@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "shadow-monarch",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8123",
+        "--directory",
+        "/Users/nischal/Desktop/Vault/03_Projects/Games/shadow-monarch"
+      ],
+      "port": 8123
+    }
+  ]
+}

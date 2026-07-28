@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SHADOW MONARCH</title>
+<link rel="stylesheet" href="src/ui/style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/build/three.module.js",
+    "three/addons/": "./vendor/three/addons/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="stage">
+  <canvas id="view"></canvas>
+
+  <!-- Everything below is DOM overlay: the System's windows are HTML, not 3D. -->
+  <div id="hud" class="hidden">
+    <div class="bars">
+      <div class="bar hp"><i></i><span>HP</span><b id="hp-text">100/100</b></div>
+      <div class="bar mp"><i></i><span>MP</span><b id="mp-text">50/50</b></div>
+      <div class="xp"><i></i></div>
+      <div class="lvl">LV <b id="lvl-text">1</b></div>
+    </div>
+    <div id="rank" class="rank">
+      <div class="letter">D</div>
+      <div class="word">DORMANT</div>
+      <div class="meter"><i></i></div>
+    </div>
+    <div id="combo" class="combo"><b>0</b><span>HITS</span></div>
+    <div id="objective" class="objective"></div>
+    <div id="boss-bar" class="boss-bar hidden">
+      <div class="boss-name">GATE GUARDIAN</div>
+      <div class="boss-track"><i></i></div>
+    </div>
+  </div>
+
+  <div id="windows"></div>
+  <div id="toasts"></div>
+
+  <div id="title" class="screen">
+    <div class="title-art">
+      <div class="sub">D&#8209;RANK GATE</div>
+      <h1>SHADOW<span>MONARCH</span></h1>
+      <div class="rule"></div>
+      <p class="tag">Level 1 &mdash; Hollow of the Kneeling Stone</p>
+    </div>
+    <button id="start" class="cta">ENTER THE GATE</button>
+    <div class="controls-hint">
+      <div><kbd>A</kbd><kbd>D</kbd> move</div>
+      <div><kbd>Space</kbd> jump / double jump</div>
+      <div><kbd>Shift</kbd> shadow step</div>
+      <div><kbd>J</kbd> slash</div>
+      <div><kbd>K</kbd> heavy</div>
+      <div><kbd>L</kbd> ruler's authority</div>
+    </div>
+  </div>
+
+  <div id="pause" class="screen hidden">
+    <h2>PAUSED</h2>
+    <button id="resume" class="cta">RESUME</button>
+    <div class="controls-hint"><div><kbd>Esc</kbd> resume</div><div><kbd>R</kbd> restart gate</div></div>
+  </div>
+
+  <div id="death" class="screen hidden">
+    <h2 class="fail">YOU HAVE DIED</h2>
+    <p class="tag">The gate does not remember you.</p>
+    <button id="retry" class="cta">RISE AGAIN</button>
+  </div>
+
+  <div id="clear" class="screen hidden">
+    <h2 class="win">GATE CLEARED</h2>
+    <div id="clear-stats" class="stats"></div>
+    <button id="again" class="cta">RUN IT AGAIN</button>
+  </div>
+
+  <div id="boot" class="screen">
+    <div class="boot-mark">&#10022;</div>
+    <p>AWAKENING&hellip;</p>
+  </div>
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
