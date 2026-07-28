@@ -83,7 +83,11 @@ export class VFX {
     // --- pooled quads/rings ---
     this.arcs = this._pool(16, () => {
       const m = new THREE.Mesh(
-        new THREE.RingGeometry(0.55, 1.55, 26, 1, 0, 2.3),
+        // A thin crescent, not a wedge. At inner 0.55 / outer 1.55, additive
+        // and above the bloom threshold, the arc rendered as a solid white fan
+        // wider than the hunter is tall — it hid the very hit it was drawing
+        // attention to. Thin ring, low alpha, and offset clear of the body.
+        new THREE.RingGeometry(0.92, 1.24, 28, 1, 0, 2.05),
         new THREE.MeshBasicMaterial({
           color: 0xffffff,
           transparent: true,
@@ -310,7 +314,7 @@ export class VFX {
     a.rotation.set(0, 0, spec.rot * player.facing);
     a.scale.set(spec.scale * player.facing, spec.scale, 1);
     a.material.color.setHex(spec.color);
-    a.material.opacity = 0.95;
+    a.material.opacity = 0.34;
     Object.assign(a.userData, {
       kind: 'arc',
       life: spec.life,
@@ -480,7 +484,7 @@ export class VFX {
         const u = o.userData.life / o.userData.maxLife;
         switch (o.userData.kind) {
           case 'arc': {
-            o.material.opacity = u * u * 0.95;
+            o.material.opacity = u * u * 0.34;
             o.rotation.z += o.userData.spin * dt;
             const s = o.userData.base * (1 + (1 - u) * o.userData.grow);
             o.scale.set(s * o.userData.flip, s, 1);
@@ -538,11 +542,11 @@ function radialTexture(size = 128) {
  * during its life, which is what reads as the blade travelling.
  */
 const ARC_SPECS = {
-  light1: { ox: 1.1, oy: 1.05, scale: 1.5, rot: 1.5, spin: -9, life: 0.17, grow: 0.35, color: 0xdfe8ff },
-  light2: { ox: 1.1, oy: 1.05, scale: 1.5, rot: -1.9, spin: 9, life: 0.17, grow: 0.35, color: 0xdfe8ff },
-  light3: { ox: 1.2, oy: 1.05, scale: 2.15, rot: 1.9, spin: -7, life: 0.28, grow: 0.5, color: P.violetGlow },
-  launcher: { ox: 0.9, oy: 0.9, scale: 1.9, rot: -2.5, spin: 8, life: 0.26, grow: 0.55, color: P.cyan },
-  air1: { ox: 1.05, oy: 1.0, scale: 1.45, rot: 1.4, spin: -9, life: 0.16, grow: 0.35, color: 0xdfe8ff },
-  air2: { ox: 1.05, oy: 1.0, scale: 1.55, rot: -1.8, spin: 9, life: 0.18, grow: 0.4, color: 0xdfe8ff },
-  slam: { ox: 0.4, oy: 0.9, scale: 1.7, rot: 0.4, spin: -3, life: 0.3, grow: 0.3, color: P.violet },
+  light1: { ox: 1.55, oy: 1.05, scale: 1.05, rot: 1.5, spin: -9, life: 0.16, grow: 0.28, color: 0xdfe8ff },
+  light2: { ox: 1.55, oy: 1.05, scale: 1.05, rot: -1.9, spin: 9, life: 0.16, grow: 0.28, color: 0xdfe8ff },
+  light3: { ox: 1.75, oy: 1.05, scale: 1.45, rot: 1.9, spin: -7, life: 0.26, grow: 0.4, color: P.violetGlow },
+  launcher: { ox: 1.15, oy: 0.95, scale: 1.3, rot: -2.5, spin: 8, life: 0.24, grow: 0.45, color: P.cyan },
+  air1: { ox: 1.45, oy: 1.0, scale: 1.0, rot: 1.4, spin: -9, life: 0.15, grow: 0.28, color: 0xdfe8ff },
+  air2: { ox: 1.5, oy: 1.0, scale: 1.1, rot: -1.8, spin: 9, life: 0.17, grow: 0.32, color: 0xdfe8ff },
+  slam: { ox: 0.55, oy: 0.9, scale: 1.25, rot: 0.4, spin: -3, life: 0.28, grow: 0.25, color: P.violet },
 };

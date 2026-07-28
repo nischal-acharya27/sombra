@@ -104,7 +104,16 @@ export class Player extends Actor {
 
     if (this.attack) {
       this.attack.t += dt;
-      if (this.attack.t >= this.attack.def.dur) this._endAttack();
+      // Fire the crescent when the hitbox opens, not when the input lands.
+      // Spawned at t=0 it is a wind-up flourish that has already faded by the
+      // time the swing can actually hit anything — the effect and the hit read
+      // as two separate events instead of one.
+      const a = this.attack;
+      if (!a.arcFired && a.t >= a.def.active[0]) {
+        a.arcFired = true;
+        this.ctx.vfx?.slashArc(this, a.key);
+      }
+      if (a.t >= a.def.dur) this._endAttack();
     }
     if (this.state === 'dash') {
       this.dashT -= dt;
@@ -227,7 +236,7 @@ export class Player extends Actor {
 
   _startAttack(key) {
     const def = ATTACKS[key];
-    this.attack = { key, def, t: 0, hitSet: new Set(), hitAny: false };
+    this.attack = { key, def, t: 0, hitSet: new Set(), hitAny: false, arcFired: false };
     this.state = 'attack';
     if (key === 'slam') {
       this.slamDiving = true;
@@ -248,7 +257,6 @@ export class Player extends Actor {
       if (!this.grounded) this.vy = Math.max(this.vy, -2);
     }
     this.ctx.audio?.play(def.sfx);
-    this.ctx.vfx?.slashArc(this, key);
   }
 
   _endAttack() {

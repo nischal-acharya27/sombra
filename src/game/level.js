@@ -181,8 +181,11 @@ export class Level {
    */
   _buildStatue() {
     const g = new THREE.Group();
-    const stone = toonMaterial({ color: 0x574f63, steps: 3, rim: 0.3, rimColor: P.violetGlow });
-    const stoneDark = toonMaterial({ color: 0x3b3547, steps: 3, rim: 0.2 });
+    // Light enough to stay legible as stone at distance. The colossus is
+    // backlit from the play plane, and darker values collapsed it into one
+    // black mass against the ridges instead of a readable silhouette.
+    const stone = toonMaterial({ color: 0x7a7189, steps: 3, rim: 0.45, rimColor: P.violetGlow });
+    const stoneDark = toonMaterial({ color: 0x574f66, steps: 3, rim: 0.3, rimColor: P.violetGlow });
 
     const add = (w, h, d, x, y, z, m = stone) => {
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);

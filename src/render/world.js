@@ -63,7 +63,10 @@ export class World {
 
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.62, 0.62, 0.78);
+    // Strength is deliberately modest. Every glow in the game is toneMapped:false
+    // so it sits above the threshold by design; at 0.62 the bloom turned each of
+    // them into a white hole rather than a light source.
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.42, 0.7, 0.82);
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
 
