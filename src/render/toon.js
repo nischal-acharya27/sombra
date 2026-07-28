@@ -61,9 +61,10 @@ export function toonMaterial({
   opacity = 1,
   fog = true,
   side = THREE.FrontSide,
-  flatShading = false,
   vertexColors = false,
 } = {}) {
+  // No `flatShading` option: MeshToonMaterial does not support it. Faceted
+  // surfaces come from the geometry instead — see `faceted()` below.
   const mat = new THREE.MeshToonMaterial({
     color,
     gradientMap: gradientMap(steps),
@@ -73,7 +74,6 @@ export function toonMaterial({
     opacity,
     fog,
     side,
-    flatShading,
     vertexColors,
   });
 
@@ -110,6 +110,18 @@ export function glowMaterial({ color = P.violet, opacity = 1, transparent = fals
     depthWrite,
     toneMapped: false, // keep it above the bloom threshold
   });
+}
+
+/**
+ * Split shared vertices and recompute normals so every face shades flat.
+ * MeshToonMaterial has no `flatShading` flag, so the facets have to be baked
+ * into the geometry — which is also the cheaper option, since it happens once
+ * at build time rather than per-fragment.
+ */
+export function faceted(geometry) {
+  const g = geometry.index ? geometry.toNonIndexed() : geometry;
+  g.computeVertexNormals();
+  return g;
 }
 
 const OUTLINE_VERT = /* glsl */ `

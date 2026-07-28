@@ -1,0 +1,182 @@
+// Every tunable number in the game.
+//
+// Nothing gameplay-affecting is hard-coded anywhere else. Movement was solved
+// backwards from the arc we wanted rather than dialled in by feel: for a jump
+// apex height h at time t, v = 2h/t and g = 2h/t². The numbers below give a
+// 3.4-unit rise in 0.33 s, which clears a 2-unit step comfortably and a
+// 4.5-unit gap at a run.
+
+export const PHYS = {
+  gravity: 62,
+  fallGravityMul: 1.45, // heavier on the way down; a symmetric arc feels floaty
+  maxFall: 42,
+  jumpVel: 20.5,
+  doubleJumpVel: 17.5,
+  jumpCutMul: 0.42, // velocity retained when jump is released early
+  coyote: 0.11,
+  apexGravityMul: 0.62, // brief float at the top of the arc: more air control
+  apexWindow: 3.5, // |vy| under this counts as the apex
+};
+
+export const PLAYER = {
+  hw: 0.34,
+  hh: 0.85,
+  runSpeed: 9.6,
+  accel: 96,
+  airAccel: 58,
+  friction: 15,
+  airDrag: 1.6,
+  turnBoost: 2.1, // extra accel when reversing, so direction changes feel sharp
+
+  maxHp: 120,
+  maxMp: 100,
+  mpRegen: 5.5, // per second
+  hurtInvuln: 0.75,
+  hurtKnock: 7,
+
+  dashSpeed: 27,
+  dashTime: 0.155,
+  dashInvuln: 0.19, // slightly longer than the dash: the escape must actually work
+  dashCooldown: 0.30,
+  airDashes: 1,
+  dashMpCost: 0,
+};
+
+/**
+ * The move list.
+ *
+ * `active` is the window during which the hitbox exists, `cancel` the point
+ * after which another attack, a dash or a jump may interrupt. Cancel always
+ * lands inside recovery, never inside the active window — being able to cancel
+ * out of a hit you have already landed is what makes a chain feel responsive
+ * instead of mashy.
+ *
+ * `reach` is the hitbox in front of the hunter: cx/cy is its centre relative to
+ * the feet, hw/hh its half extents.
+ */
+export const ATTACKS = {
+  light1: {
+    name: 'Shadow Slash', dur: 0.33, active: [0.085, 0.185], cancel: 0.17,
+    damage: 13, lunge: 5.2, reach: { cx: 1.2, cy: 1.0, hw: 0.98, hh: 0.72 },
+    knock: 3.5, launch: 0, hitstop: 0.05, style: 7, shake: 0.10, sfx: 'slash',
+  },
+  light2: {
+    name: 'Shadow Slash', dur: 0.31, active: [0.075, 0.175], cancel: 0.16,
+    damage: 15, lunge: 5.6, reach: { cx: 1.25, cy: 1.05, hw: 1.02, hh: 0.78 },
+    knock: 4, launch: 0, hitstop: 0.055, style: 8, shake: 0.11, sfx: 'slash2',
+  },
+  light3: {
+    name: 'Rending Fang', dur: 0.54, active: [0.17, 0.30], cancel: 0.38,
+    damage: 31, lunge: 6.4, reach: { cx: 1.35, cy: 1.0, hw: 1.18, hh: 0.95 },
+    knock: 13, launch: 3.5, hitstop: 0.115, style: 18, shake: 0.30, sfx: 'heavy',
+  },
+  launcher: {
+    name: "Monarch's Rise", dur: 0.56, active: [0.16, 0.30], cancel: 0.30,
+    damage: 21, lunge: 2.6, reach: { cx: 1.05, cy: 1.15, hw: 0.95, hh: 1.15 },
+    knock: 2, launch: 16.5, hitstop: 0.10, style: 20, shake: 0.22, sfx: 'launch',
+    jumpCancel: true, // the whole point: launch, then chase it into the air
+  },
+  air1: {
+    name: 'Aerial Rave', dur: 0.30, active: [0.07, 0.17], cancel: 0.16,
+    damage: 12, lunge: 3.4, reach: { cx: 1.15, cy: 1.0, hw: 0.95, hh: 0.80 },
+    knock: 2, launch: 1.2, hitstop: 0.05, style: 9, shake: 0.09, sfx: 'slash',
+    hangTime: 0.16, // gravity is suppressed while swinging: juggles stay airborne
+  },
+  air2: {
+    name: 'Aerial Rave', dur: 0.34, active: [0.08, 0.19], cancel: 0.19,
+    damage: 16, lunge: 3.8, reach: { cx: 1.2, cy: 1.0, hw: 1.0, hh: 0.88 },
+    knock: 3, launch: 1.4, hitstop: 0.06, style: 11, shake: 0.11, sfx: 'slash2',
+    hangTime: 0.18,
+  },
+  slam: {
+    name: 'Shadow Descent', dur: 0.75, active: [0, 0], cancel: 0.62,
+    damage: 34, lunge: 0, reach: { cx: 0.9, cy: 0.7, hw: 1.5, hh: 0.9 },
+    knock: 9, launch: 5.5, hitstop: 0.14, style: 24, shake: 0.42, sfx: 'slam',
+    dive: 34, // downward velocity while diving
+    shockwave: { radius: 4.6, damage: 22, knock: 11, launch: 9 },
+  },
+};
+
+export const MAGIC = {
+  name: "Ruler's Authority",
+  cost: 22,
+  damage: 33,
+  speed: 34,
+  life: 1.5,
+  pierce: 3,
+  cooldown: 0.34,
+  knock: 5,
+  hitstop: 0.06,
+  style: 14,
+  shake: 0.14,
+};
+
+export const BEAST = {
+  hp: 46,
+  hw: 0.52,
+  hh: 0.5,
+  speed: 4.4,
+  chaseRange: 15,
+  // The pounce is the entire threat. Bodies are harmless to touch, so a clean
+  // kill costs nothing and crowding is a positioning problem, not chip damage.
+  pounce: { range: 4.6, windup: 0.42, vx: 13.5, vy: 12, damage: 14, active: 0.5, recover: 0.55 },
+  exp: 24,
+  contactDamage: 0,
+};
+
+export const WISP = {
+  hp: 30,
+  hw: 0.38,
+  hh: 0.38,
+  speed: 3.0,
+  hover: { amp: 0.7, freq: 1.5 },
+  keepDistance: 7.5,
+  shoot: { interval: 2.4, windup: 0.55, speed: 15, damage: 11, life: 3 },
+  exp: 18,
+  contactDamage: 0,
+};
+
+export const GUARDIAN = {
+  hp: 900,
+  hw: 1.5,
+  hh: 1.9,
+  speed: 3.6,
+  exp: 320,
+  // Every attack is telegraphed by a core flare before it commits. Nothing the
+  // Guardian *is* deals damage — only what it *does*.
+  contactDamage: 0,
+  enrageAt: 0.5, // fraction of HP where it speeds up
+  enrageSpeedMul: 1.32,
+  attacks: {
+    charge: { windup: 0.75, speed: 19, dur: 0.85, recover: 0.9, damage: 20, knock: 13, shake: 0.3 },
+    slam: { windup: 0.68, rise: 0.34, fall: 0.24, recover: 1.0, damage: 24, radius: 5.6, knock: 15, shake: 0.55 },
+    sweep: { windup: 0.55, active: 0.28, recover: 0.75, damage: 17, reach: 5.0, knock: 11, shake: 0.26 },
+    volley: { windup: 0.7, shots: 3, gap: 0.22, recover: 0.8, damage: 13, speed: 17, shake: 0.12 },
+  },
+  cooldown: [0.9, 1.7], // idle window between attacks, shortened when enraged
+};
+
+/** Style ranks. `decay` is meter lost per second while not attacking. */
+export const STYLE = {
+  ranks: [
+    { letter: 'D', word: 'DORMANT', at: 0 },
+    { letter: 'C', word: 'CLEAN', at: 55 },
+    { letter: 'B', word: 'BRUTAL', at: 130 },
+    { letter: 'A', word: 'ARISEN', at: 230 },
+    { letter: 'S', word: 'SOVEREIGN', at: 360 },
+    { letter: 'SS', word: 'SHADOW LORD', at: 520 },
+  ],
+  max: 640,
+  decay: 26,
+  decayDelay: 1.5, // grace period after the last hit before the meter falls
+  repeatPenalty: 0.42, // repeating the same move scores this fraction
+  hitTakenLoss: 0.45, // fraction of meter kept after being hit
+  comboWindow: 2.2,
+};
+
+export const PROGRESSION = {
+  // EXP needed for each level beyond the first.
+  curve: (lvl) => Math.round(90 * Math.pow(lvl, 1.42)),
+  hpPerLevel: 14,
+  mpPerLevel: 8,
+};
