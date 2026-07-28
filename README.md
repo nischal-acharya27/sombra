@@ -1,10 +1,14 @@
-# SHADOW MONARCH
+# SOMBRA
 
-A Solo Leveling inspired 2.5D hack & slash. One hunter, one D-rank gate, and a
-boss at the end of it. Devil May Cry's combat vocabulary — combo chains, cancel
-windows, launchers, air juggles, a style meter — on Prince of Persia's
-side-on traversal, rendered in the soft cel-shaded palette of a stylised
-open-world Pokémon game.
+A 2.5D hack & slash in the Korean *hunter-and-gate* LitRPG tradition — one
+hunter, one D-rank gate, and a boss at the end of it. Devil May Cry's combat
+vocabulary (combo chains, cancel windows, launchers, air juggles, a style
+meter) on Prince of Persia's side-on traversal, rendered in the soft cel-shaded
+palette of a stylised open-world Pokémon game.
+
+Named moves are drawn from across the Romance languages — *Sombra* (shadow),
+*Décret* (decree), *Ascensão* (ascension) — because a magic system reads better
+when its vocabulary comes from somewhere other than English.
 
 It runs in a browser with **no build step and no dependencies to install**.
 three.js is vendored into the repo; everything else — every model, animation,
@@ -31,8 +35,8 @@ set of ES modules resolved through an import map.
 | Jump — press again in mid-air to **double jump** | `Space` |
 | **Shadow Step** — dash, with invincibility frames | `Shift` |
 | **Shadow Slash** — three-hit chain | `J` or `Z` |
-| **Monarch's Rise** — launcher on the ground, **Shadow Descent** dive in the air | `K` or `X` |
-| **Ruler's Authority** — piercing bolt, 16 MP | `L` or `C` |
+| **Ascensão** — launcher on the ground, **Shadow Descent** dive in the air | `K` or `X` |
+| **Décret** — piercing bolt, 16 MP | `L` or `C` |
 | Pause | `Esc` |
 
 ## The fight

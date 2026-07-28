@@ -2,14 +2,14 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "shadow-monarch",
+      "name": "sombra",
       "runtimeExecutable": "python3",
       "runtimeArgs": [
         "-m",
         "http.server",
         "8123",
         "--directory",
-        "/Users/nischal/Desktop/Vault/03_Projects/Games/shadow-monarch"
+        "/Users/nischal/Desktop/Vault/03_Projects/Games/sombra"
       ],
       "port": 8123
     }

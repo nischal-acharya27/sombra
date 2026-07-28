@@ -460,7 +460,7 @@ function print(r) {
 
   const lines = [];
   const ok = (b) => (b ? '  PASS' : '**FAIL**');
-  lines.push('SHADOW MONARCH — scripted verification', '='.repeat(58), '');
+  lines.push('SOMBRA — scripted verification', '='.repeat(58), '');
 
   lines.push('JUMP ENVELOPE');
   for (const [k, v] of Object.entries(r.arcs)) {

@@ -76,7 +76,7 @@ export const ATTACKS = {
     knock: 13, launch: 3.5, hitstop: 0.115, style: 18, shake: 0.30, sfx: 'heavy',
   },
   launcher: {
-    name: "Monarch's Rise", dur: 0.56, active: [0.16, 0.30], cancel: 0.30,
+    name: "Ascensão", dur: 0.56, active: [0.16, 0.30], cancel: 0.30,
     damage: 21, lunge: 2.6, reach: { cx: 1.05, cy: 1.15, hw: 0.95, hh: 1.15 },
     knock: 2, launch: 16.5, hitstop: 0.10, style: 20, shake: 0.22, sfx: 'launch',
     jumpCancel: true, // the whole point: launch, then chase it into the air
@@ -103,7 +103,7 @@ export const ATTACKS = {
 };
 
 export const MAGIC = {
-  name: "Ruler's Authority",
+  name: "Décret",
   // 16 of a 100 mana pool: six casts from full, and one back every three
   // seconds. Enough that reaching for it is never a resource crisis, far too
   // little to replace the sword — see the `ranged` probe in tools/sim.js.
@@ -182,9 +182,9 @@ export const STYLE = {
     { letter: 'D', word: 'DORMANT', at: 0 },
     { letter: 'C', word: 'CLEAN', at: 55 },
     { letter: 'B', word: 'BRUTAL', at: 130 },
-    { letter: 'A', word: 'ARISEN', at: 230 },
+    { letter: 'A', word: 'ASCENDANT', at: 230 },
     { letter: 'S', word: 'SOVEREIGN', at: 360 },
-    { letter: 'SS', word: 'SHADOW LORD', at: 520 },
+    { letter: 'SS', word: 'SOMBRA', at: 520 },
   ],
   max: 640,
   decay: 26,
