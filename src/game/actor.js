@@ -63,6 +63,25 @@ export class Actor {
       } else if (this.vx < 0) {
         this.x = s.x1 + this.hw;
         hit.wall = -1;
+      } else {
+        // Overlapping with no horizontal velocity — a body that was spawned
+        // inside a solid, or one a barrier was raised on top of. Without this
+        // branch the X pass does nothing, the Y pass sees the same overlap and
+        // "lands" the body on the solid's top face, and an enemy standing next
+        // to an arena barrier gets teleported 35 units into the sky.
+        //
+        // Eject along whichever axis is the shallower escape; leave the deeper
+        // one to the Y pass so a body sunk into the floor still pops upward.
+        const outLeft = b.x1 - s.x0;
+        const outRight = s.x1 - b.x0;
+        const outX = Math.min(outLeft, outRight);
+        const outY = Math.min(b.y1 - s.y0, s.y1 - b.y0);
+        if (outX <= outY) {
+          this.x = outLeft < outRight ? s.x0 - this.hw : s.x1 + this.hw;
+          hit.wall = outLeft < outRight ? 1 : -1;
+        } else {
+          continue; // the Y pass will resolve it
+        }
       }
       this.vx = 0;
       b = this.box;

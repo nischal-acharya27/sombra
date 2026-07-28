@@ -40,6 +40,11 @@ export const PLAYER = {
   dashCooldown: 0.30,
   airDashes: 1,
   dashMpCost: 0,
+  // Air swings per airtime, reset on landing. Air attacks suppress gravity for
+  // their hang-time frames — that is what keeps a juggle in the air — so
+  // without a cap, mashing attack is a slow-fall button and every pit in the
+  // level becomes optional.
+  airAttackLimit: 2,
 };
 
 /**
@@ -99,7 +104,10 @@ export const ATTACKS = {
 
 export const MAGIC = {
   name: "Ruler's Authority",
-  cost: 22,
+  // 16 of a 100 mana pool: six casts from full, and one back every three
+  // seconds. Enough that reaching for it is never a resource crisis, far too
+  // little to replace the sword — see the `ranged` probe in tools/sim.js.
+  cost: 16,
   damage: 33,
   speed: 34,
   life: 1.5,
@@ -116,11 +124,14 @@ export const BEAST = {
   hw: 0.52,
   hh: 0.5,
   speed: 4.4,
-  chaseRange: 15,
+  // Wider than any sealed arena. At 15 a beast could idle in the far corner of
+  // the bridge while the hunter stood at the other end, leaving an encounter
+  // that cannot be cleared without walking back to look for it.
+  chaseRange: 30,
   // The pounce is the entire threat. Bodies are harmless to touch, so a clean
   // kill costs nothing and crowding is a positioning problem, not chip damage.
   pounce: { range: 4.6, windup: 0.42, vx: 13.5, vy: 12, damage: 14, active: 0.5, recover: 0.55 },
-  exp: 24,
+  exp: 30,
   contactDamage: 0,
 };
 
@@ -130,9 +141,18 @@ export const WISP = {
   hh: 0.38,
   speed: 3.0,
   hover: { amp: 0.7, freq: 1.5 },
-  keepDistance: 7.5,
+  // A wisp should make you *change tool*, not make you *wait*. At 2.2 units up
+  // and 7.5 out it sat outside the light attack's 1.72 ceiling and outside
+  // every melee range, so the only answer was mana — and with regen at 5.5/s
+  // that turned two wisps into a thirty-second stall where the hunter walks
+  // underneath them taking chip damage. Now it drifts inside jump and launcher
+  // range, and the bolt is the *efficient* answer rather than the only one.
+  hoverAbove: 1.6,
+  leash: 9, // never strays this far horizontally from where it spawned
+  descend: 4.5, // ...nor this far below it, which keeps it out of the void
+  keepDistance: 5.5,
   shoot: { interval: 2.4, windup: 0.55, speed: 15, damage: 11, life: 3 },
-  exp: 18,
+  exp: 22,
   contactDamage: 0,
 };
 
@@ -175,8 +195,17 @@ export const STYLE = {
 };
 
 export const PROGRESSION = {
-  // EXP needed for each level beyond the first.
-  curve: (lvl) => Math.round(90 * Math.pow(lvl, 1.42)),
+  /**
+   * EXP for the next level. Linear, and deliberately so.
+   *
+   * Levelling restores you to full and is the *only* heal in the game, which
+   * makes this curve a difficulty control rather than a reward schedule: it is
+   * tuned so a level-up lands two kills into the bridge ambush, the one fight
+   * long enough to run a health bar dry. On the original 90·lvl^1.42 curve the
+   * third level arrived after the ambush was over, and scripted runs died there
+   * with one enemy left almost every time.
+   */
+  curve: (lvl) => 90 * lvl,
   hpPerLevel: 14,
   mpPerLevel: 8,
 };

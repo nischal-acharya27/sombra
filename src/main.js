@@ -85,8 +85,18 @@ addEventListener('keydown', (e) => {
   if (e.code === 'Enter' && game.state === 'idle') startRun();
 });
 
-loop.start();
-document.getElementById('boot').classList.add('hidden');
+// `?sim` runs the scripted verification suite instead of the game. It steps
+// the simulation directly rather than waiting on animation frames, because a
+// browser throttles rAF whenever the tab is not focused — which makes any
+// wall-clock automated playtest measure nothing at all.
+if (location.search.includes('sim')) {
+  document.getElementById('boot').classList.add('hidden');
+  document.getElementById('title').classList.add('hidden');
+  import('../tools/sim.js').then((m) => m.runSuite(game, input));
+} else {
+  loop.start();
+  document.getElementById('boot').classList.add('hidden');
+}
 
 // Handy for poking at a running game from the console.
 window.__game = { game, world, loop, audio, input, hud };

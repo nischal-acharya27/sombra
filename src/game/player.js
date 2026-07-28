@@ -29,6 +29,7 @@ export class Player extends Actor {
     this.dashCd = 0;
     this.dashT = 0;
     this.airDashes = PLAYER.airDashes;
+    this.airAttacks = 0;
     this.magicCd = 0;
     this.hurtT = 0;
     this.slamDiving = false;
@@ -59,6 +60,8 @@ export class Player extends Actor {
     this.invuln = 0;
     this.facing = 1;
     this.jumps = 0;
+    this.airAttacks = 0;
+    this.airDashes = PLAYER.airDashes;
   }
 
   // -- queries the combat system asks about ---------------------------------
@@ -152,10 +155,15 @@ export class Player extends Actor {
 
     if (input.pressed('light') && canCancel) {
       if (!this.grounded) {
-        // Air chain is two hits; the third input does nothing rather than
-        // silently restarting, so mashing in the air cannot stall a juggle.
+        // Air chain is two hits, and the budget is per airtime rather than per
+        // chain — otherwise letting one swing finish and starting a fresh one
+        // repeats the hang-time frames forever.
+        if (this.airAttacks >= PLAYER.airAttackLimit) return;
         const next = a && a.key === 'air1' ? 'air2' : a && a.key === 'air2' ? null : 'air1';
-        if (next) this._startAttack(next);
+        if (next) {
+          this.airAttacks++;
+          this._startAttack(next);
+        }
       } else {
         const chain = ['light1', 'light2', 'light3'];
         this._startAttack(chain[this.comboIndex % 3]);
@@ -210,7 +218,11 @@ export class Player extends Actor {
     this.ctx.spawnBolt(this.x + this.facing * 0.7, this.y + 1.05, this.facing);
     this.ctx.audio?.play('magic');
     this.ctx.shake?.(MAGIC.shake);
-    this.vx *= 0.3;
+    // A light brake to give the cast some weight — but only on the ground, and
+    // nothing like a stop. Scrubbing 70% of speed here used to brake the hunter
+    // mid-stride, and casting at a wisp while approaching a gap would silently
+    // turn a comfortable jump into a fatal one.
+    if (this.grounded) this.vx *= 0.75;
   }
 
   _startAttack(key) {
@@ -224,7 +236,14 @@ export class Player extends Actor {
     } else {
       // Every swing carries the hunter forward. Attacks that leave you rooted
       // read as slow no matter how fast the animation is.
-      const lunge = def.lunge;
+      let lunge = def.lunge;
+      // ...but never off a cliff. A swing roots your steering, so a lunge that
+      // clears the lip drops you straight down with no way to correct — the
+      // player gets killed by the attack button, at a ledge they never chose to
+      // leave. Clamp it when there is no floor to land the lunge on.
+      if (this.grounded && !this.level.hasFloorAhead(this.x + this.facing * 1.5, this.y, 1.2)) {
+        lunge = Math.min(lunge, 1.2);
+      }
       this.vx = this.facing * lunge;
       if (!this.grounded) this.vy = Math.max(this.vy, -2);
     }
@@ -313,6 +332,7 @@ export class Player extends Actor {
       this.coyote = PHYS.coyote;
       this.jumps = 0;
       this.airDashes = PLAYER.airDashes;
+      this.airAttacks = 0;
       if (this.state === 'jump' || this.state === 'fall') this.state = 'idle';
     } else {
       this.coyote -= dt;

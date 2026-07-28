@@ -324,6 +324,7 @@ export class Wisp extends Enemy {
     this.n = this.root.userData.nodes;
     this.finishSetup();
     this.baseY = y;
+    this.homeX = x;
     this.shootCd = rand(0.8, WISP.shoot.interval);
     this.windup = 0;
     this.driftPhase = rand(0, 7);
@@ -349,12 +350,20 @@ export class Wisp extends Enemy {
 
     if (this.state !== 'hurt') {
       // Hold a ring at keepDistance: close in when far, back off when crowded.
-      const want = dist > WISP.keepDistance + 1.5 ? Math.sign(dx) * WISP.speed
+      let want = dist > WISP.keepDistance + 1.5 ? Math.sign(dx) * WISP.speed
         : dist < WISP.keepDistance - 1.5 ? -Math.sign(dx) * WISP.speed
         : Math.sin(this.t * 0.8) * WISP.speed * 0.4;
+      // Leashed to where it spawned. Without this a wisp will happily follow
+      // the player over the edge and hound them all the way down the pit,
+      // which turns a missed jump into an unrecoverable one.
+      if (this.x < this.homeX - WISP.leash) want = Math.max(want, WISP.speed * 0.6);
+      if (this.x > this.homeX + WISP.leash) want = Math.min(want, -WISP.speed * 0.6);
       this.vx = damp(this.vx, want, 0.002, dt);
 
-      const targetY = player.y + 2.6 + Math.sin(this.t * WISP.hover.freq + this.driftPhase) * WISP.hover.amp;
+      // Same for altitude: it tracks the player but never descends into the
+      // void after them.
+      const hover = Math.sin(this.t * WISP.hover.freq + this.driftPhase) * WISP.hover.amp;
+      const targetY = clamp(player.y + WISP.hoverAbove + hover, this.baseY - WISP.descend, this.baseY + 5);
       this.vy = damp(this.vy, (targetY - this.y) * 2.2, 0.004, dt);
 
       this.shootCd -= dt;

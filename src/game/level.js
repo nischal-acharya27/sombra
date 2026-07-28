@@ -335,12 +335,19 @@ const SEGMENTS = [
   { x0: 95, x1: 103, top: 5.2, crystals: 2, boulders: 1 },
 
   // The chasm: small islands over the void, patrolled by wisps.
-  { x0: 108, x1: 113, top: 5.2, barren: true, depth: 5 },
-  { x0: 118, x1: 123, top: 6.4, barren: true, depth: 5 },
-  { x0: 128, x1: 133, top: 5.0, barren: true, depth: 5 },
+  //
+  // Gaps are 3.8. A crossing therefore needs 4.5 of the measured 6.08-unit
+  // running jump — about a third in reserve. That reserve is the whole point:
+  // at 4.5-unit gaps the margin was 4%, which meant the jump had to start
+  // within a few centimetres of the lip, and both scripted bots died there
+  // repeatedly. The drop below is what makes the chasm read as dangerous;
+  // the gap width only decides whether it is *fair*.
+  { x0: 106.8, x1: 111.8, top: 5.2, barren: true, depth: 5 },
+  { x0: 115.6, x1: 120.6, top: 6.4, barren: true, depth: 5 },
+  { x0: 124.4, x1: 129.4, top: 5.0, barren: true, depth: 5 },
 
   // The bridge, and the ambush on it.
-  { x0: 137, x1: 162, top: 4.2, boulders: 3, pillars: 3, crystals: 2, trees: 1 },
+  { x0: 133.2, x1: 162, top: 4.2, boulders: 3, pillars: 3, crystals: 2, trees: 1 },
 
   // Boss arena — long, flat, no cover, nowhere to run.
   { x0: 166, x1: 204, top: ARENA_TOP, depth: 9, boulders: 2, pillars: 2, thickness: 6 },
@@ -364,26 +371,40 @@ export const ENCOUNTERS = [
   },
   {
     id: 'the-chasm',
-    trigger: 106,
+    trigger: 105,
     // No lock: the chasm's threat is the fall, not the fight.
     spawns: [
-      { type: 'wisp', x: 115, y: 9, delay: 0 },
-      { type: 'wisp', x: 125, y: 10.5, delay: 0.3 },
-      { type: 'wisp', x: 131, y: 9, delay: 0.9 },
+      // Spawn altitude is the wisp's home altitude, and it only ranges a few
+      // units either side of it — so these have to sit near where the hunter
+      // will actually be, not far overhead.
+      // Positioned over the *islands*, not the gaps. A wisp hovering above a
+      // gap baits the player into jumping at it instead of across, and the
+      // punishment for taking that bait is the void. Fights belong on floor.
+      { type: 'wisp', x: 109.3, y: 7.0, delay: 0 },
+      { type: 'wisp', x: 118.1, y: 8.2, delay: 0.3 },
+      { type: 'wisp', x: 126.9, y: 6.8, delay: 0.9 },
     ],
   },
   {
     id: 'the-bridge',
-    trigger: 140,
-    lock: [138, 161],
+    trigger: 136,
+    lock: [134, 161],
     intro: { title: 'AMBUSH', body: 'Shadow Beast × 4  ·  Wisp × 2' },
+    // Six enemies, but spread over seven seconds rather than dropped at once.
+    // Arriving together, four beasts pounce often enough to out-damage the
+    // hunter's entire health bar before the first one dies; arriving in waves,
+    // the same six are a fight you can actually work through. The count is the
+    // spectacle, the spacing is the difficulty.
+    // Spawns stay clear of the arena barriers at 134 and 161. A body that
+    // materialises overlapping one has to be ejected by the collision solver,
+    // and "wherever the solver puts it" is not a spawn point.
     spawns: [
-      { type: 'beast', x: 150, delay: 0 },
-      { type: 'beast', x: 158, delay: 0.4 },
-      { type: 'wisp', x: 154, y: 9, delay: 0.8 },
-      { type: 'beast', x: 144, delay: 1.6 },
-      { type: 'wisp', x: 148, y: 10, delay: 2.0 },
-      { type: 'beast', x: 160, delay: 2.6 },
+      { type: 'beast', x: 147, delay: 0 },
+      { type: 'beast', x: 155, delay: 1.4 },
+      { type: 'wisp', x: 151, y: 6.2, delay: 2.8 },
+      { type: 'beast', x: 141, delay: 4.2 },
+      { type: 'wisp', x: 145, y: 6.6, delay: 5.6 },
+      { type: 'beast', x: 157, delay: 7.0 },
     ],
   },
   {
