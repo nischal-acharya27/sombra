@@ -163,3 +163,67 @@ articulate. Write it badly rather than not at all.*
 >
 - Hitting 'R' when paused with Esc doesn't restart the gate.
 - if you jump and go forawrd, and attack, the motion stops. I would like the motion to continue even when you're attacking.
+
+---
+---
+
+# Round 2 — build `cb10a5d`
+
+Round 1 above stays untouched. It is the evidence every change in `cb10a5d` was
+made from, and the baseline this round is measured against — if one of those
+changes turns out to be wrong, that log is how we find out.
+
+This round is deliberately short. It asks three things: **did the fixes land**,
+**did anything get worse**, and the one question round 1 left blank.
+
+Restart the server from the renamed folder first:
+
+```bash
+cd /Users/nischal/Desktop/Vault/03_Projects/Games/sombra && python3 -m http.server 8000
+```
+
+## A. Did the fixes land?
+
+Tick or strike each one. A "no" here is more useful than a polite "yes".
+
+| # | What was broken | What should be true now | Verdict |
+|---|---|---|---|
+| 1 | Taps swallowed unless you paused between them | Mash `J` as fast as you like — the chain runs 1→2→3 with nothing dropped | |
+| 2 | Forward motion died when you attacked mid-jump | Jump forward, press `J` — you keep travelling | |
+| 3 | `R` on the pause screen did nothing visible | `Esc` then `R` restarts the gate immediately | |
+| 4 | Launch → air combo impossible; enemy landed first | `K` to launch, `Space` to chase, `J` `J` connects | |
+| 5 | Finisher felt no wider than the first two swings | Third swing visibly sweeps a wide wedge and reaches further | |
+| 6 | Style meter unnoticed | You see `S / SOVEREIGN` flash top-right without looking for it | |
+| 7 | Wisps killed you four times in seven runs | Still dangerous, no longer the main cause of death | |
+
+## B. Did anything get worse?
+
+*Toning the slam down was your call, but the slam was also part of how you beat
+the Guardian. The dodge bot went from finishing with 83 HP to 49. This is the
+change I am least confident in.*
+
+- Is jump-`K` still useful, or did it get gutted?
+- **Boss attempts this time** (was 4–5):
+- Did the boss feel worse, or just different?
+
+>
+
+## C. The question round 1 left blank
+
+*This is the one that matters most, because every enemy in the game and the whole
+ARISE design assume telegraphs are readable. The beast stops, crouches, its eyes
+flare and grow, it growls — 0.42 s — then leaps. Its body is harmless; only the
+leap can hurt you.*
+
+- Did you learn the tell, or did you just get hit until you adapted?
+- Is 0.42 s long enough to react to?
+- Did you ever realise you can stand right next to a beast safely?
+
+>
+
+## D. Anything new
+
+*Round 1's "anything lost" and "where were you bored" were left blank or "not
+bored" — worth a second look now that the controls respond differently.*
+
+>
