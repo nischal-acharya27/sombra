@@ -85,7 +85,15 @@ export const ATTACKS = {
   launcher: {
     name: "Ascensão", dur: 0.56, active: [0.16, 0.30], cancel: 0.30,
     damage: 21, lunge: 2.6, reach: { cx: 1.05, cy: 1.15, hw: 0.95, hh: 1.15 },
-    knock: 2, launch: 16.5, hitstop: 0.10, style: 20, shake: 0.22, sfx: 'launch',
+    // 13.0, not 16.5, and the number is not a feel choice.
+    //
+    // Under juggle gravity (62 × 0.40) a 16.5 launch peaks at 5.49 units. A
+    // single jump peaks at 3.45. The launched enemy was therefore two units
+    // above anything one `Space` could reach, and the juggle only worked if you
+    // also spent the double jump — which nothing tells you and round 3 reported
+    // as "the enemy is launched too high". 13.0 peaks at 3.41, just under the
+    // single-jump apex, so K → Space → J is one jump and one swing.
+    knock: 2, launch: 13.0, hitstop: 0.10, style: 20, shake: 0.22, sfx: 'launch',
     jumpCancel: true, // the whole point: launch, then chase it into the air
   },
   air1: {
@@ -117,10 +125,13 @@ export const ATTACKS = {
 /**
  * Launched enemies fall slowly for a moment.
  *
- * Without this the juggle is not merely hard, it is impossible: a launch sends
- * a beast up at 16.5 against gravity 62, so it is airborne for 0.53 s — less
- * time than it takes to jump-cancel the launcher and reach it. The playtest
- * reported "the enemy is already down before I get there", which was accurate.
+ * Without this the juggle is not merely hard, it is impossible: at full gravity
+ * a 13.0 launch is airborne for 0.42 s — less time than it takes to jump-cancel
+ * the launcher and reach it. The playtest reported "the enemy is already down
+ * before I get there", which was accurate.
+ *
+ * `gravityMul` is what the launch height was tuned against, so the two numbers
+ * only mean anything together: 0.40 is what puts the apex at 3.41 units.
  */
 export const JUGGLE = { time: 0.8, gravityMul: 0.40 };
 
@@ -130,10 +141,21 @@ export const MAGIC = {
   // seconds. Enough that reaching for it is never a resource crisis, far too
   // little to replace the sword — see the `ranged` probe in tools/sim.js.
   cost: 16,
-  damage: 33,
+  // Round 3: "it hits all the enemies on the way, and it deals a lot of damage".
+  //
+  // At 33 the bolt was doing something nobody intended: `WISP.hp` is 30, so one
+  // cast killed a wisp outright, and at `pierce: 3` one cast killed all three
+  // over the chasm. That is also, on the evidence, why the wisps stopped
+  // reading as a threat — the same round asked for them to be made dangerous
+  // again, and their interval, damage and wind-up were never the reason they
+  // were easy. One dial explains both complaints, so only one dial moves.
+  //
+  // 23 puts a wisp at two casts and leaves the beast at two (46 hp). Pierce 1
+  // makes a lined-up crowd a positioning reward rather than a free clear.
+  damage: 23,
   speed: 34,
   life: 1.5,
-  pierce: 3,
+  pierce: 1,
   cooldown: 0.34,
   knock: 5,
   hitstop: 0.06,

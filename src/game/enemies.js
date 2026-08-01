@@ -75,7 +75,7 @@ class Enemy extends Actor {
       //
       // This is the same bug the player's air lunge had, in the same shape and
       // with the same symptom. `vy = launch` meant an aerial connecting with a
-      // rising enemy *replaced* its 16.5 launch velocity with air1's 1.2 —
+      // rising enemy *replaced* its launch velocity with air1's 1.2 —
       // so the one hit the juggle exists to set up was also the hit that ended
       // it. Measured: launch, jump, swing once, and the enemy peaked 1.42 units
       // up while the hunter sailed to 6.59. The playtest reported that as
@@ -243,8 +243,8 @@ export class Beast extends Enemy {
         break;
     }
 
-    // A launched enemy hangs. At full gravity a 16.5 launch is airborne for
-    // 0.53 s — less than it takes to jump-cancel the launcher and reach it, so
+    // A launched enemy hangs. At full gravity a 13.0 launch is airborne for
+    // 0.42 s — less than it takes to jump-cancel the launcher and reach it, so
     // the juggle the launcher exists to set up was not merely hard but
     // impossible. Landing cancels the hang so it cannot be stacked.
     if (this.juggleT > 0) this.juggleT = this.grounded ? 0 : this.juggleT - dt;

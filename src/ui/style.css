@@ -300,23 +300,33 @@ html, body {
 .sys-window {
   min-width: 330px;
   max-width: 440px;
-  background: var(--panel);
+  /* Slightly more opaque than `--panel`, because there is no blur behind it any
+   * more. See below. */
+  background: rgba(10, 20, 38, 0.93);
   border: 1px solid var(--panel-edge);
   box-shadow: 0 0 40px rgba(50, 160, 220, 0.28), inset 0 0 30px rgba(40, 120, 190, 0.14);
-  backdrop-filter: blur(3px);
   padding: 20px 26px 22px;
   text-align: center;
   animation: sysIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-  /* Own compositor layer, declared up front.
+  /* No `backdrop-filter`. This was the frame-skip, and it took three rounds to
+   * find because the first two explanations were both about *opening* cost.
    *
-   * A backdrop-filter appearing mid-frame makes the compositor allocate a
-   * backdrop texture the size of what it is filtering, and on some GPUs that
-   * allocation lands as a visible hitch. The System window opens at exactly the
-   * moment round 2 reported "the screen seems to pause just before the enemies
-   * appear", so this is the leading suspect — see the warm-up in main.js, which
-   * pays that cost once during the title screen instead. */
+   * A backdrop-filter does not cost once. It re-blurs whatever is behind it on
+   * every frame it is composited, and what is behind this window is a moving 3D
+   * canvas. So the price is paid for the window's entire lifetime.
+   *
+   * `?perf` says so plainly. The spikes are not one frame, they are 1.3 s of
+   * 32–84 ms frames spanning exactly the intro window's time on screen, and the
+   * worst of them carries 0.8 ms of JavaScript. The chasm — the only encounter
+   * in the level with no System window — is the only encounter that never
+   * skipped, including on the run where it spawned three wisps for the first
+   * time. Every encounter that does open a window skips, and no other candidate
+   * fits all four data points.
+   *
+   * The warm-up this replaces paid the first allocation during the title
+   * screen. That was real, and it was not the bill. */
   transform: translateZ(0);
-  will-change: backdrop-filter, opacity, transform;
+  will-change: opacity, transform;
 }
 .sys-window.out { animation: sysOut 0.24s ease-in forwards; }
 .sys-window h3 {

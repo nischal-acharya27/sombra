@@ -14,14 +14,57 @@ const DT = 1 / 120;
 /** Seeds per playthrough sweep. Eight runs cost about a second. */
 const RUNS_PER_SWEEP = 8;
 
+/**
+ * Reaction latency for the two bots that play the level, in seconds.
+ *
+ * Without this the suite cannot say anything about telegraphs, and for a while
+ * it said something false. A bot with zero latency does not need a wind-up: it
+ * can read the active frames and dash out, or — as the naive bot demonstrably
+ * did — simply kill the beast during its wind-up. So "the bot that ignores
+ * tells survives fine" was never evidence that the tells do nothing. It was
+ * evidence that the instrument had no way to measure them.
+ *
+ * A telegraph exists to buy *human* reaction time, so the bot is given a human
+ * one. 250 ms is the usual figure for a simple visual reaction, and it sits
+ * deliberately inside the beast's 0.42 s pounce wind-up: a bot that starts
+ * moving when the tell appears still has 170 ms of margin, and a bot that waits
+ * for the leap itself has none.
+ *
+ * Applied to combat presses only, and identically to both bots. Held keys are a
+ * steady state already in progress, and jumps are pathing rather than reaction:
+ * the bot's one-unit ledge look-ahead is a crude stand-in for a human seeing
+ * the terrain several seconds out, so delaying it does not model reaction time,
+ * it models blindness. Measured, not assumed — with jumps delayed too, both
+ * bots died on all eight seeds having taken 14 damage, which is the sound of a
+ * bot walking off a ledge, and nothing at all about telegraphs.
+ *
+ * The suite's standing warning still stands: if this pair ever stops
+ * separating, the fix is not to handicap the naive bot.
+ */
+const REACTION = 0.25;
+/** Presses the bot plans rather than reacts to. See REACTION. */
+const PLANNED = new Set(['jump']);
+/**
+ * How much less damage reading tells must buy. Below this the telegraph design
+ * is decoration, whatever the doc says about it.
+ */
+const TELL_GAP = 0.85;
+
 class Bot {
-  constructor(game, input) {
+  /** `latency` delays presses only — see REACTION. Probes leave it at 0. */
+  constructor(game, input, latency = 0) {
     this.g = game;
     this.input = input;
     this.p = game.player;
+    this.latency = latency;
+    this.queued = [];
   }
   press(a) {
-    this.input.buffer.set(a, 0.16);
+    if (this.latency <= 0 || PLANNED.has(a)) {
+      this.input.buffer.set(a, 0.16);
+      return;
+    }
+    this.queued.push({ a, t: this.latency });
   }
   hold(a, on = true) {
     if (on) this.input.held.add(a);
@@ -29,8 +72,19 @@ class Bot {
   }
   releaseAll() {
     this.input.held.clear();
+    this.queued.length = 0;
   }
   step() {
+    // Matured presses land before the world moves, so a press queued `latency`
+    // ago is indistinguishable from a key struck this frame.
+    for (let i = this.queued.length - 1; i >= 0; i--) {
+      const q = this.queued[i];
+      q.t -= DT;
+      if (q.t <= 0) {
+        this.input.buffer.set(q.a, 0.16);
+        this.queued.splice(i, 1);
+      }
+    }
     this.g.update(DT);
     this.input.endFrame(DT);
   }
@@ -319,7 +373,7 @@ function checkGaps(game, arcs) {
  */
 function playthrough(game, input, { maxSeconds = 400, readTells = false } = {}) {
   game.start();
-  const bot = new Bot(game, input);
+  const bot = new Bot(game, input, REACTION);
   const p = game.player;
   let attackCd = 0;
   let magicCd = 0;
@@ -699,7 +753,11 @@ function runAll(game, input, seed) {
       runs.push(scope(n * 100 + i, () => playthrough(game, input, { readTells })));
     }
     const cleared = runs.filter((r) => r.ok).length;
-    return { runs, cleared, of: runs.length, best: runs.find((r) => r.ok) ?? runs[0] };
+    // Mean damage over *every* run, cleared or not. A bot that dies has spent
+    // its whole health bar by definition, so dying is not rewarded by the
+    // average — which it would be if only clears were counted.
+    const damage = runs.reduce((a, r) => a + (r.damageTaken ?? PLAYER.maxHp), 0) / runs.length;
+    return { runs, cleared, of: runs.length, damage, best: runs.find((r) => r.ok) ?? runs[0] };
   };
   report.naive = sweep(3, false);
   report.playthrough = sweep(4, true);
@@ -790,25 +848,33 @@ function print(r) {
   // A majority, not a single run. One sample of a stochastic level says nothing
   // about the level; it says something about the seed.
   const readsOk = r.playthrough.cleared * 2 > r.playthrough.of;
-  const naiveOk = r.naive.cleared * 2 <= r.naive.of;
+  const gap = r.naive.damage > 0 ? r.playthrough.damage / r.naive.damage : 1;
+  const gapOk = readsOk && gap <= TELL_GAP;
   lines.push(row('reads tells', r.playthrough, ok(readsOk)));
-  lines.push(row('ignores tells', r.naive, naiveOk ? '  info' : '**LOOK**'));
+  lines.push(row('ignores tells', r.naive, '  info'));
   lines.push('  legend: . cleared   x died   ? stuck');
-  lines.push('  the telegraph-reading bot must clear a majority. The naive bot was');
-  lines.push('  supposed not to — that pair was the combat design stated as a test.');
-  if (!naiveOk) {
+  lines.push(
+    `  damage taken   reads ${r.playthrough.damage.toFixed(0)}   ignores ${r.naive.damage.toFixed(0)}   ` +
+      `reader pays ${(gap * 100).toFixed(0)}% of naive   ${ok(gapOk)}`
+  );
+  lines.push('');
+  lines.push(`  Both bots play at ${Math.round(REACTION * 1000)} ms reaction latency, and the claim under`);
+  lines.push('  test is the damage gap, not who finishes. That pairing replaces an');
+  lines.push('  earlier one that did not survive scrutiny: the suite used to assert');
+  lines.push('  that a bot ignoring telegraphs must *lose*, and cited it as proof the');
+  lines.push('  tells are load-bearing. Two things were wrong with it. The naive bot');
+  lines.push('  was dying to a navigation deadlock rather than to the beasts, and —');
+  lines.push('  the deeper problem — a bot with no reaction delay has no use for a');
+  lines.push('  wind-up at all. It can answer the active frames, or kill the beast');
+  lines.push('  mid-tell, which is exactly what it was observed doing. A telegraph');
+  lines.push('  buys reaction time, so a test of telegraphs has to spend some.');
+  if (!gapOk) {
     lines.push('');
-    lines.push('  IT NO LONGER HOLDS, and the reason is worth reading before you tune');
-    lines.push('  anything against it. The naive bot used to die at the bridge, which');
-    lines.push('  read as "ignoring the tells kills you". It was not: both bots were');
-    lines.push('  hitting a navigation deadlock at the arena barrier, and the dodging');
-    lines.push('  bot simply jittered out of it more often. With the deadlock fixed');
-    lines.push('  both clear every seed, taking the same damage to within a few points,');
-    lines.push('  so dashing on a telegraph currently buys the bot nothing.');
-    lines.push('');
-    lines.push('  That is a statement about the *evidence*, not about the game: a human');
-    lines.push('  playtest confirmed separately that the beast\'s tell reads and is');
-    lines.push('  learnable. What died here is the automated proof, not the design.');
+    lines.push(`  THE GAP HAS CLOSED. Reading tells now buys ${(100 - gap * 100).toFixed(0)}% less damage, under`);
+    lines.push(`  the ${Math.round((1 - TELL_GAP) * 100)}% this asserts. Either a wind-up has been shortened below what`);
+    lines.push(`  ${Math.round(REACTION * 1000)} ms can answer — check BEAST.pounce.windup and the Guardian's`);
+    lines.push('  flares — or something now kills enemies faster than they can commit,');
+    lines.push('  which makes the fight a race rather than a read.');
     lines.push('  Do not "fix" it by making the naive bot worse.');
   }
   lines.push('');
@@ -821,8 +887,16 @@ function print(r) {
         `boss hp ${String(b.bossHpLeft).padStart(4)}  ${String(b.seconds).padStart(5)}s  ${verdict}`
     );
   }
-  lines.push('  mash and dodge must both win. `ranged` is a probe, not a target:');
-  lines.push('  mana regen caps the bolt near a tenth of melee DPS on purpose.');
+  lines.push('  mash and dodge must both win. Boss probes run at zero latency so their');
+  lines.push('  numbers stay comparable with older builds.');
+  lines.push('');
+  lines.push('  `ranged` is a recorded baseline, not yet a gate. It was winning most');
+  lines.push('  seeds against an explicit design intent that kiting should lose, and');
+  lines.push('  the round-3 bolt nerf (33 -> 23 damage, pierce 3 -> 1) is the first');
+  lines.push('  change aimed at it. The Guardian is not being tuned to move this now:');
+  lines.push('  it needs re-tuning anyway once a carried shadow exists, and tuning it');
+  lines.push('  twice is how you end up unable to attribute either result. At that');
+  lines.push('  re-tune this becomes a hard gate — kiting must not win a majority.');
   lines.push('', `seed ${r.seed}   ·   suite ran in ${r.ms} ms`);
 
   el.textContent = lines.join('\n');

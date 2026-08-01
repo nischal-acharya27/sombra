@@ -74,7 +74,6 @@ export class Game {
     this.encounters = ENCOUNTERS.map((e) => ({ ...e, started: false, cleared: false, alive: 0 }));
     this.activeEncounter = null;
     this.moteT = 0;
-    this._hinted = new Set(); // one-time teaching windows, per run
   }
 
   // -- lifecycle ------------------------------------------------------------
@@ -118,7 +117,6 @@ export class Game {
       this.level.setBarriers(e.id, false);
     }
     this.activeEncounter = null;
-    this._hinted.clear();
     // Deferred beats hold a closure over the run that queued them. Left in
     // place across a restart, a finisher landed a moment before death shakes
     // the camera of the new run.
@@ -454,23 +452,14 @@ export class Game {
     }
     if (e.intro) {
       this.audio.play('systemOpen');
-      const shown = this.hud.window({
+      // A teaching line rides inside the intro rather than following it, and
+      // buys a little extra time on screen when there is one to read.
+      this.hud.window({
         title: e.intro.title,
         big: e.intro.body,
-        duration: e.boss ? 2400 : 1700,
+        body: e.intro.note,
+        duration: e.boss ? 2400 : e.intro.note ? 2600 : 1700,
       });
-      // A one-time teaching window, queued behind the intro rather than stacked
-      // on top of it. Shown once per run and never again, and skipped entirely
-      // if the fight is already over — a rule explained after you have used it
-      // is just a window in the way.
-      if (e.hint && !this._hinted.has(e.id)) {
-        this._hinted.add(e.id);
-        shown.then(() => {
-          if (this.state !== 'playing' || e.cleared) return;
-          this.audio.play('systemOpen');
-          this.hud.window({ title: e.hint.title, body: e.hint.body, duration: 4200 });
-        });
-      }
     }
     if (e.boss) {
       this.hud.objective('');
