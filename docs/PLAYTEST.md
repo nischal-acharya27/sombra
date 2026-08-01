@@ -188,13 +188,13 @@ Tick or strike each one. A "no" here is more useful than a polite "yes".
 
 | # | What was broken | What should be true now | Verdict |
 |---|---|---|---|
-| 1 | Taps swallowed unless you paused between them | Mash `J` as fast as you like — the chain runs 1→2→3 with nothing dropped | |
-| 2 | Forward motion died when you attacked mid-jump | Jump forward, press `J` — you keep travelling | |
-| 3 | `R` on the pause screen did nothing visible | `Esc` then `R` restarts the gate immediately | |
-| 4 | Launch → air combo impossible; enemy landed first | `K` to launch, `Space` to chase, `J` `J` connects | |
-| 5 | Finisher felt no wider than the first two swings | Third swing visibly sweeps a wide wedge and reaches further | |
-| 6 | Style meter unnoticed | You see `S / SOVEREIGN` flash top-right without looking for it | |
-| 7 | Wisps killed you four times in seven runs | Still dangerous, no longer the main cause of death | |
+| 1 | Taps swallowed unless you paused between them | Mash `J` as fast as you like — the chain runs 1→2→3 with nothing dropped | Yes |
+| 2 | Forward motion died when you attacked mid-jump | Jump forward, press `J` — you keep travelling | No |
+| 3 | `R` on the pause screen did nothing visible | `Esc` then `R` restarts the gate immediately | Now that I think about it, I guess it was working already. Pressing 'R' on pause screen kind of jumped the screen a little before, and stayed on the Pause screen, so I thought it was not working. Now it's the same. But probably the problem was that pressing 'R' restarted the game, but the 'PAUSED' screen was (and is) still displayed.|
+| 4 | Launch → air combo impossible; enemy landed first | `K` to launch, `Space` to chase, `J` `J` connects |The time is too short. Launches the enemy, but then Space jumps too high, and doesn't land. Maybe K-SPACE-J woule be better instead of 'J' 'J' |
+| 5 | Finisher felt no wider than the first two swings | Third swing visibly sweeps a wide wedge and reaches further | It is still similar. What I wanted was a design change, rather than a 'reach' change.|
+| 6 | Style meter unnoticed | You see `S / SOVEREIGN` flash top-right without looking for it | No. |
+| 7 | Wisps killed you four times in seven runs | Still dangerous, no longer the main cause of death | Now they are too easy. The previous difficulty was good enough.|
 
 ## B. Did anything get worse?
 
@@ -207,6 +207,8 @@ change I am least confident in.*
 - Did the boss feel worse, or just different?
 
 >
+- It's still useful.
+- I am not sure if I am just used to playing the game now, but the boss felt a little easier than all other attempts before. Cleared it in the first attempt.
 
 ## C. The question round 1 left blank
 
@@ -220,6 +222,9 @@ leap can hurt you.*
 - Did you ever realise you can stand right next to a beast safely?
 
 >
+- I noticed it. 
+- Yes.
+- Realised it only after I read this question.
 
 ## D. Anything new
 
@@ -227,3 +232,121 @@ leap can hurt you.*
 bored" — worth a second look now that the controls respond differently.*
 
 >
+- Still not bored. 
+- MAJOR COMMENT: Now, before the enemies appear, the screen seems to pause, like there's a little lag or something before the next frame. This bug was not present before.
+
+---
+---
+
+# Round 3 — build `TBD`
+
+Rounds 1 and 2 above stay untouched.
+
+**Start the server with the new script.** This matters more than it sounds:
+
+```bash
+cd /Users/nischal/Desktop/Vault/03_Projects/Games/sombra && python3 tools/serve.py
+```
+
+`python3 -m http.server` sends no `Cache-Control`, so the browser decides for
+itself how long to keep your ES modules and CSS — and it keeps them. At least
+one round-2 verdict was measured against code that had already been fixed:
+item 3 was reported as still broken, and the fix is verifiably working on a
+fresh build. `tools/serve.py` is the same server with caching switched off.
+
+If anything below looks unchanged, hard-reload once (`Cmd-Shift-R`) before
+writing "no" — and then do write "no", because two of round 2's "no"s were
+completely correct and found real bugs.
+
+## A. The two that were genuinely broken
+
+*Round 2 said no to both of these and was right both times. The round-1 fixes
+had addressed a symptom next to the cause.*
+
+| # | What was actually wrong | What should be true now | Verdict |
+|---|---|---|---|
+| 1 | Air attacks ignored the direction key outright — holding forward and letting go produced identical trajectories. `vx` had been fixed; nobody had checked whether the game was still *listening*. | Jump forward, press `J`, and keep holding forward — you keep driving. Let go mid-swing and you visibly coast instead. Steering works during a swing, at 75% of normal air control. | |
+| 2 | A launched enemy's upward speed was **assigned** by the next hit rather than floored, so the aerial that was meant to extend a juggle was the hit that ended it — the enemy peaked 1.4 units up while you sailed to 6.6. | `K` → `Space` → a single `J` connects, and the enemy stays up. There is a 0.40 s window to press `J`, not an instant. A second `J` extends it further but is not required. | |
+
+## B. The finisher, again
+
+*You asked for a design change rather than a reach change. The wedge was already
+there in round 2 at a quarter opacity, which over a lit sky is very nearly
+nothing — so "still similar" was a fair reading of something that was, visually,
+barely present.*
+
+The third swing is now **amber** where the first two are white-blue, it strikes
+**twice** — a second sweep crosses the first — and it is the only sword hit in
+the game that puts a ring on the ground.
+
+- Does the third swing read as a *different move* now, or still as a bigger one?
+- Two shakes a beat apart instead of one big one: heavier, or just messier?
+
+>
+
+## C. The style meter, for the third time
+
+*Round 1 didn't notice it. Round 2 didn't notice it after the letter grew by a
+third and gained a flash. Making the thing in the corner louder was the wrong
+answer twice, so it now comes to you: a rank-up prints the rank across the
+middle of the screen, once, and then gets out of the way.*
+
+- Did you see it without looking for it this time?
+- Is it in the way?
+
+>
+
+## D. The stutter — the one I could not reproduce
+
+*This is the most important thing in this round, because I have a theory and no
+evidence. Measured in-session: no new shaders compiled on spawn, 1.7 ms to build
+a beast, 0.5 ms for the System window's DOM. None of that is a visible pause.
+The measuring instrument was the problem — the preview I test in throttles the
+frame clock, so frame timing there is meaningless.*
+
+**Leading theory:** the "THREAT DETECTED" window is the only element in the game
+using `backdrop-filter`, and it opens at exactly the moment you describe. The
+first one forces the compositor to allocate a blur texture, which is a known
+hitch on some GPUs. There is now a warm-up at boot that pays that cost during
+the title screen.
+
+**Please run this one in a real browser window, not embedded:**
+
+```bash
+python3 tools/serve.py
+```
+
+then <http://localhost:8000/?perf>. A panel appears bottom-left listing every
+frame over 28 ms and what the game was doing just before it.
+
+- Is the stutter still there at all?
+- If it is: paste or describe the spike lines from the panel. The "why" column
+  is the answer — if it says `sys-window`, the theory was right; if it says
+  `spawn`, it is the enemy build; if it says `—`, it is neither and I have been
+  looking in the wrong place entirely.
+
+>
+
+## E. Wisps, back to round-1 difficulty
+
+*You said round 2 made them too easy and the previous difficulty was fine. Shot
+interval and damage are back to round-1 values (2.5 s, 11 damage). The longer
+wind-up is the one thing I kept — 0.66 s against round 1's 0.55 — because the
+round-1 deaths were falls caused by knockback with no warning, and the wind-up
+is what addressed that specifically without making them weaker.*
+
+- Back to the right threat level, or did the longer wind-up defang them anyway?
+
+>
+
+## F. Free-form
+
+*Especially: anything that got worse. And the beast hint — a System window now
+tells you outright that bodies are harmless, the first time you meet one. Round
+2 said you only worked that out from reading the question.*
+
+- Did the hint land before you needed it, or after you'd already been hit?
+- Anything else.
+
+>
+

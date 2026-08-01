@@ -26,6 +26,9 @@ export class HUD {
       rankMeter: $('rank').querySelector('.meter i'),
       combo: $('combo'),
       comboNum: $('combo').querySelector('b'),
+      callout: $('rank-callout'),
+      calloutLetter: $('rank-callout').querySelector('b'),
+      calloutWord: $('rank-callout').querySelector('span'),
       objective: $('objective'),
       bossBar: $('boss-bar'),
       bossName: $('boss-bar').querySelector('.boss-name'),
@@ -80,8 +83,28 @@ export class HUD {
       this.el.rank.classList.remove('bump');
       void this.el.rank.offsetWidth;
       this.el.rank.classList.add('bump');
+      this._callout(rank, idx);
     }
     return rankedUp;
+  }
+
+  /**
+   * Announce a rank-up over the fight.
+   *
+   * The corner meter went unnoticed in both playtests — the second time after
+   * the letter had already grown by a third and gained a flash. Scaling up the
+   * thing in the corner was answering the wrong question: the player is looking
+   * at the hunter. So the rank comes to them once, where they are looking, and
+   * then leaves.
+   */
+  _callout(rank, idx) {
+    const el = this.el.callout;
+    this.el.calloutLetter.textContent = rank.letter;
+    this.el.calloutWord.textContent = rank.word;
+    for (let i = 0; i < 6; i++) el.classList.toggle('r' + i, i === idx);
+    el.classList.remove('on');
+    void el.offsetWidth;
+    el.classList.add('on');
   }
 
   setCombo(n) {

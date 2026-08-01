@@ -71,7 +71,17 @@ class Enemy extends Actor {
     this.state = 'hurt';
     this.vx = dir * knock;
     if (launch > 0) {
-      this.vy = launch;
+      // A floor on upward speed, never an assignment.
+      //
+      // This is the same bug the player's air lunge had, in the same shape and
+      // with the same symptom. `vy = launch` meant an aerial connecting with a
+      // rising enemy *replaced* its 16.5 launch velocity with air1's 1.2 —
+      // so the one hit the juggle exists to set up was also the hit that ended
+      // it. Measured: launch, jump, swing once, and the enemy peaked 1.42 units
+      // up while the hunter sailed to 6.59. The playtest reported that as
+      // "Space jumps too high and doesn't land", which was exactly right about
+      // the symptom and had no way to see the cause.
+      this.vy = Math.max(this.vy, launch);
       this.grounded = false;
       this.juggleT = JUGGLE.time;
     }

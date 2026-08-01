@@ -74,6 +74,7 @@ export class Game {
     this.encounters = ENCOUNTERS.map((e) => ({ ...e, started: false, cleared: false, alive: 0 }));
     this.activeEncounter = null;
     this.moteT = 0;
+    this._hinted = new Set(); // one-time teaching windows, per run
   }
 
   // -- lifecycle ------------------------------------------------------------
@@ -117,6 +118,11 @@ export class Game {
       this.level.setBarriers(e.id, false);
     }
     this.activeEncounter = null;
+    this._hinted.clear();
+    // Deferred beats hold a closure over the run that queued them. Left in
+    // place across a restart, a finisher landed a moment before death shakes
+    // the camera of the new run.
+    this.vfx.pending.length = 0;
     this.hud.boss(false);
     this.hud.setCombo(0);
     this.hud.setStyle(0);
@@ -292,6 +298,17 @@ export class Game {
 
     this.freeze = Math.max(this.freeze, hitstop);
     this.cam.shake(shake);
+
+    // The finisher lands twice. Two shakes a beat apart read as a heavier blow
+    // than one big one does — a single larger number just makes the camera
+    // noisier, which is the trap the reach change fell into. Amber sparks, a
+    // ground ring and a second jolt give the third swing an identity the first
+    // two have no version of.
+    if (move === 'light3') {
+      this.vfx.finisherImpact(e.x, hy, dir, e.y);
+      this.vfx.later(0.09, () => this.cam.shake(shake * 0.7));
+    }
+
     this._addStyle(style, move);
 
     if (e.dead) this._onKill(e);
@@ -437,7 +454,23 @@ export class Game {
     }
     if (e.intro) {
       this.audio.play('systemOpen');
-      this.hud.window({ title: e.intro.title, big: e.intro.body, duration: e.boss ? 2400 : 1700 });
+      const shown = this.hud.window({
+        title: e.intro.title,
+        big: e.intro.body,
+        duration: e.boss ? 2400 : 1700,
+      });
+      // A one-time teaching window, queued behind the intro rather than stacked
+      // on top of it. Shown once per run and never again, and skipped entirely
+      // if the fight is already over — a rule explained after you have used it
+      // is just a window in the way.
+      if (e.hint && !this._hinted.has(e.id)) {
+        this._hinted.add(e.id);
+        shown.then(() => {
+          if (this.state !== 'playing' || e.cleared) return;
+          this.audio.play('systemOpen');
+          this.hud.window({ title: e.hint.title, body: e.hint.body, duration: 4200 });
+        });
+      }
     }
     if (e.boss) {
       this.hud.objective('');

@@ -159,12 +159,67 @@ html, body {
   transform-origin: right;
   transform: scaleX(0);
 }
-#rank.r0 { color: #8fa6b8; }
-#rank.r1 { color: #7fd0ff; }
-#rank.r2 { color: #7ff2c9; }
-#rank.r3 { color: #ffd24d; }
-#rank.r4 { color: #ff8a3d; }
-#rank.r5 { color: #ff4d7e; }
+/* One source of truth for rank colour: the corner meter and the callout wear
+   the same class, so they can never drift apart. */
+#rank.r0, .rank-callout.r0 { color: #8fa6b8; }
+#rank.r1, .rank-callout.r1 { color: #7fd0ff; }
+#rank.r2, .rank-callout.r2 { color: #7ff2c9; }
+#rank.r3, .rank-callout.r3 { color: #ffd24d; }
+#rank.r4, .rank-callout.r4 { color: #ff8a3d; }
+#rank.r5, .rank-callout.r5 { color: #ff4d7e; }
+
+/* Rank-up, announced over the fight.
+ *
+ * The corner meter was reported unnoticed in round 1, and unnoticed again in
+ * round 2 after the letter went 76px -> 104px with a flash on rank-up. Making
+ * the thing in the corner louder was answering the wrong question: the player
+ * is watching the hunter, not the top-right of the screen, so the meter has to
+ * come to them once, at the moment it changes, and then get out of the way.
+ *
+ * Anchored just above centre and pinned behind the play area's focal point, it
+ * inherits the rank colour from #rank via a custom property so the two can
+ * never disagree. */
+.rank-callout {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  color: #fff;
+}
+.rank-callout.on {
+  animation: rankCallout 0.95s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.rank-callout b {
+  display: block;
+  font-size: 128px;
+  line-height: 0.85;
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: -0.04em;
+  text-shadow: 0 0 40px currentColor, 0 0 90px currentColor, 0 6px 0 rgba(0, 0, 0, 0.5);
+}
+.rank-callout span {
+  display: block;
+  margin-top: 6px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
+  text-shadow: 0 0 18px currentColor;
+}
+@keyframes rankCallout {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.55) skewX(-12deg); }
+  18% { opacity: 1; transform: translate(-50%, -50%) scale(1.12) skewX(-12deg); }
+  34% { transform: translate(-50%, -50%) scale(1) skewX(-12deg); }
+  70% { opacity: 0.95; }
+  100% { opacity: 0; transform: translate(-50%, -58%) scale(1.04) skewX(-12deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rank-callout.on { animation-duration: 0.6s; }
+}
 
 #combo {
   position: absolute;
@@ -252,6 +307,16 @@ html, body {
   padding: 20px 26px 22px;
   text-align: center;
   animation: sysIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Own compositor layer, declared up front.
+   *
+   * A backdrop-filter appearing mid-frame makes the compositor allocate a
+   * backdrop texture the size of what it is filtering, and on some GPUs that
+   * allocation lands as a visible hitch. The System window opens at exactly the
+   * moment round 2 reported "the screen seems to pause just before the enemies
+   * appear", so this is the leading suspect — see the warm-up in main.js, which
+   * pays that cost once during the title screen instead. */
+  transform: translateZ(0);
+  will-change: backdrop-filter, opacity, transform;
 }
 .sys-window.out { animation: sysOut 0.24s ease-in forwards; }
 .sys-window h3 {

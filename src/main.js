@@ -99,7 +99,41 @@ if (location.search.includes('sim')) {
 } else {
   loop.start();
   document.getElementById('boot').classList.add('hidden');
+  // `?perf` records frame times and names what the game was doing at each
+  // spike. It has to be run in a real browser window: the in-app preview
+  // throttles rAF, which is what made the last attempt at the reported spawn
+  // stutter measure nothing at all.
+  if (location.search.includes('perf')) {
+    import('../tools/perf.js').then((m) => m.attach(game, hud));
+  }
 }
+
+/**
+ * Pay the System window's one-off costs during the title screen.
+ *
+ * Round 2 reported a new stutter "before the enemies appear". The first thing
+ * that happens at an encounter is a `.sys-window` opening, and it is the only
+ * element in the game carrying `backdrop-filter` — the compositor has to
+ * allocate a backdrop texture the first time one appears, and that allocation
+ * is a known hitch on some GPUs. Rendering one off-screen at boot moves that
+ * cost to a moment when nothing is moving.
+ *
+ * Measured in-session, the JS half of the spawn is not the problem: zero new
+ * shader programs, 1.7 ms to build a beast's 34 meshes, 0.5 ms for the DOM.
+ * None of that is a visible pause, which is what points at the compositor.
+ * This is a mitigation for the leading theory, not a confirmed fix — the
+ * throttled preview cannot measure frame time, so `?perf` exists to check it
+ * in a real browser window.
+ */
+function warmSystemWindow() {
+  const el = document.createElement('div');
+  el.className = 'sys-window';
+  el.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0.01;pointer-events:none';
+  el.innerHTML = '<h3>&nbsp;</h3><div class="divider"></div><div class="big">&nbsp;</div>';
+  document.body.appendChild(el);
+  requestAnimationFrame(() => requestAnimationFrame(() => el.remove()));
+}
+warmSystemWindow();
 
 // Handy for poking at a running game from the console.
 window.__game = { game, world, loop, audio, input, hud };
