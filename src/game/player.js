@@ -33,6 +33,7 @@ export class Player extends Actor {
     this.magicCd = 0;
     this.hurtT = 0;
     this.slamDiving = false;
+    this.lock = 0; // rooted for this long, ignoring all input
     this.animT = 0;
     this.runPhase = 0;
     this.landSquash = 0;
@@ -62,6 +63,7 @@ export class Player extends Actor {
     this.jumps = 0;
     this.airAttacks = 0;
     this.airDashes = PLAYER.airDashes;
+    this.lock = 0;
   }
 
   // -- queries the combat system asks about ---------------------------------
@@ -88,10 +90,16 @@ export class Player extends Actor {
     this.magicCd -= dt;
     this.hitFlash -= dt;
     this.comboTimer -= dt;
+    this.lock = Math.max(0, this.lock - dt);
     this.landSquash = damp(this.landSquash, 0, 0.0004, dt);
 
     if (this.comboTimer <= 0) this.comboIndex = 0;
-    if (this.mp < this.maxMp) this.mp = Math.min(this.maxMp, this.mp + PLAYER.mpRegen * dt);
+    if (this.mp < this.maxMp) {
+      // Style pays out here rather than in damage: a damage bonus would
+      // invalidate the boss tuning the suite verifies, mana regen does not.
+      const styleMul = this.ctx.styleMul ? this.ctx.styleMul() : 1;
+      this.mp = Math.min(this.maxMp, this.mp + PLAYER.mpRegen * styleMul * dt);
+    }
 
     if (this.state === 'dead') {
       this.vx = damp(this.vx, 0, 0.001, dt);
@@ -132,64 +140,83 @@ export class Player extends Actor {
 
   // -- input ----------------------------------------------------------------
 
+  /**
+   * Read intent from the input buffer.
+   *
+   * **Every branch establishes it can act BEFORE it consumes the press.** This
+   * previously read `input.pressed(x) && canCancel`, which consumes first and
+   * validates second — so a press made during attack recovery was swallowed and
+   * never replayed, the exact opposite of what a buffer is for. Measured cost:
+   * three taps of J at 60 ms produced three consumed presses and one attack. It
+   * ate early dash inputs and pre-landing jumps by the same mechanism.
+   *
+   * The rule this file now keeps: `pressed()` is the last term in the condition.
+   */
   _actions(input) {
+    if (this.lock > 0) return; // rooted — slam landing recovery
+
     const a = this.attack;
     const canCancel = !a || a.t >= a.def.cancel;
 
     // Dash first: it is the defensive option, and a player mashing dash under
     // pressure means it, whatever else is queued.
-    if (input.pressed('dash') && this.dashCd <= 0 && canCancel && this.state !== 'dash') {
-      if (this.grounded || this.airDashes > 0) {
-        if (!this.grounded) this.airDashes--;
-        this._startDash(input);
-        return;
-      }
+    const canDash =
+      canCancel && this.dashCd <= 0 && this.state !== 'dash' && (this.grounded || this.airDashes > 0);
+    if (canDash && input.pressed('dash')) {
+      if (!this.grounded) this.airDashes--;
+      this._startDash(input);
+      return;
     }
 
     if (this.state === 'dash') return;
 
-    if (input.pressed('magic') && canCancel && this.magicCd <= 0) {
+    if (canCancel && this.magicCd <= 0 && input.peek('magic')) {
       if (this.mp >= MAGIC.cost) {
+        input.pressed('magic');
         this._castMagic();
         return;
       }
+      // Out of mana: consume anyway, or the buffered press retries every frame
+      // and the denial sound machine-guns for as long as the buffer lives.
+      input.pressed('magic');
       this.ctx.audio?.play('deny');
       this.ctx.toast?.('NOT ENOUGH MANA', 'warn');
     }
 
-    if (input.pressed('heavy') && canCancel) {
+    if (canCancel && input.pressed('heavy')) {
       this._startAttack(this.grounded ? 'launcher' : 'slam');
       return;
     }
 
-    if (input.pressed('light') && canCancel) {
-      if (!this.grounded) {
+    if (canCancel) {
+      if (this.grounded) {
+        if (input.pressed('light')) {
+          const chain = ['light1', 'light2', 'light3'];
+          this._startAttack(chain[this.comboIndex % 3]);
+          this.comboIndex++;
+          this.comboTimer = 0.55;
+          return;
+        }
+      } else {
         // Air chain is two hits, and the budget is per airtime rather than per
         // chain — otherwise letting one swing finish and starting a fresh one
         // repeats the hang-time frames forever.
-        if (this.airAttacks >= PLAYER.airAttackLimit) return;
         const next = a && a.key === 'air1' ? 'air2' : a && a.key === 'air2' ? null : 'air1';
-        if (next) {
+        if (next && this.airAttacks < PLAYER.airAttackLimit && input.pressed('light')) {
           this.airAttacks++;
           this._startAttack(next);
+          return;
         }
-      } else {
-        const chain = ['light1', 'light2', 'light3'];
-        this._startAttack(chain[this.comboIndex % 3]);
-        this.comboIndex++;
-        this.comboTimer = 0.55;
       }
-      return;
     }
 
-    if (input.pressed('jump')) {
-      const jumpCancelable = !a || a.t >= a.def.cancel || a.def.jumpCancel;
-      if (!jumpCancelable) return;
-      if (this.grounded || this.coyote > 0) {
-        this._jump(PHYS.jumpVel);
-      } else if (this.jumps < this.maxJumps) {
-        this._jump(PHYS.doubleJumpVel, true);
-      }
+    // A jump pressed just before landing must survive until the feet touch,
+    // which it cannot do if the press is consumed while still airborne.
+    const jumpCancelable = !a || a.t >= a.def.cancel || a.def.jumpCancel;
+    const canJump = jumpCancelable && (this.grounded || this.coyote > 0 || this.jumps < this.maxJumps);
+    if (canJump && input.pressed('jump')) {
+      if (this.grounded || this.coyote > 0) this._jump(PHYS.jumpVel);
+      else this._jump(PHYS.doubleJumpVel, true);
     }
   }
 
@@ -253,8 +280,16 @@ export class Player extends Actor {
       if (this.grounded && !this.level.hasFloorAhead(this.x + this.facing * 1.5, this.y, 1.2)) {
         lunge = Math.min(lunge, 1.2);
       }
-      this.vx = this.facing * lunge;
-      if (!this.grounded) this.vy = Math.max(this.vy, -2);
+      if (this.grounded) {
+        this.vx = this.facing * lunge;
+      } else {
+        // Airborne, the lunge sets a floor on speed, never a ceiling. Assigning
+        // it outright turned a 9.6-unit running jump into a 3.4-unit one the
+        // instant you attacked, which reads as the character stopping dead.
+        const forward = this.vx * this.facing;
+        this.vx = this.facing * Math.max(forward, lunge);
+        this.vy = Math.max(this.vy, -2);
+      }
     }
     this.ctx.audio?.play(def.sfx);
   }
@@ -296,7 +331,12 @@ export class Player extends Actor {
     if (rooted) {
       // Attack lunge bleeds off fast, but steering is disabled: committing to a
       // swing has to mean something.
-      this.vx = damp(this.vx, 0, 0.00002, dt);
+      //
+      // In the air it barely bleeds at all. On the ground, planting your feet to
+      // swing should kill your momentum; mid-jump there is nothing to plant, and
+      // scrubbing 24% of speed per 25 ms made a running jump-attack read as
+      // hitting a wall in mid-air.
+      this.vx = damp(this.vx, 0, this.grounded ? 0.00002 : 0.55, dt);
     } else if (this.state !== 'hurt') {
       const accel = this.grounded ? PLAYER.accel : PLAYER.airAccel;
       if (dir !== 0) {
@@ -365,6 +405,7 @@ export class Player extends Actor {
       this.ctx.audio?.play('slam');
       this.slamDiving = false;
       this._endAttack();
+      this.lock = ATTACKS.slam.landLock;
     } else {
       this.ctx.vfx?.dust(this.x, this.y, 3 + Math.round(impact * 7));
       if (impact > 0.15) this.ctx.audio?.play('land');

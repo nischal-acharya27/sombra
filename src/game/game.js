@@ -41,6 +41,7 @@ export class Game {
       shockwaveFromBoss: (x, y, d) => this.bossShockwave(x, y, d),
       onEnrage: () => this.onEnrage(),
       onTelegraph: (name) => this.onTelegraph(name),
+      styleMul: () => STYLE.mpRegenByRank[this.styleRank()] ?? 1,
     };
 
     this.player = new Player(this.level, this.ctx);
@@ -366,6 +367,13 @@ export class Game {
     });
     this.bolts.push(b);
     this.entityRoot.add(b.root);
+  }
+
+  /** Index into STYLE.ranks for the current meter value. */
+  styleRank() {
+    let idx = 0;
+    for (let i = 0; i < STYLE.ranks.length; i++) if (this.style >= STYLE.ranks[i].at) idx = i;
+    return idx;
   }
 
   // -- style ----------------------------------------------------------------

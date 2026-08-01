@@ -25,11 +25,15 @@ One line per attempt. Time, how far you got, what killed you.
 
 | # | Reached | Died to | Time | Note |
 |---|---------|---------|------|------|
-| 1 | | | | |
-| 2 | | | | |
-| 3 | | | | |
-| 4 | | | | |
+| 1 | The wisps part| Falling while trying to kill those things | |Perfect difficulty I would say. |
+| 2 | The wisps? thing after the shadow beasts| Falling while trying to kill those things | |Perfect difficulty I would say. |
+| 3 | After the part of shadow beasts| Fell while using dash (shift key) | | |
+| 4 | The boss| The boss | | Perfect difficulty I would say. |
+| 5 | The wisps again| Fell jumping trying to kill them | | Maybe decrease the difficulty against these things a tiny little bit for the first level. |
+| 5 | The wisps again after the shadow beasts| Fell trying to escape their shooting | Finally noted.. takes ~26 seconds to get there, and ~29 second to die. | Maybe decrease the difficulty against these things a tiny little bit for the first level. |
+| 5 | Boss | - | 1m28s |  |
 
+ 
 ---
 
 ## The questions that block the next block of work
@@ -45,7 +49,16 @@ camera three times as hard.*
 - Is the third swing obviously different from the first two, or does the chain
   read as three of the same thing?
 
->
+> 
+- The hit feels like contact, and the enemy loses numbers.
+
+- The keyboard strokes are not registered if they are tapped very quickly in succession. There needs to be a litttlle delay between the key-strokes if it is pressed 2 or 3 times.
+
+- The 3rd strike is different, the 3rd strike always produces this different kind of style that feels a little heavier, yes.
+That being said, the impact area, or the area the swing covers doesn't seem to be broader than the first two strikes. I feel like it should look the shape of something like a piece of pizza. Right now, it's more like a part of concentric circles, like a 1/4th part of a donut, for examples.
+
+
+
 
 ### 2. Does the beast's pounce read?
 
@@ -68,7 +81,10 @@ the game tells you this.*
 - Did you find it on your own? If so, when — and what prompted it?
 - If you didn't, did you use `K` at all, or ignore it?
 
->
+> 
+- I didn't find it on my own. But I attempted after reading this, and the time/distance is too short for launching the air-combo. 'K' launches the enemy in the air, but by the time that I jump to hit 'J' 'J', the enemy is already down on the ground.
+
+- I used 'K' after discovering it, and it eased the game/killing the enemies a lot, you just jump, and press 'K', whcich pushes the enemies away, and also deals damage at the same time.
 
 ### 4. How many attempts to clear the Guardian?
 
@@ -81,6 +97,11 @@ left, dodging with 83 — so it should be beatable badly and comfortable when re
 - Did you notice the second phase when the core turns red?
 
 >
+- It took quitea a few attempts to clear the boss... maybe 4 or 5? When I cleared it. 
+I used a lot of 'magic' ('L') in the last round when I cleared it. 
+- I am not sure if I saw 'volley' from the boss... The boss used some kind of a magic/shooting techniques too in one of the attempts, so that is something that I noticed as well. The other attacks were not that difficult to read.
+- 
+- I did notice the second phase when the core turns red.
 
 ### 5. Is the chasm tense or trivial?
 
@@ -91,6 +112,8 @@ plus a double jump. Deliberately forgiving, possibly too forgiving.*
 - Did you fall? If so, was it the jump or something knocking you off?
 
 >
+- Jumps and distances are fine. 
+- Yes, I fell. But it was usually during the fight with those things that shoot at you.
 
 ### 6. Is the bridge ambush fair?
 
@@ -100,7 +123,8 @@ survives, and the tuning was set against that bot rather than a person.*
 - Overwhelming, or the best fight in the level?
 - Did the wisps feel like a threat, or noise?
 
->
+> 
+- I would say it was a bit overwhelming until I learned to jump and press 'K'. The wisps are a real threat.
 
 ### 7. Did you notice the style meter?
 
@@ -110,7 +134,9 @@ costs you over half the meter.*
 - Did you see it during play, or only when you stopped to look?
 - Did it ever change what you did?
 
->
+> 
+- I think I didn't notice it until I read this question. 
+- I don't think it changed what I did after I saw it though.
 
 ---
 
@@ -119,14 +145,15 @@ costs you over half the meter.*
 *Any moment the camera lost you, or you lost track of where the floor was, or
 you didn't know what killed you. These are usually bugs rather than taste.*
 
->
+> 
+
 
 ## Where were you bored?
 
 *The most valuable question in the document, and the easiest to skip. Name the
 seconds you wanted to skip past.*
 
->
+> Not bored at all.
 
 ## Everything else
 
@@ -134,3 +161,5 @@ seconds you wanted to skip past.*
 articulate. Write it badly rather than not at all.*
 
 >
+- Hitting 'R' when paused with Esc doesn't restart the gate.
+- if you jump and go forawrd, and attack, the motion stops. I would like the motion to continue even when you're attacking.

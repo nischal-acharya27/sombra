@@ -71,8 +71,11 @@ export const ATTACKS = {
     knock: 4, launch: 0, hitstop: 0.055, style: 8, shake: 0.11, sfx: 'slash2',
   },
   light3: {
+    // Reach is the finisher's identity. At hw 1.18 against 0.98 and 1.02 it was
+    // three percent wider than the swings before it, which is invisible in the
+    // hand — the animation said "heavy" and the hitbox said "identical".
     name: 'Rending Fang', dur: 0.54, active: [0.17, 0.30], cancel: 0.38,
-    damage: 31, lunge: 6.4, reach: { cx: 1.35, cy: 1.0, hw: 1.18, hh: 0.95 },
+    damage: 31, lunge: 6.4, reach: { cx: 1.5, cy: 1.0, hw: 1.6, hh: 1.2 },
     knock: 13, launch: 3.5, hitstop: 0.115, style: 18, shake: 0.30, sfx: 'heavy',
   },
   launcher: {
@@ -98,9 +101,24 @@ export const ATTACKS = {
     damage: 34, lunge: 0, reach: { cx: 0.9, cy: 0.7, hw: 1.5, hh: 0.9 },
     knock: 9, launch: 5.5, hitstop: 0.14, style: 24, shake: 0.42, sfx: 'slam',
     dive: 34, // downward velocity while diving
-    shockwave: { radius: 4.6, damage: 22, knock: 11, launch: 9 },
+    // Trimmed from radius 4.6 / damage 22. Jump-then-slam was solving every
+    // crowd in the game, which quietly retired the rest of the move list.
+    // `landLock` is the real cost: 0.3 s rooted on impact, so spamming it into
+    // a group now hands the group a free window.
+    shockwave: { radius: 3.6, damage: 14, knock: 11, launch: 9 },
+    landLock: 0.30,
   },
 };
+
+/**
+ * Launched enemies fall slowly for a moment.
+ *
+ * Without this the juggle is not merely hard, it is impossible: a launch sends
+ * a beast up at 16.5 against gravity 62, so it is airborne for 0.53 s — less
+ * time than it takes to jump-cancel the launcher and reach it. The playtest
+ * reported "the enemy is already down before I get there", which was accurate.
+ */
+export const JUGGLE = { time: 0.8, gravityMul: 0.40 };
 
 export const MAGIC = {
   name: "Décret",
@@ -151,7 +169,11 @@ export const WISP = {
   leash: 9, // never strays this far horizontally from where it spawned
   descend: 4.5, // ...nor this far below it, which keeps it out of the void
   keepDistance: 5.5,
-  shoot: { interval: 2.4, windup: 0.55, speed: 15, damage: 11, life: 3 },
+  // Softened for a first level. Four of seven playtest deaths were falls while
+  // fighting wisps over the chasm — the damage was never the problem, the
+  // knockback arriving with little warning while airborne was. Longer wind-up
+  // to see it coming, longer gap between shots, less damage.
+  shoot: { interval: 3.1, windup: 0.72, speed: 15, damage: 9, life: 3 },
   exp: 22,
   contactDamage: 0,
 };
@@ -192,6 +214,14 @@ export const STYLE = {
   repeatPenalty: 0.42, // repeating the same move scores this fraction
   hitTakenLoss: 0.45, // fraction of meter kept after being hit
   comboWindow: 2.2,
+  // The meter went unnoticed in playtest and changed nothing about how the game
+  // was played, which makes it decoration. Mana regen scales with rank instead:
+  // it rewards the variety the meter measures, it is felt rather than read, and
+  // unlike a damage bonus it does not invalidate the verified boss tuning.
+  // Kept modest. At [1 … 2.5] the pure-kiting bot went from losing the boss
+  // fight to winning it with 86 of 134 HP left — a reward for style that makes
+  // the safest, least stylish strategy the best one is self-defeating.
+  mpRegenByRank: [1, 1.12, 1.26, 1.4, 1.55, 1.7],
 };
 
 export const PROGRESSION = {

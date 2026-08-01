@@ -121,8 +121,16 @@ html, body {
   transition: opacity 0.22s, transform 0.22s;
 }
 #rank.on { opacity: 1; transform: none; }
+/* Rank-up needs to happen in peripheral vision — the playtest never noticed the
+   meter at all until it was pointed out. */
+#rank.bump .letter { animation: rankBump 0.42s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes rankBump {
+  0% { transform: scale(1.75); filter: brightness(2.4); }
+  60% { transform: scale(0.94); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
 #rank .letter {
-  font-size: 76px;
+  font-size: 104px;
   line-height: 0.82;
   font-weight: 800;
   font-style: italic;
@@ -131,7 +139,7 @@ html, body {
   text-shadow: 0 0 26px currentColor, 0 5px 0 rgba(0, 0, 0, 0.45);
 }
 #rank .word {
-  font-size: 13px;
+  font-size: 16px;
   letter-spacing: 0.26em;
   font-weight: 700;
   margin-top: 2px;
@@ -139,7 +147,7 @@ html, body {
 }
 #rank .meter {
   margin-top: 7px;
-  height: 4px;
+  height: 6px;
   background: rgba(4, 10, 22, 0.7);
   transform: skewX(-18deg);
   overflow: hidden;

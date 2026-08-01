@@ -102,6 +102,26 @@ export class VFX {
       return m;
     });
 
+    // The finisher's arc. A near-zero inner radius makes this a filled sector
+    // — the "slice of pizza" the playtest asked for — where the light swings
+    // stay thin rings. The shape is the tell that this swing reaches further.
+    this.wedges = this._pool(8, () => {
+      const m = new THREE.Mesh(
+        new THREE.RingGeometry(0.10, 1.5, 34, 1, 0, 1.5),
+        new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+          fog: false,
+          toneMapped: false,
+        })
+      );
+      return m;
+    });
+
     this.rings = this._pool(10, () => {
       const m = new THREE.Mesh(
         new THREE.RingGeometry(0.86, 1, 40),
@@ -303,7 +323,7 @@ export class VFX {
   slashArc(player, key) {
     const spec = ARC_SPECS[key];
     if (!spec) return;
-    const a = this._take(this.arcs);
+    const a = this._take(spec.shape === 'wedge' ? this.wedges : this.arcs);
     a.position.set(
       player.x + player.facing * spec.ox,
       player.y + spec.oy,
@@ -314,7 +334,7 @@ export class VFX {
     a.rotation.set(0, 0, spec.rot * player.facing);
     a.scale.set(spec.scale * player.facing, spec.scale, 1);
     a.material.color.setHex(spec.color);
-    a.material.opacity = 0.34;
+    a.material.opacity = spec.alpha ?? 0.34;
     Object.assign(a.userData, {
       kind: 'arc',
       life: spec.life,
@@ -323,6 +343,7 @@ export class VFX {
       grow: spec.grow,
       base: spec.scale,
       flip: player.facing,
+      alpha: spec.alpha ?? 0.34,
     });
   }
 
@@ -472,7 +493,7 @@ export class VFX {
     g.attributes.aSize.needsUpdate = true;
     g.attributes.aAlpha.needsUpdate = true;
 
-    for (const pool of [this.arcs, this.rings, this.smears, this.flashes, this.labels]) {
+    for (const pool of [this.arcs, this.wedges, this.rings, this.smears, this.flashes, this.labels]) {
       for (const o of pool.items) {
         if (!o.visible) continue;
         o.userData.life -= dt;
@@ -484,7 +505,7 @@ export class VFX {
         const u = o.userData.life / o.userData.maxLife;
         switch (o.userData.kind) {
           case 'arc': {
-            o.material.opacity = u * u * 0.34;
+            o.material.opacity = u * u * (o.userData.alpha ?? 0.34);
             o.rotation.z += o.userData.spin * dt;
             const s = o.userData.base * (1 + (1 - u) * o.userData.grow);
             o.scale.set(s * o.userData.flip, s, 1);
@@ -544,7 +565,7 @@ function radialTexture(size = 128) {
 const ARC_SPECS = {
   light1: { ox: 1.55, oy: 1.05, scale: 1.05, rot: 1.5, spin: -9, life: 0.16, grow: 0.28, color: 0xdfe8ff },
   light2: { ox: 1.55, oy: 1.05, scale: 1.05, rot: -1.9, spin: 9, life: 0.16, grow: 0.28, color: 0xdfe8ff },
-  light3: { ox: 1.75, oy: 1.05, scale: 1.45, rot: 1.9, spin: -7, life: 0.26, grow: 0.4, color: P.violetGlow },
+  light3: { ox: 1.55, oy: 1.05, scale: 1.35, rot: 1.75, spin: -6, life: 0.26, grow: 0.35, color: P.violetGlow, shape: 'wedge', alpha: 0.24 },
   launcher: { ox: 1.15, oy: 0.95, scale: 1.3, rot: -2.5, spin: 8, life: 0.24, grow: 0.45, color: P.cyan },
   air1: { ox: 1.45, oy: 1.0, scale: 1.0, rot: 1.4, spin: -9, life: 0.15, grow: 0.28, color: 0xdfe8ff },
   air2: { ox: 1.5, oy: 1.0, scale: 1.1, rot: -1.8, spin: 9, life: 0.17, grow: 0.32, color: 0xdfe8ff },

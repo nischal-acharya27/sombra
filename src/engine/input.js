@@ -6,7 +6,14 @@
 // than testing a single frame, so an input made up to BUFFER seconds early
 // still lands.
 
-const BUFFER = 0.16; // seconds an unconsumed press stays live
+// Seconds an unconsumed press stays live.
+//
+// 0.16 was too short to cover a three-hit chain: the moves themselves cannot
+// advance faster than cancel-window + cancel-window (~0.33 s), so a third tap
+// made during the first swing expired before the game was ever able to use it.
+// The player experiences that as a dropped input, because it is one. 0.24 spans
+// the gap while staying well short of "the game plays a move I no longer want".
+const BUFFER = 0.24;
 
 const BINDINGS = {
   left: ['KeyA', 'ArrowLeft'],

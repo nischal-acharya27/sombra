@@ -59,6 +59,9 @@ function startRun() {
   hud.screen('title', false);
   hud.screen('death', false);
   hud.screen('clear', false);
+  // Restarting from the pause menu left this overlay up: the gate really did
+  // reset, you just could not see it happen.
+  hud.screen('pause', false);
   paused = false;
   game.start();
 }

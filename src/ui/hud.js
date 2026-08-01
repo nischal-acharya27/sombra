@@ -74,6 +74,13 @@ export class HUD {
 
     const rankedUp = idx > this._lastRank && meter > 4;
     this._lastRank = idx;
+    if (rankedUp) {
+      // Restart the animation: removing and re-adding in the same frame is a
+      // no-op, so force a reflow between the two.
+      this.el.rank.classList.remove('bump');
+      void this.el.rank.offsetWidth;
+      this.el.rank.classList.add('bump');
+    }
     return rankedUp;
   }
 

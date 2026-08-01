@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { Actor, boxHit } from './actor.js';
 import { buildBeast, buildWisp } from '../render/models.js';
-import { BEAST, WISP, PHYS } from './config.js';
+import { BEAST, WISP, PHYS, JUGGLE } from './config.js';
 import { P } from '../render/palette.js';
 import { clamp, damp, lerp, rand } from '../engine/mathx.js';
 
@@ -38,6 +38,7 @@ class Enemy extends Actor {
     this.exp = cfg.exp;
     this.removeMe = false;
     this.deathT = 0;
+    this.juggleT = 0; // launched: falls slowly, so a juggle is possible
     this.spawnT = 0.45; // rise-from-shadow entrance
   }
 
@@ -72,6 +73,7 @@ class Enemy extends Actor {
     if (launch > 0) {
       this.vy = launch;
       this.grounded = false;
+      this.juggleT = JUGGLE.time;
     }
     this.ctx.audio?.play('impact');
     return true;
@@ -231,7 +233,12 @@ export class Beast extends Enemy {
         break;
     }
 
-    this.applyGravity(dt, PHYS.gravity);
+    // A launched enemy hangs. At full gravity a 16.5 launch is airborne for
+    // 0.53 s — less than it takes to jump-cancel the launcher and reach it, so
+    // the juggle the launcher exists to set up was not merely hard but
+    // impossible. Landing cancels the hang so it cannot be stacked.
+    if (this.juggleT > 0) this.juggleT = this.grounded ? 0 : this.juggleT - dt;
+    this.applyGravity(dt, PHYS.gravity * (this.juggleT > 0 ? JUGGLE.gravityMul : 1));
     this.moveAndCollide(dt);
     this._animate(dt);
     this.syncRig();
