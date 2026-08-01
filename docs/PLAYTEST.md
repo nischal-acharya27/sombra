@@ -238,7 +238,7 @@ bored" — worth a second look now that the controls respond differently.*
 ---
 ---
 
-# Round 3 — build `TBD`
+# Round 3 — build `e1ea490`
 
 Rounds 1 and 2 above stay untouched.
 
