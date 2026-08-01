@@ -45,6 +45,10 @@ export const PLAYER = {
   // without a cap, mashing attack is a slow-fall button and every pit in the
   // level becomes optional.
   airAttackLimit: 2,
+  // Fraction of air acceleration you keep while swinging. Not 1: the lunge is
+  // a commitment and should still read as one. Not 0 either, which is what it
+  // was — see the `rooted` note in Player._move.
+  airAttackSteer: 0.75,
 };
 
 /**
@@ -169,11 +173,17 @@ export const WISP = {
   leash: 9, // never strays this far horizontally from where it spawned
   descend: 4.5, // ...nor this far below it, which keeps it out of the void
   keepDistance: 5.5,
-  // Softened for a first level. Four of seven playtest deaths were falls while
-  // fighting wisps over the chasm — the damage was never the problem, the
-  // knockback arriving with little warning while airborne was. Longer wind-up
-  // to see it coming, longer gap between shots, less damage.
-  shoot: { interval: 3.1, windup: 0.72, speed: 15, damage: 9, life: 3 },
+  // Round 1 was 2.4 / 0.55 / 11 and read as too sharp; round 2 at 3.1 / 0.72 / 9
+  // read as "now they are too easy — the previous difficulty was good enough".
+  // So the interval and the damage go back, and only the wind-up stays long.
+  //
+  // That split is deliberate rather than a compromise. Four of seven round-1
+  // deaths were falls while fighting wisps over the chasm, and the damage was
+  // never what killed anyone — knockback arriving with no warning while
+  // airborne was. The wind-up is the part that addressed that specifically, and
+  // it is the part with no cost to the threat level: you can see the shot
+  // coming and still have to deal with it.
+  shoot: { interval: 2.5, windup: 0.66, speed: 15, damage: 11, life: 3 },
   exp: 22,
   contactDamage: 0,
 };

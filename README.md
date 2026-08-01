@@ -20,12 +20,20 @@ asset file.
 ## Run it
 
 ```bash
-python3 -m http.server 8000
+python3 tools/serve.py
 ```
 
-Then open <http://localhost:8000>. Any static file server works; it must be
-served over HTTP rather than opened as a `file://` URL, because the game is a
-set of ES modules resolved through an import map.
+Then open <http://localhost:8000>. It must be served over HTTP rather than
+opened as a `file://` URL, because the game is a set of ES modules resolved
+through an import map.
+
+Use that script rather than `python3 -m http.server`. `http.server` sends
+`Last-Modified` and no `Cache-Control`, so the browser falls back to heuristic
+freshness and serves stale modules and CSS without asking — an edit appears to
+have had no effect, and you go and change something that was never wrong. It has
+cost this project two wrong diagnoses and, most likely, a whole round of
+playtest verdicts. `tools/serve.py` is `http.server` with `no-store` on every
+response.
 
 ## Controls
 
@@ -49,10 +57,13 @@ never inside the active frames, so a chain feels responsive without one input
 producing two hitboxes.
 
 The launcher pops an enemy into the air and can be **jump-cancelled**, which is
-the whole reason it exists: launch, chase it up, and finish the juggle with the
-two-hit aerial. Air attacks suppress gravity for a few frames so a juggle stays
-airborne — capped at two per airtime, or mashing attack would just be a
-slow-fall button and every pit in the level would become optional.
+the whole reason it exists: `K` to launch, `Space` to chase it up, then `J`.
+There is a 0.40-second window to land that swing, and a second `J` extends the
+juggle rather than being required by it. Air attacks suppress gravity for a few
+frames so a juggle stays airborne — capped at two per airtime, or mashing attack
+would just be a slow-fall button and every pit in the level would become
+optional. Swinging never takes the controls away from you: a running jump keeps
+all of its speed through a swing, and you can still steer during one.
 
 The style meter rewards **variety**, not volume: repeating a move scores a
 fraction of its value, and taking a hit costs you more than half the meter.
@@ -105,6 +116,14 @@ This is not optional tooling. Browsers throttle `requestAnimationFrame` in an
 unfocused tab, so any automated playtest that waits on wall-clock time advances
 the simulation by a fraction of a second and silently measures nothing.
 
+Every test runs in **its own seed scope**, and the playthrough runs **eight
+seeds** rather than one. Both of those were bought the hard way. The suite used
+to run a single sequential stream, so a change that made the playthrough two
+seconds longer consumed a different number of draws and silently re-rolled every
+boss fight after it — numbers moved for two reasons at once and there was no way
+to tell which. And a single playthrough sample was never evidence about the
+level; it was evidence about a seed.
+
 Current results:
 
 | | |
@@ -112,20 +131,46 @@ Current results:
 | Jump envelope | **3.36** units high, **6.08** across at a run — 5.8 and 9.76 with the double jump |
 | Gaps | widest is 3.8 (needs 4.5 of the 6.08); every one clearable on a single jump |
 | Move list | all six attacks connect for their advertised damage |
-| Playthrough | a bot that **reads telegraphs** clears the gate in 64.6 s at level 3; one that **ignores** them dies at the ambush |
-| Gate Guardian | mash wins at 72 HP, dodge at 83, pure kiting loses |
+| Air attack | a running jump keeps **100%** of top speed through a swing, and the direction key still commands 1.9 units of travel during one |
+| Launcher juggle | `K` → `Space` → `J` connects across a **0.40 s** window; the launched enemy rises 5.39 against a 6.59 jump |
+| Playthrough | the telegraph-reading bot clears **8/8** seeds, average 58 s |
+| Gate Guardian | mash and dodge both win with ~100 HP left |
 
-That last pair of rows is the design stated as a test. The telegraph-reading
-bot must clear and the naive one must not, which is what keeps the tells
-load-bearing instead of decorative. For the boss, melee has to be a winning
-answer and mana must not be — the `ranged` bot is a balance probe, and if it
-ever starts winning comfortably the bolt is overtuned.
+For the boss, melee has to be a winning answer and mana must not be — the
+`ranged` bot is a balance probe, and if it ever starts winning comfortably the
+bolt is overtuned. **It currently wins**, on six of eight seeds, which is a real
+signal and is recorded here rather than quietly tuned away.
 
-Six real bugs came out of writing it, including enemies being teleported onto
-the tops of arena barriers (the collision solver ignored penetration when
-velocity was zero), wisps following the player down into the void, and attack
-lunges walking you off ledges while the swing rooted your steering. The commit
-history has the details.
+One claim that used to live here has been **withdrawn**. The suite reported that
+a bot ignoring telegraphs died at the ambush, and that pair — reader clears,
+naive dies — was cited as the combat design stated as a test. It was an
+artifact. Both bots were hitting a navigation deadlock at a sealed arena
+barrier, and the dodging bot merely jittered out of it more often; with the
+deadlock fixed both clear every seed taking the same damage. Dashing on a
+telegraph currently buys the bot nothing.
+
+That is a statement about the evidence, not the game. A human playtest confirmed
+separately that the beast's tell reads, that 0.42 s is enough to react to, and
+that it is learnable. What died is the automated proof, not the design — and the
+fix is not to make the naive bot worse until the old answer comes back.
+
+Six real bugs came out of writing the suite. Two more came out of the round-2
+playtest: air attacks were ignoring the direction key outright, and a launched
+enemy's upward velocity was being *assigned* rather than floored, so the aerial
+that was supposed to extend a juggle was the hit that ended it.
+
+### Frame times
+
+Open <http://localhost:8000/?perf> in a **real browser window** and play. It
+records every frame and, for each one over 28 ms, names what the game did in the
+250 ms before it — an encounter firing, an enemy spawning, a System window
+opening. It must not be run in an embedded or backgrounded view, where rAF
+throttling makes frame timing meaningless.
+
+Those bugs included enemies being teleported onto the tops of arena barriers
+(the collision solver ignored penetration when velocity was zero), wisps
+following the player down into the void, and attack lunges walking you off
+ledges while the swing rooted your steering. The commit history has the details.
 
 ## How it looks
 
@@ -180,6 +225,8 @@ src/
     hud.js, style.css the System's interface
 tools/
   sim.js              the scripted verification suite
+  perf.js             frame-time recorder — ?perf, real browser only
+  serve.py            static server with caching switched off
 vendor/three/         three.js v0.185.1, pinned
 ```
 

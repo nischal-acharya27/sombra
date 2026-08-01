@@ -310,7 +310,19 @@ export class Player extends Actor {
   _move(dt, input) {
     const a = this.attack;
     const attacking = !!a;
-    const rooted = attacking && a.key !== 'slam';
+    // Committing to a swing roots your steering — **on the ground**. Planting
+    // your feet to swing should cost you your momentum.
+    //
+    // Mid-jump there is nothing to plant, and taking the controls away for the
+    // 0.30 s of a swing (0.64 s for the two-hit chain, against a jump that
+    // lasts 0.63 s) spends most of a jump as a passenger. `cb10a5d` answered
+    // the playtest's "the motion stops" by fixing `vx`, and round 2 still said
+    // no — because the missing thing was never velocity. Holding the direction
+    // key through a swing and releasing it produced identical trajectories to
+    // two decimal places: the input was simply not being read.
+    // `measureAirAttack` in tools/sim.js fails if that ever returns to zero.
+    const rooted = attacking && a.key !== 'slam' && this.grounded;
+    const swinging = attacking && a.key !== 'slam' && !this.grounded;
 
     if (this.state === 'dash') {
       // Dash owns velocity outright; no gravity, no steering.
@@ -329,25 +341,29 @@ export class Player extends Actor {
     const dir = input ? input.moveX : 0;
 
     if (rooted) {
-      // Attack lunge bleeds off fast, but steering is disabled: committing to a
-      // swing has to mean something.
-      //
-      // In the air it barely bleeds at all. On the ground, planting your feet to
-      // swing should kill your momentum; mid-jump there is nothing to plant, and
-      // scrubbing 24% of speed per 25 ms made a running jump-attack read as
-      // hitting a wall in mid-air.
-      this.vx = damp(this.vx, 0, this.grounded ? 0.00002 : 0.55, dt);
+      // Grounded swing: the lunge bleeds off almost not at all over the length
+      // of a swing, but you cannot steer it. The commitment is the point.
+      this.vx = damp(this.vx, 0, 0.00002, dt);
     } else if (this.state !== 'hurt') {
-      const accel = this.grounded ? PLAYER.accel : PLAYER.airAccel;
+      const accel = this.grounded
+        ? PLAYER.accel
+        : PLAYER.airAccel * (swinging ? PLAYER.airAttackSteer : 1);
       if (dir !== 0) {
+        // No turn boost mid-swing: reversing out of your own lunge should not
+        // be sharper than an ordinary direction change.
         const reversing = dir * this.vx < 0;
-        const rate = accel * (reversing ? PLAYER.turnBoost : 1);
+        const rate = accel * (reversing && !swinging ? PLAYER.turnBoost : 1);
         this.vx = approach(this.vx, dir * PLAYER.runSpeed, rate * dt);
         if (!attacking) this.facing = dir;
       } else if (this.grounded) {
         this.vx = approach(this.vx, 0, PLAYER.friction * dt * 10);
       } else {
-        this.vx = damp(this.vx, 0, 0.7, dt);
+        // Asking for nothing mid-swing bleeds the lunge off at exactly the rate
+        // it always has. Restoring steering was the fix; carrying *more* speed
+        // than before while the player holds no direction is not — over the
+        // chasm that turns a swing at a wisp into an overshoot into the void,
+        // and it cost the telegraph-reading bot half the seeds it used to clear.
+        this.vx = damp(this.vx, 0, swinging ? 0.55 : 0.7, dt);
       }
     } else {
       this.vx = damp(this.vx, 0, 0.4, dt);

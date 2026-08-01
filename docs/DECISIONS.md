@@ -61,9 +61,22 @@ The signature mechanic of the genre, currently absent. Specified as:
 - Command word: **SORGI**.
 
 **Known cost of this design:** it invalidates a verified number. The Guardian is
-currently measured as *mash wins with 72 HP left*, taken without an ally.
-Carrying a shadow in changes that, so the boss needs re-tuning and `sim.js`
-needs a shadow-carrying bot variant.
+measured as *mash and dodge both win with about 100 HP left*, taken without an
+ally. Carrying a shadow in changes that, so the boss needs re-tuning and
+`sim.js` needs a shadow-carrying bot variant.
+
+**Still green-lit after round 2.** The blocking question was whether the
+telegraph design reads to a human, and it does: the player learned the beast's
+tell, confirmed 0.42 s is enough to react to, and described the tell without
+prompting. That is the evidence ARISE was waiting on.
+
+One caveat, recorded because it would otherwise look like support and is not.
+The suite used to report that a bot *ignoring* telegraphs died at the ambush,
+and that was cited as proof the tells are load-bearing. It was an artifact of a
+navigation deadlock in the bot, not of the telegraphs; with that fixed, both
+bots clear every seed taking the same damage. The human evidence stands and the
+automated evidence does not. Do not cite the naive bot for this claim again
+without re-establishing it.
 
 **Known risk:** this is the first thing in the game that can kill without the
 player. It is the mechanic most likely to make the combat worse.
