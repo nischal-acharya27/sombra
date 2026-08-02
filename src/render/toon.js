@@ -21,7 +21,7 @@ const gradientCache = new Map();
  * A 1D texture of `steps` hard bands. NearestFilter is the entire point — any
  * filtering here reintroduces the gradient we are trying to destroy.
  */
-export function gradientMap(steps = 4) {
+function gradientMap(steps = 4) {
   if (gradientCache.has(steps)) return gradientCache.get(steps);
   const data = new Uint8Array(steps);
   for (let i = 0; i < steps; i++) {
@@ -167,17 +167,3 @@ export function outlineFor(geometry, thickness = 0.035, color = P.outline) {
   return outline;
 }
 
-/**
- * Build a mesh plus its outline as one Object3D, so callers can treat an
- * outlined part as a single node.
- */
-export function outlinedMesh(geometry, material, thickness = 0.035) {
-  const group = new THREE.Group();
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  group.add(mesh);
-  if (thickness > 0) group.add(outlineFor(geometry, thickness));
-  group.userData.mesh = mesh;
-  return group;
-}

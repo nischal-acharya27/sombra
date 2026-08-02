@@ -12,7 +12,7 @@ import * as THREE from 'three';
 import { P } from '../render/palette.js';
 import { toonMaterial, glowMaterial, outlineFor } from '../render/toon.js';
 import { GrassField, scatterGrass, makeRock, makeCrystal, makeTree, makeMist, buildBackdrop } from '../render/env.js';
-import { rand, randInt } from '../engine/mathx.js';
+import { rand } from '../engine/mathx.js';
 
 export const VOID_Y = -26; // below this you have fallen out of the world
 
@@ -365,19 +365,24 @@ export const ENCOUNTERS = [
     id: 'first-blood',
     trigger: 40,
     lock: [35, 67],
-    intro: { title: 'THREAT DETECTED', body: 'Shadow Beast × 3' },
     // The one rule the whole combat design rests on, stated once, the first
-    // time the player meets something that can hurt them.
+    // time the player meets something that can hurt them — and stated *in the
+    // intro window*, not after it.
     //
-    // The playtest confirmed the beast's tell reads and that 0.42 s is enough
-    // to react to — but the player only worked out that the *bodies* are safe
-    // after reading the question about it. That is not a balance problem, it is
-    // the central rule of the game going untaught: if you believe touching a
-    // beast hurts, then crowding reads as chip damage, backing off reads as
-    // correct, and the fight you are actually being offered never starts.
-    hint: {
-      title: 'ANALYSIS',
-      body: 'Their bodies cannot harm you. Stand as close as you like — only the <b>pounce</b> deals damage, and it announces itself: the beast stops, crouches, and its eyes flare.',
+    // It used to be a second window: 37 words, opening at 1.7 s, for 4.2 s.
+    // Beasts spawn at 0 s, 0.5 s and 1.4 s, so it arrived with all three
+    // already on the player and left before any of them was dead. Round 3:
+    // "too much text, for a short period of time... reading the texts while
+    // fighting them is not very feasible." A rule nobody can read is a rule
+    // nobody was taught, and if you believe touching a beast hurts, crowding
+    // reads as chip damage, backing off reads as correct, and the fight you are
+    // actually being offered never starts.
+    //
+    // One line, on screen from 0 s, short enough to take in at a glance.
+    intro: {
+      title: 'THREAT DETECTED',
+      body: 'Shadow Beast × 3',
+      note: 'Their bodies cannot harm you — only the <b>pounce</b>, and it announces itself.',
     },
     spawns: [
       { type: 'beast', x: 52, delay: 0 },

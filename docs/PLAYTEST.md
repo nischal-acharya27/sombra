@@ -265,8 +265,8 @@ had addressed a symptom next to the cause.*
 
 | # | What was actually wrong | What should be true now | Verdict |
 |---|---|---|---|
-| 1 | Air attacks ignored the direction key outright — holding forward and letting go produced identical trajectories. `vx` had been fixed; nobody had checked whether the game was still *listening*. | Jump forward, press `J`, and keep holding forward — you keep driving. Let go mid-swing and you visibly coast instead. Steering works during a swing, at 75% of normal air control. | |
-| 2 | A launched enemy's upward speed was **assigned** by the next hit rather than floored, so the aerial that was meant to extend a juggle was the hit that ended it — the enemy peaked 1.4 units up while you sailed to 6.6. | `K` → `Space` → a single `J` connects, and the enemy stays up. There is a 0.40 s window to press `J`, not an instant. A second `J` extends it further but is not required. | |
+| 1 | Air attacks ignored the direction key outright — holding forward and letting go produced identical trajectories. `vx` had been fixed; nobody had checked whether the game was still *listening*. | Jump forward, press `J`, and keep holding forward — you keep driving. Let go mid-swing and you visibly coast instead. Steering works during a swing, at 75% of normal air control. | It's okay now. |
+| 2 | A launched enemy's upward speed was **assigned** by the next hit rather than floored, so the aerial that was meant to extend a juggle was the hit that ended it — the enemy peaked 1.4 units up while you sailed to 6.6. | `K` → `Space` → a single `J` connects, and the enemy stays up. There is a 0.40 s window to press `J`, not an instant. A second `J` extends it further but is not required. | The enemy is launched too high. An average of the first implementation and the current one would be just right. |
 
 ## B. The finisher, again
 
@@ -283,6 +283,7 @@ the game that puts a ring on the ground.
 - Two shakes a beat apart instead of one big one: heavier, or just messier?
 
 >
+- It's all good for now. 
 
 ## C. The style meter, for the third time
 
@@ -294,7 +295,9 @@ middle of the screen, once, and then gets out of the way.*
 - Did you see it without looking for it this time?
 - Is it in the way?
 
->
+> 
+- Yeah, it's good. The meter on the top right of the screen is still not thaaat visible.
+But it's there if I look for it.
 
 ## D. The stutter — the one I could not reproduce
 
@@ -326,6 +329,8 @@ frame over 28 ms and what the game was doing just before it.
   looking in the wrong place entirely.
 
 >
+- It's not a stutter. More like a frame-skip. It doesn't appear now when the first shadow beasts appear.
+But the problem arises after defeating them, and before the ambush of the shadow beasts and the wisps.
 
 ## E. Wisps, back to round-1 difficulty
 
@@ -338,6 +343,7 @@ is what addressed that specifically without making them weaker.*
 - Back to the right threat level, or did the longer wind-up defang them anyway?
 
 >
+- I think go back to the first round threat level, makes it a little more challenging. 
 
 ## F. Free-form
 
@@ -349,4 +355,10 @@ tells you outright that bodies are harmless, the first time you meet one. Round
 - Anything else.
 
 >
+- The system window tells about it, but it's too much text, for a short period of time.
+And the beasts appear right away, so reading the texts while fighting them is not very feasible.
+
+The magic power (shooting) should be nerfed a bit. Now, it hits all the enemies on the way. 
+It should only hurt one opponent on the way, not everyone on the path of the power. And it deals a lot of damage. 
+Maybe reduce the power to ~70% of what it is now.
 

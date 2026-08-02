@@ -7,7 +7,6 @@ import { Audio } from './engine/audio.js';
 import { HUD } from './ui/hud.js';
 import { Game } from './game/game.js';
 import { STATUE_X } from './game/level.js';
-import { damp } from './engine/mathx.js';
 
 const world = new World(document.getElementById('view'));
 const hud = new HUD();
@@ -108,32 +107,11 @@ if (location.search.includes('sim')) {
   }
 }
 
-/**
- * Pay the System window's one-off costs during the title screen.
- *
- * Round 2 reported a new stutter "before the enemies appear". The first thing
- * that happens at an encounter is a `.sys-window` opening, and it is the only
- * element in the game carrying `backdrop-filter` — the compositor has to
- * allocate a backdrop texture the first time one appears, and that allocation
- * is a known hitch on some GPUs. Rendering one off-screen at boot moves that
- * cost to a moment when nothing is moving.
- *
- * Measured in-session, the JS half of the spawn is not the problem: zero new
- * shader programs, 1.7 ms to build a beast's 34 meshes, 0.5 ms for the DOM.
- * None of that is a visible pause, which is what points at the compositor.
- * This is a mitigation for the leading theory, not a confirmed fix — the
- * throttled preview cannot measure frame time, so `?perf` exists to check it
- * in a real browser window.
- */
-function warmSystemWindow() {
-  const el = document.createElement('div');
-  el.className = 'sys-window';
-  el.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0.01;pointer-events:none';
-  el.innerHTML = '<h3>&nbsp;</h3><div class="divider"></div><div class="big">&nbsp;</div>';
-  document.body.appendChild(el);
-  requestAnimationFrame(() => requestAnimationFrame(() => el.remove()));
-}
-warmSystemWindow();
+// The System window warm-up that used to live here is gone. It paid the
+// backdrop-filter's first allocation during the title screen, on the theory
+// that the cost was in *opening* the window. `?perf` showed the cost was in
+// keeping it open — the blur re-runs every frame over a moving 3D canvas — so
+// the filter itself was removed instead. See the note in src/ui/style.css.
 
 // Handy for poking at a running game from the console.
 window.__game = { game, world, loop, audio, input, hud };

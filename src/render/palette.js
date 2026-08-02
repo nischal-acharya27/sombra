@@ -62,5 +62,3 @@ export const P = {
 
   outline: 0x0a0813,
 };
-
-export const asHex = (n) => `#${n.toString(16).padStart(6, '0')}`;

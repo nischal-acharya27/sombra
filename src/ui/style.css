@@ -300,23 +300,25 @@ html, body {
 .sys-window {
   min-width: 330px;
   max-width: 440px;
-  background: var(--panel);
+  /* Slightly more opaque than `--panel`, because there is no blur behind it any
+   * more. See below. */
+  background: rgba(10, 20, 38, 0.93);
   border: 1px solid var(--panel-edge);
   box-shadow: 0 0 40px rgba(50, 160, 220, 0.28), inset 0 0 30px rgba(40, 120, 190, 0.14);
-  backdrop-filter: blur(3px);
   padding: 20px 26px 22px;
   text-align: center;
   animation: sysIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-  /* Own compositor layer, declared up front.
+  /* No `backdrop-filter`, and no compositor layer either.
    *
-   * A backdrop-filter appearing mid-frame makes the compositor allocate a
-   * backdrop texture the size of what it is filtering, and on some GPUs that
-   * allocation lands as a visible hitch. The System window opens at exactly the
-   * moment round 2 reported "the screen seems to pause just before the enemies
-   * appear", so this is the leading suspect — see the warm-up in main.js, which
-   * pays that cost once during the title screen instead. */
-  transform: translateZ(0);
-  will-change: backdrop-filter, opacity, transform;
+   * The filter was a genuine per-frame cost: it re-blurs whatever is behind it
+   * on every frame it is composited, and what is behind this window is a moving
+   * 3D canvas, so the price was paid for the window's entire lifetime rather
+   * than once at open. Removing it did not fix the reported frame-skip, which
+   * was later found in the round-1 build too — see `docs/DECISIONS.md`.
+   *
+   * `translateZ(0)` and `will-change` went with it. They existed to give the
+   * filter its own layer; with no filter they promote a layer over the canvas
+   * for nothing. */
 }
 .sys-window.out { animation: sysOut 0.24s ease-in forwards; }
 .sys-window h3 {
