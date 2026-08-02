@@ -308,25 +308,17 @@ html, body {
   padding: 20px 26px 22px;
   text-align: center;
   animation: sysIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-  /* No `backdrop-filter`. This was the frame-skip, and it took three rounds to
-   * find because the first two explanations were both about *opening* cost.
+  /* No `backdrop-filter`, and no compositor layer either.
    *
-   * A backdrop-filter does not cost once. It re-blurs whatever is behind it on
-   * every frame it is composited, and what is behind this window is a moving 3D
-   * canvas. So the price is paid for the window's entire lifetime.
+   * The filter was a genuine per-frame cost: it re-blurs whatever is behind it
+   * on every frame it is composited, and what is behind this window is a moving
+   * 3D canvas, so the price was paid for the window's entire lifetime rather
+   * than once at open. Removing it did not fix the reported frame-skip, which
+   * was later found in the round-1 build too — see `docs/DECISIONS.md`.
    *
-   * `?perf` says so plainly. The spikes are not one frame, they are 1.3 s of
-   * 32–84 ms frames spanning exactly the intro window's time on screen, and the
-   * worst of them carries 0.8 ms of JavaScript. The chasm — the only encounter
-   * in the level with no System window — is the only encounter that never
-   * skipped, including on the run where it spawned three wisps for the first
-   * time. Every encounter that does open a window skips, and no other candidate
-   * fits all four data points.
-   *
-   * The warm-up this replaces paid the first allocation during the title
-   * screen. That was real, and it was not the bill. */
-  transform: translateZ(0);
-  will-change: opacity, transform;
+   * `translateZ(0)` and `will-change` went with it. They existed to give the
+   * filter its own layer; with no filter they promote a layer over the canvas
+   * for nothing. */
 }
 .sys-window.out { animation: sysOut 0.24s ease-in forwards; }
 .sys-window h3 {
