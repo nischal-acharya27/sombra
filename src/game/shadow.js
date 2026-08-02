@@ -1,0 +1,164 @@
+// SORGI — what a body leaves behind, and what rises from it.
+//
+// Two small things live here and they are two halves of one mechanic: the
+// corpse is the offer, the shadow is what accepting it costs and buys.
+//
+// The design rule that shapes both: **one shadow at a time.** That is not
+// enforced anywhere in this file, and deliberately so — the game holds a single
+// slot rather than a list, so "one" is a property of the shape rather than a
+// rule someone has to remember to check. Every readability rule in the combat
+// design exists so the player always knows what happened to them, and four
+// allies in a corridor arena destroy that.
+
+import { Beast } from './enemies.js';
+import { SHADOW } from './config.js';
+import { P } from '../render/palette.js';
+import { clamp } from '../engine/mathx.js';
+
+/** How far the shard floats above the body it marks. */
+const SHARD_HEIGHT = 0.95;
+
+/** The ally wears the beast's rig in the System's colours. See palette.js. */
+const SKIN = {
+  body: P.shadowBody,
+  dark: P.shadowBodyDark,
+  spine: P.shadowSpine,
+  eye: P.shadowEye,
+};
+
+/**
+ * A claimable body.
+ *
+ * It is not an enemy and it is not an actor: it does not move, it cannot be
+ * hit, and nothing collides with it. Bodies are harmless to stand on and walk
+ * through, which is the game's rule and the reason extraction had to be bound
+ * to something other than plain heavy — standing next to a corpse is *correct*
+ * play, so the launcher could not be allowed to become a root whenever one
+ * happened to be in reach.
+ */
+export class Corpse {
+  /**
+   * Allocates nothing. The body is the dead beast's own rig, left exactly where
+   * and how it fell, and the shard is borrowed from a pool the game built at
+   * construction time. That is a hard requirement rather than an optimisation:
+   * three.js draws four `Math.random()` values per object for its UUID, and the
+   * suite runs the game against a seeded `Math.random`, so anything built
+   * during a run reaches into the gameplay stream and re-rolls it.
+   *
+   * The two are kept as siblings rather than parented together because the
+   * death animation squashes the body to a fifth of its height, and a shard
+   * parented to it would inherit the squash.
+   *
+   * @param {THREE.Group} body the dead beast's rig
+   * @param {THREE.Group} shard borrowed from the game's pool, returned on expiry
+   */
+  constructor(x, y, body, shard) {
+    this.x = x;
+    this.y = y;
+    this.windowT = SHADOW.corpseWindow;
+    this.t = 0;
+    this.body = body;
+    this.shard = shard;
+    shard.position.set(x, y + SHARD_HEIGHT, 0);
+    shard.rotation.set(0, 0, 0);
+    shard.scale.setScalar(1);
+  }
+
+  /**
+   * The window *is* the tell.
+   *
+   * The shard shrinks with the time left, so the player reads the deadline off
+   * the body instead of off a number in the corner. It never shrinks to
+   * nothing: a shard too small to notice in the last second is a shard that
+   * teaches the player the window ended early.
+   */
+  update(dt) {
+    this.windowT -= dt;
+    this.t += dt;
+    const u = clamp(this.windowT / SHADOW.corpseWindow, 0, 1);
+    this.shard.scale.setScalar(0.34 + u * 0.66);
+    this.shard.rotation.y += dt * 2.4;
+    this.shard.position.y = this.y + SHARD_HEIGHT + Math.sin(this.t * 3.2) * 0.07;
+  }
+
+  get expired() {
+    return this.windowT <= 0;
+  }
+}
+
+/**
+ * The raised shadow: one melee ally that follows and fights.
+ *
+ * It is the beast's own state machine pointed at a different target, which is
+ * the single decision that makes this mechanic small. `Beast.update` already
+ * took its target as a parameter rather than reaching for the player, so an
+ * ally is that same chase-and-pounce loop handed the nearest enemy instead —
+ * and when there is no enemy, handed the hunter, with the pounce gated off.
+ *
+ * It obeys every rule the enemies obey. No passive contact damage: it hurts
+ * things by committing to a leap, never by standing near them. It has health
+ * and it dies for good. It is not in the enemy list, so the hunter's swings
+ * pass through it and it can never hold an encounter open.
+ */
+export class Shadow extends Beast {
+  constructor(level, ctx, x, y) {
+    super(level, ctx, x, y, SHADOW, SKIN);
+    this.hostile = false;
+    /** Victims of the current leap, cleared between pounces. */
+    this.hitSet = new Set();
+    this.hurtCd = 0;
+    /**
+     * A dead shadow leaves nothing. Raising one from your own shadow's body
+     * would make the corpse window irrelevant and the mechanic self-sustaining,
+     * which is the opposite of a cost.
+     */
+    this.leavesCorpse = false;
+  }
+
+  /** No pouncing the hunter it is following. */
+  _canCommit() {
+    return this.hostile;
+  }
+
+  update(dt, player, enemies) {
+    this.hurtCd -= dt;
+    if (this.state !== 'dying') this._recall(player);
+
+    // Nearest living enemy, or the hunter to follow.
+    let target = null;
+    let best = Infinity;
+    for (const e of enemies) {
+      if (e.dead) continue;
+      const d = Math.abs(e.x - this.x);
+      if (d < best && d < this.cfg.chaseRange) {
+        best = d;
+        target = e;
+      }
+    }
+    this.hostile = !!target;
+    super.update(dt, target || player);
+  }
+
+  /**
+   * Re-form beside the hunter when left behind or dropped out of the world.
+   *
+   * This is one rule standing in for a pathfinder. The ally would otherwise be
+   * lost to every pit in the level, every encounter barrier that closes behind
+   * the hunter, and every ledge its one-unit ledge check refuses to walk off —
+   * and a slice meant to answer "does an ally make this combat better" would
+   * instead spend its evidence on navigation. A shadow appearing out of nowhere
+   * beside its master costs the fiction nothing, which is the rare case where
+   * the cheap answer is also the right one.
+   */
+  _recall(player) {
+    const behind = Math.abs(this.x - player.x) > SHADOW.recallAt;
+    const below = this.y < player.y - SHADOW.recallBelow;
+    if (!behind && !below) return;
+    this.x = player.x - player.facing * SHADOW.recallBehind;
+    this.y = player.y + SHADOW.recallAbove;
+    this.vx = 0;
+    this.vy = 0;
+    this.state = 'chase';
+    this.ctx.vfx?.shadowBurst(this.x, this.y + 0.4, 12, P.violet);
+  }
+}

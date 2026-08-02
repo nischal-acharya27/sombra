@@ -687,6 +687,131 @@ function moveList(game, input) {
 }
 
 /**
+ * SORGI: the corpse, the channel, and what the shadow's kills are worth.
+ *
+ * Runs at zero latency, like the other focused probes — this measures the
+ * mechanic, not a reaction to it. The playthrough bots are where reaction time
+ * belongs.
+ *
+ * The three assertions that actually matter are the last three. Everything
+ * before them is the mechanic working; those are the mechanic staying bounded.
+ * One shadow at a time is the whole reason this is not an army, a hit through
+ * the channel is the entire cost of the extraction, and the EXP-yes-style-no
+ * split is the only brake on the ally doing the player's job for them. All
+ * three are invisible in play until they are wrong.
+ */
+function extraction(game, input) {
+  const bot = new Bot(game, input);
+  const p = game.player;
+  const rows = [];
+  const check = (name, ok, detail = '') => rows.push({ name, ok, detail });
+
+  /** Kill a beast next to the hunter and let the body settle. */
+  const layCorpse = (dx = 1.3) => {
+    game._spawn({ type: 'beast', x: p.x + dx, encounter: 'test' });
+    const e = game.enemies[game.enemies.length - 1];
+    e.spawnT = 0;
+    e.root.scale.setScalar(1);
+    // Straight to the body rather than through the combat system: this is
+    // setup, and routing it through a swing would make every row below depend
+    // on the hunter's reach as well as on extraction.
+    e.takeHit({ damage: e.hp + 1, knock: 0, launch: 0, fromX: e.x });
+    for (let i = 0; i < 90; i++) bot.step();
+    return game.corpses[game.corpses.length - 1] ?? null;
+  };
+
+  /** Hold down, tap heavy, and wait out the channel. */
+  const sorgi = (steps = 120) => {
+    bot.hold('down', true);
+    bot.press('heavy');
+    for (let i = 0; i < steps; i++) bot.step();
+    bot.hold('down', false);
+  };
+
+  // --- the corpse and its window ---
+  game.start();
+  const corpse = layCorpse();
+  check('a beast leaves a corpse', !!corpse);
+  const before = corpse ? corpse.windowT : 0;
+  for (let i = 0; i < 120; i++) bot.step();
+  const after = corpse ? corpse.windowT : 0;
+  check('its window closes', before > 0 && after < before - 0.5,
+    `${before.toFixed(2)}s -> ${after.toFixed(2)}s`);
+  for (let i = 0; i < 120 * 6; i++) bot.step();
+  check('the corpse expires unclaimed', game.corpses.length === 0);
+
+  // --- the channel ---
+  game.start();
+  layCorpse();
+  sorgi();
+  const raised = game.shadow;
+  check('the channel raises a shadow', !!raised);
+  check('and consumes the corpse', game.corpses.length === 0);
+  check('the shadow is not an enemy', !!raised && !game.enemies.includes(raised));
+
+  // The cost is standing still. If the hunter can walk out of the channel it
+  // is not a cost, and the mechanic is free.
+  game.start();
+  layCorpse();
+  const x0 = p.x;
+  bot.hold('down', true);
+  bot.press('heavy');
+  bot.step();
+  bot.hold('down', false);
+  bot.hold('right', true);
+  for (let i = 0; i < 84; i++) bot.step(); // 0.7 s — still inside the channel
+  const drift = Math.abs(p.x - x0);
+  bot.releaseAll();
+  check('the channel roots the hunter', drift < 0.5, `drifted ${drift.toFixed(2)}`);
+
+  // --- a hit breaks it ---
+  game.start();
+  layCorpse();
+  bot.hold('down', true);
+  bot.press('heavy');
+  for (let i = 0; i < 24; i++) bot.step();
+  bot.hold('down', false);
+  // Nothing raised yet and the body still there: the channel is in flight. Read
+  // off what the player would see rather than off `p.state`, so this row keeps
+  // meaning the same thing if the state is ever renamed or split.
+  const inFlight = !game.shadow && game.corpses.length === 1;
+  game._damagePlayer(10, p.x + 4);
+  for (let i = 0; i < 150; i++) bot.step();
+  check('a hit cancels the channel', inFlight && !game.shadow);
+  check('and the corpse outlives it', game.corpses.length === 1);
+
+  // --- one at a time ---
+  game.start();
+  layCorpse();
+  sorgi();
+  const first = game.shadow;
+  layCorpse();
+  sorgi();
+  check('extracting again replaces', !!first && !!game.shadow && game.shadow !== first);
+
+  // --- EXP yes, style no ---
+  game.start();
+  layCorpse();
+  sorgi();
+  game.style = 0;
+  const expBefore = game.exp;
+  game._spawn({ type: 'beast', x: p.x + 3.0, encounter: 'test' });
+  const victim = game.enemies[game.enemies.length - 1];
+  victim.spawnT = 0;
+  victim.root.scale.setScalar(1);
+  // One connect is enough. This row is about who gets the credit, not about
+  // how long the ally takes to chew through a health bar.
+  victim.hp = 6;
+  for (let i = 0; i < 120 * 10 && !victim.dead; i++) bot.step();
+  bot.releaseAll();
+  check('the shadow kills on its own', victim.dead);
+  check('its kill pays EXP', game.exp > expBefore, `+${game.exp - expBefore}`);
+  check('its kill pays no style', game.style === 0, `style ${game.style.toFixed(1)}`);
+
+  return rows;
+}
+
+/**
  * Deterministic RNG for the duration of the suite.
  *
  * Enemy AI jitter, wisp drift phases and spawn scatter all draw on
@@ -770,6 +895,15 @@ function runAll(game, input, seed) {
     { ...scope(6, () => bossFight(game, input, 'dodge')), mustWin: true },
     { ...scope(7, () => bossFight(game, input, 'ranged')), mustWin: false },
   ];
+  // Last, and that position is the whole point.
+  //
+  // A scoped seed makes a probe's *randomness* independent, and this one is
+  // scoped. It does not make a probe's effect on the game object independent:
+  // running eight thousand extra frames before the sweeps moved the naive row
+  // by four points, through state that `reset()` does not clear. Scoping was
+  // never going to catch that, and the cheapest fix is to have nothing after it
+  // to disturb. A new probe belongs here too, for the same reason.
+  report.extraction = scope(8, () => extraction(game, input));
   report.ms = Math.round(performance.now() - t0);
 
   print(report);
@@ -833,6 +967,14 @@ function print(r) {
   for (const m of r.moves) {
     lines.push(`  ${m.move.padEnd(10)} damage ${String(m.damage).padStart(4)}   ${ok(m.connected)}`);
   }
+  lines.push('');
+
+  lines.push('SORGI   (extraction, the corpse window, and the shadow)');
+  for (const e of r.extraction) {
+    lines.push(`  ${e.name.padEnd(34)} ${e.detail.padEnd(22)} ${ok(e.ok)}`);
+  }
+  lines.push('  one shadow, a channel that a hit breaks, and EXP without style are the');
+  lines.push('  three bounds the design rests on. Each is invisible in play until wrong.');
   lines.push('');
 
   lines.push(`FULL PLAYTHROUGH   (${r.playthrough.of} seeds each)`);

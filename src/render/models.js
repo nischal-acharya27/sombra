@@ -247,7 +247,17 @@ function buildBlade() {
 // Shadow beast — the quadruped grunt
 // ---------------------------------------------------------------------------
 
-export function buildBeast() {
+/**
+ * The quadruped grunt, and — with `skin` — the shadow raised from one.
+ *
+ * The ally is the same rig in different colours rather than a second model,
+ * which is not laziness: measured, a second beast costs zero extra shader
+ * programs and at most two geometries, because `mat()` and `box()` both cache.
+ * Recolouring changes uniform values, not the material type, so the ally
+ * allocates essentially nothing and adds no compile.
+ */
+export function buildBeast(skin = null) {
+  const c = skin || { body: P.beastBody, dark: P.beastBodyDark, spine: P.violetDeep, eye: P.beastEye };
   const root = new THREE.Group();
   const n = {};
 
@@ -256,13 +266,13 @@ export function buildBeast() {
   root.add(body);
   n.body = body;
 
-  const chest = part(0.86, 0.42, 0.46, P.beastBody, { outline: 0.026 });
+  const chest = part(0.86, 0.42, 0.46, c.body, { outline: 0.026 });
   body.add(chest);
   n.chest = chest;
 
   // Spines along the back.
   for (let i = 0; i < 4; i++) {
-    const spine = part(0.07, 0.18 - i * 0.02, 0.06, P.violetDeep, { pivot: 'bottom', outline: 0.014 });
+    const spine = part(0.07, 0.18 - i * 0.02, 0.06, c.spine, { pivot: 'bottom', outline: 0.014 });
     spine.position.set(0.26 - i * 0.17, 0.20, 0);
     spine.rotation.z = -0.35;
     body.add(spine);
@@ -273,17 +283,17 @@ export function buildBeast() {
   body.add(neck);
   n.neck = neck;
 
-  const head = part(0.40, 0.28, 0.32, P.beastBodyDark, { outline: 0.024 });
+  const head = part(0.40, 0.28, 0.32, c.dark, { outline: 0.024 });
   head.position.x = 0.18;
   neck.add(head);
 
-  const jaw = part(0.26, 0.10, 0.26, P.beastBodyDark, { pivot: 'top', outline: 0.018 });
+  const jaw = part(0.26, 0.10, 0.26, c.dark, { pivot: 'top', outline: 0.018 });
   jaw.position.set(0.26, -0.10, 0);
   neck.add(jaw);
   n.jaw = jaw;
 
   for (const side of [-1, 1]) {
-    const eye = decal(0.10, 0.07, P.beastEye);
+    const eye = decal(0.10, 0.07, c.eye);
     eye.position.set(0.38, 0.06, side * 0.09);
     eye.rotation.y = Math.PI / 2;
     neck.add(eye);
@@ -297,9 +307,9 @@ export function buildBeast() {
       const hip = new THREE.Group();
       hip.position.set(fx, -0.18, side * 0.17);
       body.add(hip);
-      const upper = part(0.13, 0.26, 0.13, P.beastBodyDark, { pivot: 'top', outline: 0.016 });
+      const upper = part(0.13, 0.26, 0.13, c.dark, { pivot: 'top', outline: 0.016 });
       hip.add(upper);
-      const paw = part(0.17, 0.10, 0.15, P.beastBodyDark, { pivot: 'top', outline: 0.014 });
+      const paw = part(0.17, 0.10, 0.15, c.dark, { pivot: 'top', outline: 0.014 });
       paw.position.set(0.02, -0.26, 0);
       hip.add(paw);
       n['leg' + i] = hip;
@@ -311,11 +321,54 @@ export function buildBeast() {
   tail.position.set(-0.42, 0.08, 0);
   body.add(tail);
   n.tail = tail;
-  const tailSeg = part(0.34, 0.09, 0.09, P.beastBodyDark, { outline: 0.014 });
+  const tailSeg = part(0.34, 0.09, 0.09, c.dark, { outline: 0.014 });
   tailSeg.position.x = -0.17;
   tail.add(tailSeg);
 
   root.userData.nodes = n;
+  return root;
+}
+
+/**
+ * The shard that marks a claimable body.
+ *
+ * This is the entire tell for the extraction window: it shrinks as the window
+ * closes, so the timer is read off the world instead of off a HUD element. The
+ * game has now failed to teach a purely diegetic mechanic twice — the launcher
+ * went undiscovered for two playtest rounds and the style meter for three — so
+ * the shard is deliberately loud: a glowing core, a halo around it, and it sits
+ * above the body rather than inside it where the corpse's own dark palette
+ * would swallow it.
+ */
+// Built once and shared by every shard, like `boltGeo` in game/enemies.js.
+//
+// This is not only the usual "don't allocate per instance" hygiene. Three.js
+// gives every geometry, material and Object3D a UUID from `Math.random()` —
+// four draws each — and `tools/sim.js` verifies the game against a *seeded*
+// `Math.random`. So anything the game allocates mid-run silently consumes the
+// gameplay stream and re-rolls every enemy's jitter after it. Building a shard
+// per corpse spent 32 draws at the instant of every beast's death, which was
+// enough to send eight fixed seeds down entirely different playthroughs. See
+// the note in docs/DECISIONS.md.
+const shardCoreGeo = new THREE.OctahedronGeometry(0.19, 0);
+const shardHaloGeo = new THREE.OctahedronGeometry(0.36, 0);
+const shardCoreMat = glowMaterial({ color: P.violet });
+const shardHaloMat = new THREE.MeshBasicMaterial({
+  color: P.violetGlow,
+  transparent: true,
+  opacity: 0.26,
+  fog: false,
+  depthWrite: false,
+  toneMapped: false,
+});
+
+export function buildShard() {
+  const root = new THREE.Group();
+  const core = new THREE.Mesh(shardCoreGeo, shardCoreMat);
+  const halo = new THREE.Mesh(shardHaloGeo, shardHaloMat);
+  root.add(core);
+  root.add(halo);
+  root.userData.nodes = { core, halo };
   return root;
 }
 
