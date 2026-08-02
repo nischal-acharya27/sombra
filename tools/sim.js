@@ -685,10 +685,38 @@ function nearestEnemy(game) {
  * The Guardian, three ways. A boss that only one strategy beats is a boss
  * tuned to a single solution; all three should win, at different costs.
  */
-function bossFight(game, input, strategy, { maxSeconds = 240 } = {}) {
+/**
+ * Put a shadow beside the hunter without playing out the channel.
+ *
+ * The channel is `extraction`'s subject, not this one's. What the boss rows
+ * need is an ally standing in the arena, and routing that through 0.8 s of
+ * held keys would make every Guardian number depend on the extraction timing
+ * as well as on the fight.
+ */
+function giveShadow(game, bot) {
+  const p = game.player;
+  game._spawn({ type: 'beast', x: p.x + 1.3, encounter: 'test' });
+  const e = game.enemies[game.enemies.length - 1];
+  e.spawnT = 0;
+  e.root.scale.setScalar(1);
+  e.takeHit({ damage: e.hp + 1, knock: 0, launch: 0, fromX: e.x });
+  for (let i = 0; i < 90; i++) bot.step();
+  const corpse = game.corpses[game.corpses.length - 1];
+  if (corpse) game.extract(corpse);
+  return !!game.shadow;
+}
+
+function bossFight(game, input, strategy, { maxSeconds = 240, carryShadow = false } = {}) {
   game.start();
   const bot = new Bot(game, input);
   const p = game.player;
+
+  // Walk in carrying a shadow, when asked. Set up at the spawn point *before*
+  // the teleport, because nothing has triggered there yet — the first encounter
+  // is at x=40 — so the setup cannot disturb an encounter mid-flight. The ally
+  // re-forms beside the hunter when it is left behind, which is the same rule
+  // that carries it through a sealed barrier in ordinary play.
+  const carried = carryShadow ? giveShadow(game, bot) : false;
 
   // Skip to the arena rather than replaying the level for each strategy.
   p.x = 178;
@@ -772,6 +800,38 @@ function bossFight(game, input, strategy, { maxSeconds = 240 } = {}) {
     bossHpLeft: boss ? Math.round(Math.max(0, boss.hp)) : 0,
     seconds: +game.runTime.toFixed(1),
     damageTaken: Math.round(game.damageTaken),
+    carried,
+    shadowAlive: !!game.shadow,
+  };
+}
+
+/**
+ * One strategy, swept across seeds.
+ *
+ * "Kiting must not win a majority of seeds" was written as a gate and could not
+ * be checked, because each strategy ran exactly once. A single boss fight is a
+ * sample of one from a fight with enemy jitter and four attacks chosen from a
+ * random cooldown window — it says what happened that time, not what the fight
+ * is.
+ */
+function bossSweep(game, input, scope, base, strategy, carryShadow) {
+  const runs = [];
+  for (let i = 0; i < RUNS_PER_SWEEP; i++) {
+    runs.push(scope(base + i, () => bossFight(game, input, strategy, { carryShadow })));
+  }
+  const won = runs.filter((r) => r.won).length;
+  const hp = runs.reduce((a, r) => a + r.playerHp, 0) / runs.length;
+  const left = runs.reduce((a, r) => a + r.bossHpLeft, 0) / runs.length;
+  return {
+    strategy,
+    carryShadow,
+    runs,
+    won,
+    of: runs.length,
+    hp,
+    bossHpLeft: left,
+    seconds: runs.reduce((a, r) => a + r.seconds, 0) / runs.length,
+    majority: won * 2 > runs.length,
   };
 }
 
@@ -1136,12 +1196,21 @@ function runAll(game, input, seed) {
   report.tell = tellStats(paired);
   // Melee has to be a winning answer; kiting deliberately is not. Mana regen
   // caps the bolt at roughly a tenth of melee DPS, so `ranged` is a balance
-  // probe — if it ever starts winning comfortably, the bolt is overtuned and
-  // the fight has stopped being a fight.
+  // gate — if it starts winning a majority, the bolt is overtuned and the
+  // fight has stopped being a fight.
+  //
+  // Each strategy is now swept and each is run twice: empty-handed, and walking
+  // in carrying a shadow. Carrying one is the normal way the arena is reached —
+  // the shadow row measures 6 to 7 runs in 8 arriving with an ally — so a boss
+  // verified only against a shadow-less hunter was verified against a case that
+  // mostly does not happen.
   report.boss = [
-    { ...scope(5, () => bossFight(game, input, 'mash')), mustWin: true },
-    { ...scope(6, () => bossFight(game, input, 'dodge')), mustWin: true },
-    { ...scope(7, () => bossFight(game, input, 'ranged')), mustWin: false },
+    { ...bossSweep(game, input, scope, 500, 'mash', false), mustWin: true },
+    { ...bossSweep(game, input, scope, 520, 'dodge', false), mustWin: true },
+    { ...bossSweep(game, input, scope, 540, 'ranged', false), mustWin: false },
+    { ...bossSweep(game, input, scope, 560, 'mash', true), mustWin: true },
+    { ...bossSweep(game, input, scope, 580, 'dodge', true), mustWin: true },
+    { ...bossSweep(game, input, scope, 600, 'ranged', true), mustWin: false },
   ];
   // Last, and that position is the whole point.
   //
@@ -1307,24 +1376,28 @@ function print(r) {
   }
   lines.push('');
 
-  lines.push('GATE GUARDIAN   (a boss only one strategy beats is tuned to one solution)');
+  lines.push(`GATE GUARDIAN   (${RUNS_PER_SWEEP} seeds per strategy, empty-handed and carrying)`);
   for (const b of r.boss) {
-    const verdict = b.mustWin ? ok(b.won) : b.won ? ' probe' : ' probe';
+    // `mustWin` reads as "a majority must win"; the kiting row inverts it —
+    // that strategy is required to *fail* a majority, which is the gate the
+    // design has always claimed and never been able to check.
+    const pass = b.mustWin ? b.majority : !b.majority;
     lines.push(
-      `  ${b.strategy.padEnd(8)} ${b.won ? 'WIN ' : 'LOSS'}  hp left ${String(b.playerHp).padStart(4)}  ` +
-        `boss hp ${String(b.bossHpLeft).padStart(4)}  ${String(b.seconds).padStart(5)}s  ${verdict}`
+      `  ${b.strategy.padEnd(7)}${b.carryShadow ? '+shadow' : '       '}  ` +
+        `wins ${String(b.won)}/${b.of}  hp left ${b.hp.toFixed(0).padStart(4)}  ` +
+        `boss hp ${b.bossHpLeft.toFixed(0).padStart(4)}  ${b.seconds.toFixed(1).padStart(5)}s  ${ok(pass)}`
     );
   }
-  lines.push('  mash and dodge must both win. Boss probes run at zero latency so their');
-  lines.push('  numbers stay comparable with older builds.');
+  lines.push('  mash and dodge must both win a majority; ranged must not win one.');
+  lines.push('  Boss probes run at zero latency so their numbers stay comparable with');
+  lines.push('  older builds.');
   lines.push('');
-  lines.push('  `ranged` is a recorded baseline, not yet a gate. It was winning most');
-  lines.push('  seeds against an explicit design intent that kiting should lose, and');
-  lines.push('  the round-3 bolt nerf (33 -> 23 damage, pierce 3 -> 1) is the first');
-  lines.push('  change aimed at it. The Guardian is not being tuned to move this now:');
-  lines.push('  it needs re-tuning anyway once a carried shadow exists, and tuning it');
-  lines.push('  twice is how you end up unable to attribute either result. At that');
-  lines.push('  re-tune this becomes a hard gate — kiting must not win a majority.');
+  lines.push('  Each strategy runs twice: empty-handed, and walking in with a shadow.');
+  lines.push('  Carrying one is the normal way this arena is reached — 6 to 7 runs in 8');
+  lines.push('  arrive with an ally — so a boss verified only against a shadow-less');
+  lines.push('  hunter was verified against the case that mostly does not happen. The');
+  lines.push('  arena holds no other enemies and therefore no bodies, so whatever walks');
+  lines.push('  in is all there is for the whole fight.');
   lines.push('');
 
   lines.push('CARRYING A SHADOW   (the way the game is actually played)');

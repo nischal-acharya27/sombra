@@ -330,6 +330,13 @@ re-tuning once a carried shadow exists, and tuning it twice would make neither
 result attributable. At that re-tune, `ranged` becomes a hard gate — kiting must
 not win a majority of seeds.
 
+**Now a hard gate, and it passes — 2026-08-03.** Kiting wins 11 of 40
+empty-handed and 15 of 40 carrying a shadow, across five top-level seeds, and
+fails to reach a majority on every one. The 187 HP figure above was a single
+run and should be read as such; swept, the boss is left with 63–125 HP. See
+§ The level-data seam → three debts for the full table and for why no Guardian
+number moved.
+
 **Known risk:** this is the first thing in the game that can kill without the
 player. It is the mechanic most likely to make the combat worse.
 
@@ -640,11 +647,18 @@ two of them prerequisites rather than debts.
   Measured on `0e508b3` plus the new row, across the five top-level seeds:
 
       seed        clears   raised   into the arena carrying   dmg carried / empty
-      20260728     7/8       7           7/8                    116 / 87
-      1            7/8       8           7/7                     98 / 96
-      99991        7/8       8           6/7                    105 / 133
-      20260802     7/8       7           7/7                     63 / 112
-      7777777      6/8       6           6/8                    129 / 94
+      20260728     7/8       7           7/8                    116 / 108
+      1            7/8       8           7/7                     98 / 113
+      99991        7/8       8           6/7                    102 / 102
+      20260802     7/8       7           7/7                     63 / 109
+      7777777      6/8       6           6/8                    129 /  95
+
+  Re-measured after the telegraph rows became 24 paired seeds. The
+  empty-handed column moved a long way — it is the mean of the reading bot's
+  runs, and that sweep went from 8 unpaired runs to 24 paired ones, so it is a
+  better comparator rather than a changed game. The carried column is stable
+  except on 99991 (105 → 102), which is the documented state bleed: the carried
+  row runs last, and there are now three times as many playthroughs ahead of it.
 
   **The gate is clearable carrying a shadow, on every seed tried**, at six or
   seven of eight — at or above the empty-handed bot's own rate. The bot raised a
@@ -664,13 +678,52 @@ two of them prerequisites rather than debts.
   measure the mid-fight gamble — which is a different probe for a different
   claim, and naming that here so the row is not later mistaken for evidence
   about it.
-- **The Guardian re-tune.** Four Guardian-class bosses are committed. Tuning the
-  first properly, with a bot, produces a repeatable *method* for the other
-  three; skipping it produces four bosses tuned by feel with no way to attribute
-  which change did what. This document already states the rule: the boss must
-  not be re-tuned by feel, because with one playtester who is also the developer
-  the suite is the only independent check there is. At that re-tune `ranged`
-  becomes a hard gate — kiting must not win a majority of seeds.
+- ~~**The Guardian re-tune.**~~ **Discharged 2026-08-03 by measurement, and no
+  Guardian number moved.** The instrument was the debt; the tuning turned out
+  not to be owed.
+
+  `ranged` is now the hard gate it was always described as, which required the
+  boss probes to be swept — each strategy ran exactly once, so "must not win a
+  majority of seeds" was a gate nobody could check. Each strategy now runs eight
+  seeds, twice: empty-handed, and walking in carrying a shadow. Carrying one is
+  the normal case, since the shadow row above measures six to seven runs in
+  eight arriving with an ally, so a boss verified only against a shadow-less
+  hunter was verified against the case that mostly does not happen.
+
+  Measured on `a0ca821`, wins out of 8, mean HP left in brackets:
+
+      seed        mash      dodge     ranged   mash+S    dodge+S   ranged+S
+      20260728   8/8 (84)  8/8 (78)    2/8    8/8 (76)  8/8 ( 98)    2/8
+      1          8/8 (80)  8/8 (93)    2/8    8/8 (74)  8/8 ( 95)    3/8
+      99991      8/8 (61)  8/8 (96)    2/8    8/8 (85)  8/8 ( 84)    4/8
+      20260802   8/8 (68)  8/8 (91)    3/8    8/8 (78)  8/8 (102)    3/8
+      7777777    8/8 (77)  8/8 (89)    2/8    8/8 (58)  8/8 ( 86)    3/8
+
+  **All thirty gate cells pass on all five seeds.** Melee wins, kiting loses
+  a majority everywhere — 11 of 40 empty-handed, 15 of 40 carrying.
+
+  **The premise for the re-tune is disproven.** This document predicted that
+  carrying a shadow into the arena would invalidate the verified numbers. It
+  does not: `mash` moves 84 → 76, `dodge` moves 78 → 98, and across seeds the
+  shift is small and not even one-directional. The ally trades damage dealt
+  against aggro drawn and roughly breaks even, which is the same wash the
+  playthrough row found. So there is no gate demanding a change, and changing
+  numbers anyway to satisfy a feeling is precisely the thing this document
+  forbids — *the boss must not be re-tuned by feel.*
+
+  **Two things recorded rather than acted on.**
+
+  `ranged +shadow` reached 4/8 on seed 99991, one win short of failing. The gate
+  holds on every seed tried and the margin is thin; it is the first number to
+  look at if the bolt or the shadow is ever touched again.
+
+  And `mash` wins 40 of 40 with roughly two thirds of its health intact, while
+  `PLAYTEST.md` records a human needing four or five attempts at the same fight.
+  Both are true, and the gap between them is the honest limit of what this suite
+  can say: a bot does not panic, misread a flare, or fumble a dash. **The boss
+  probes verify that a solution exists, not that the fight is hard.** Difficulty
+  remains a question only playtesting answers, and no amount of seeds changes
+  that.
 - ~~**The telegraph-gap restatement.**~~ **Paid 2026-08-03.** Paired runs and a
   Wilcoxon signed-rank gate; five of five top-level seeds pass, where the old
   assertion failed three of five. See § The telegraph gap is a coin-flip.
