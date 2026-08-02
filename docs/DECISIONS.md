@@ -157,6 +157,109 @@ check there is.
 
 Wisp-as-ranged comes after the melee shadow feels right.
 
+### Built 2026-08-02 — the vertical slice
+
+Spec in `SPEC-SORGI.md`. What building it settled, beyond what that document
+already says:
+
+**The ally is the beast's own state machine pointed at a different target.**
+`Beast.update` already took its target as a parameter instead of reaching for
+the player, so an ally is that same chase-and-pounce loop handed the nearest
+enemy — and the hunter to follow when there is none, with the pounce gated off
+so it does not leap at the person it is following. That one fact is why the
+slice is small. Every number the beast reads now comes from `this.cfg`, which is
+what makes the reuse a subclass rather than a copy.
+
+**One slot for the shadow, a separate list for corpses.** Holding a single
+reference makes "one summon at a time" a property of the shape rather than a
+rule every caller has to remember, and keeping corpses out of `enemies` means no
+loop that iterates enemies — player melee, projectiles, the encounter-clear
+check, the AI's target search — can see a body without being changed to. The
+"does not count toward defeat all enemies" requirement cost zero lines.
+
+**The shadow re-forms beside the hunter when left behind or dropped.** One rule
+standing in for a pathfinder. It would otherwise be lost to every pit, every
+barrier that closes behind you, and every ledge its ledge-check refuses to walk
+off — and a slice meant to answer *does an ally make this combat better* would
+have spent its evidence on navigation instead. A shadow arriving out of nowhere
+costs the fiction nothing.
+
+**Only beasts leave corpses.** Wisp-as-ranged is not in this slice, and a shard
+on a wisp would teach a promise the slice cannot keep. The tell that teaches the
+mechanic is the one thing that must not lie.
+
+**The teaching line fires once per page load.** "The first time ever" cannot mean
+more than that while nothing survives a reload. Recorded because it looks like a
+persistence decision and is not one.
+
+### The suite's seeded stream reaches further than it looks
+
+Building this cost most of a session to a bug that was not in the mechanic, and
+the shape of it is worth more than the fix.
+
+The first working build sent the tell-reading bot from 87 damage to 141 and
+failed the telegraph gap assertion — while the playthrough bots never touched
+extraction, never held `down`, and never saw a corpse. Five theories were wrong
+before the measurement was right. What settled it was counting `Math.random()`
+draws per frame and diffing the two builds: at the exact frame a beast's body
+became a corpse, one build drew 1 and the other drew **33**.
+
+**Three.js takes four `Math.random()` values per object for its UUID**, and
+`tools/sim.js` verifies the game against a *seeded* `Math.random`. Building a
+shard per corpse — two geometries, two materials, three Object3Ds — spent 32
+draws at the instant of every beast's death, which re-rolled every enemy's jitter
+after it and sent eight fixed seeds down entirely different playthroughs. The
+divergence surfaced as a 3×10⁻⁴ difference in the hunter's `x` and grew from
+there. Nothing was wrong with the mechanic.
+
+The fix is the rule the codebase already followed everywhere else and this code
+had quietly broken: **allocate nothing during a run.** Shard geometry and
+material are module-level, like `boltGeo`; the rigs come from a pool built in
+the `Game` constructor, like the particle pool.
+
+**A second, quieter leak, and scoped seeds do not stop it either.** With the
+allocation fixed the reading bot's row was exact, and the *naive* row was still
+four points off. Cause: the probe ran before the sweeps, and eight thousand
+frames of simulation leave state on the game object that `reset()` does not
+clear. A scoped seed makes a probe's randomness independent; it does nothing
+about what the probe does to the object. The fix is ordering — the probe runs
+last, after every row that existed before it. With both fixes every pre-SORGI
+row is bit-identical: same damage, same seeds cleared, same draw count, which is
+the correct result for a mechanic the bots do not use.
+
+Both leaks were found by the same instrument and it is worth naming: a counter
+around `Math.random`, and a per-frame trace of `Game.update` diffed between two
+builds to find the first frame that disagrees.
+
+The general form, and the reason this is in the design log rather than a commit
+message: **anything the game allocates mid-run is silently part of the suite's
+random stream.** Spawning an enemy already does this, harmlessly, because it
+happens at the same instant in every build being compared. Anything new does not
+get that guarantee. The cheap instrument is a draw counter around `Game.update`,
+and it should be the first measurement rather than the sixth — the same lesson
+the frame-skip cost, in a different costume.
+
+### The telegraph gap is a coin-flip across top-level seeds
+
+Measured while chasing the above, on the **unmodified** pre-SORGI build:
+
+    seed 20260728   gap  54%   PASS        seed 20260802   gap  89%   FAIL
+    seed        1   gap  85%   FAIL        seed  7777777   gap  69%   PASS
+    seed    99991   gap 102%   FAIL
+
+The SORGI build produces the same five numbers, being bit-identical on this row.
+So the suite is at zero failures on its default seed and fails three of five
+elsewhere, and has been for as long as the assertion has existed. Widening the
+sweep moves the estimate a long way on a fixed build too — the same build reads
+54% at eight seeds and 65% at twenty-four.
+
+This is recorded and **not** acted on. It is a real weakness in the only
+independent check the project has, the obvious fixes are all forms of turning a
+dial on the instrument, and the standing warning at the top of that assertion —
+do not close the gap by making the naive bot worse — applies just as much to
+closing it by choosing a kinder sample. It wants a decision of its own, taken
+deliberately, not one taken in passing while landing a feature.
+
 ## Art direction
 
 The palette **darkens progressively left to right** — pastel at the entrance,

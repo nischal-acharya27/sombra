@@ -8,13 +8,25 @@ import * as THREE from 'three';
 import { Level, ENCOUNTERS, SPAWN_X, VOID_Y, ARENA_TOP } from './level.js';
 import { Player } from './player.js';
 import { Beast, Wisp, Bolt } from './enemies.js';
+import { Shadow, Corpse } from './shadow.js';
 import { Guardian } from './boss.js';
 import { GameCamera } from './camera.js';
 import { VFX } from '../render/vfx.js';
+import { buildShard } from '../render/models.js';
 import { P } from '../render/palette.js';
-import { MAGIC, STYLE, PROGRESSION, PLAYER, WISP } from './config.js';
+import { MAGIC, STYLE, PROGRESSION, PLAYER, WISP, SHADOW } from './config.js';
 import { boxHit } from './actor.js';
 import { clamp, rand } from '../engine/mathx.js';
+
+/**
+ * What an enemy's live attack is worth this frame, or null if it is worth
+ * nothing. The Guardian answers for itself because its damage depends on which
+ * of four attacks is out; everything else has exactly one.
+ */
+function attackDamage(e) {
+  const info = e.currentAttackDamage ? e.currentAttackDamage() : { damage: e.cfg.pounce.damage };
+  return info ? info.damage : null;
+}
 
 export class Game {
   constructor(world, hud, audio, input) {
@@ -42,6 +54,8 @@ export class Game {
       onEnrage: () => this.onEnrage(),
       onTelegraph: (name) => this.onTelegraph(name),
       styleMul: () => STYLE.mpRegenByRank[this.styleRank()] ?? 1,
+      nearestCorpse: (x, y) => this.nearestCorpse(x, y),
+      extract: (corpse) => this.extract(corpse),
     };
 
     this.player = new Player(this.level, this.ctx);
@@ -51,6 +65,25 @@ export class Game {
     this.bolts = [];
     this.pendingSpawns = [];
     this.boss = null;
+
+    // SORGI. A single slot, not a list — "one summon at a time" is the design's
+    // central bound, and holding one reference makes it a property of the shape
+    // rather than a rule every caller has to remember. Corpses get their own
+    // list for the same reason in reverse: nothing that iterates `enemies` can
+    // see a body, so none of those loops needed a guard added.
+    this.shadow = null;
+    this.corpses = [];
+    // Shard rigs, all of them built here and never during a run. Three.js takes
+    // four `Math.random()` draws per object for its UUID, and tools/sim.js runs
+    // the game against a seeded `Math.random` — so a rig built mid-run spends
+    // the gameplay stream and re-rolls every enemy's jitter after it.
+    this.shardPool = [];
+    for (let i = 0; i < SHADOW.maxCorpses; i++) this.shardPool.push(buildShard());
+    // Deliberately not cleared by `reset`. The line teaches the mechanic once;
+    // re-teaching it every restart is the per-kill interruption the design was
+    // careful to avoid. Persistence is deferred project-wide, so "ever" here
+    // means "this page load", which is all it can mean.
+    this._taughtCorpse = false;
 
     this.state = 'idle'; // idle | playing | dead | cleared
     this.freeze = 0;
@@ -89,9 +122,12 @@ export class Game {
   reset() {
     for (const e of this.enemies) this.entityRoot.remove(e.root);
     for (const b of this.bolts) this.entityRoot.remove(b.root);
+    while (this.corpses.length) this._removeCorpse(this.corpses.length - 1);
+    if (this.shadow) this.entityRoot.remove(this.shadow.root);
     this.enemies.length = 0;
     this.bolts.length = 0;
     this.pendingSpawns.length = 0;
+    this.shadow = null;
     this.boss = null;
 
     this.player.maxHp = PLAYER.maxHp;
@@ -142,7 +178,9 @@ export class Game {
     this.player.update(dt, this.input);
 
     for (const e of this.enemies) e.update(dt, this.player);
+    if (this.shadow) this.shadow.update(dt, this.player, this.enemies);
     for (const b of this.bolts) b.update(dt, this.level);
+    for (const c of this.corpses) c.update(dt);
 
     this._resolveCombat(dt);
     this._updateSpawns(dt);
@@ -153,9 +191,21 @@ export class Game {
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const e = this.enemies[i];
       if (e.removeMe || e.y < VOID_Y) {
-        this.entityRoot.remove(e.root);
+        // A beast that finished dying above the void leaves something to claim.
+        // Anything that fell out of the world does not — a body suspended over
+        // the chasm is either unreachable or a reason to jump after it.
+        if (e.removeMe && e.dead && e.y >= VOID_Y && e.leavesCorpse) this._leaveCorpse(e);
+        else this.entityRoot.remove(e.root);
         this.enemies.splice(i, 1);
       }
+    }
+    for (let i = this.corpses.length - 1; i >= 0; i--) {
+      if (this.corpses[i].expired) this._removeCorpse(i);
+    }
+    if (this.shadow && (this.shadow.removeMe || this.shadow.y < VOID_Y)) {
+      this.entityRoot.remove(this.shadow.root);
+      this.shadow = null;
+      this.hud.toast('SHADOW LOST', 'warn');
     }
     for (let i = this.bolts.length - 1; i >= 0; i--) {
       if (this.bolts[i].removeMe) {
@@ -237,6 +287,50 @@ export class Game {
       }
     }
 
+    // The shadow's pounce vs enemies, and enemy attacks vs the shadow.
+    //
+    // Both directions obey the rule that governs everything else in this game:
+    // nothing damages anything by touching it, only by committing to an attack.
+    // The ally is not immune and it is not a wall — it walks into leaps, sweeps
+    // and slams by doing its job, and nothing has to aim at it for that to
+    // happen. Enemies keep targeting the hunter.
+    const sh = this.shadow;
+    if (sh && !sh.dead) {
+      const sb = sh.attackBox?.();
+      if (sb) {
+        for (const e of this.enemies) {
+          if (e.dead || sh.hitSet.has(e)) continue;
+          if (!boxHit(sb, e.hurtBox())) continue;
+          sh.hitSet.add(e);
+          this._damageEnemy(
+            e,
+            {
+              damage: SHADOW.pounce.damage,
+              knock: SHADOW.knock,
+              launch: 0,
+              move: 'shadow',
+              color: P.violet,
+            },
+            sh
+          );
+        }
+      } else {
+        sh.hitSet.clear(); // one set of victims per leap
+      }
+
+      if (sh.hurtCd <= 0) {
+        for (const e of this.enemies) {
+          if (e.dead) continue;
+          const ab = e.attackBox?.();
+          if (!ab || !boxHit(ab, sh.hurtBox())) continue;
+          const dmg = attackDamage(e);
+          if (dmg === null) continue;
+          this._damageShadow(dmg, e.x);
+          break;
+        }
+      }
+    }
+
     // Enemy attacks vs player.
     for (const e of this.enemies) {
       const ab = e.attackBox?.();
@@ -246,9 +340,9 @@ export class Game {
         if (e.chargeHitSet.has(p)) continue;
         e.chargeHitSet.add(p);
       }
-      const info = e.currentAttackDamage ? e.currentAttackDamage() : { damage: e.cfg.pounce.damage };
-      if (!info) continue;
-      this._damagePlayer(info.damage, e.x);
+      const dmg = attackDamage(e);
+      if (dmg === null) continue;
+      this._damagePlayer(dmg, e.x);
     }
 
     // Projectiles.
@@ -271,45 +365,79 @@ export class Game {
           });
           if (b.consumeHit()) break;
         }
-      } else {
-        if (boxHit(b.box, p.box) && p.invuln <= 0 && !p.dead) {
-          this._damagePlayer(b.damage, b.x);
-          b._expire();
-        }
+      } else if (boxHit(b.box, p.box) && p.invuln <= 0 && !p.dead) {
+        this._damagePlayer(b.damage, b.x);
+        b._expire();
+      } else if (sh && !sh.dead && sh.hurtCd <= 0 && boxHit(b.box, sh.hurtBox())) {
+        // A wisp's shot is a committed, telegraphed attack, so it can kill the
+        // ally like anything else that commits. Without this the wisps are the
+        // one enemy in the game a shadow is simply immune to, which would make
+        // the bridge — four beasts and two wisps, the fight the mechanic exists
+        // to change — quietly the safest place to be carrying one.
+        this._damageShadow(b.damage, b.x);
+        b._expire();
       }
     }
   }
 
-  _damageEnemy(e, { damage, knock, launch, hitstop, shake, move, style, color = P.violetGlow }) {
+  /**
+   * @param {Actor} by whoever landed the hit — and what it is worth.
+   *
+   * The credit split is the entire brake on the ally. Its kills pay EXP, so
+   * clearing an encounter with its help still levels you on the pace the game
+   * is tuned for and the shadow never reads as a punishment. Its kills pay no
+   * style, because style is a score for what *you* did — and since style drives
+   * `mpRegenByRank`, leaning on the shadow quietly costs rank, and rank is
+   * mana. The brake is a cost inside the mechanic rather than a nerf bolted on,
+   * and it needed no new tunable to defend.
+   *
+   * Hitstop and shake are the player's too. Freezing the frame for a hit the
+   * player did not make reads as a hitch, not as impact, and shaking the camera
+   * for an ally fighting off-screen shakes the fight they are actually in.
+   */
+  _damageEnemy(e, { damage, knock, launch, hitstop, shake, move, style, color = P.violetGlow }, by = this.player) {
     const isBoss = e === this.boss;
-    const landed = e.takeHit({ damage, knock, launch, fromX: this.player.x });
+    const mine = by === this.player;
+    const landed = e.takeHit({ damage, knock, launch, fromX: by.x });
     if (!landed) return;
 
-    this.player.notifyHit();
-    const dir = Math.sign(e.x - this.player.x) || this.player.facing;
+    const dir = Math.sign(e.x - by.x) || this.player.facing;
     const hy = e.y + (isBoss ? 2.0 : e.hh);
     this.vfx.hitSpark(e.x - dir * 0.3, hy, dir, clamp(damage / 26, 0.35, 1.6), color);
     this.vfx.damageNumber(e.x, hy + 0.5, Math.round(damage), {
-      color: damage >= 28 ? '#ffd24d' : '#ffffff',
-      scale: damage >= 28 ? 1.35 : 1,
+      color: mine ? (damage >= 28 ? '#ffd24d' : '#ffffff') : '#c9a3ff',
+      scale: mine ? (damage >= 28 ? 1.35 : 1) : 0.85,
     });
 
-    this.freeze = Math.max(this.freeze, hitstop);
-    this.cam.shake(shake);
+    if (mine) {
+      this.player.notifyHit();
+      this.freeze = Math.max(this.freeze, hitstop);
+      this.cam.shake(shake);
 
-    // The finisher lands twice. Two shakes a beat apart read as a heavier blow
-    // than one big one does — a single larger number just makes the camera
-    // noisier, which is the trap the reach change fell into. Amber sparks, a
-    // ground ring and a second jolt give the third swing an identity the first
-    // two have no version of.
-    if (move === 'light3') {
-      this.vfx.finisherImpact(e.x, hy, dir, e.y);
-      this.vfx.later(0.09, () => this.cam.shake(shake * 0.7));
+      // The finisher lands twice. Two shakes a beat apart read as a heavier
+      // blow than one big one does — a single larger number just makes the
+      // camera noisier, which is the trap the reach change fell into. Amber
+      // sparks, a ground ring and a second jolt give the third swing an
+      // identity the first two have no version of.
+      if (move === 'light3') {
+        this.vfx.finisherImpact(e.x, hy, dir, e.y);
+        this.vfx.later(0.09, () => this.cam.shake(shake * 0.7));
+      }
+
+      this._addStyle(style, move);
     }
 
-    this._addStyle(style, move);
-
     if (e.dead) this._onKill(e);
+  }
+
+  /** The ally is mortal, and stays dead. Another one costs another corpse. */
+  _damageShadow(amount, fromX) {
+    const sh = this.shadow;
+    if (!sh || sh.dead) return;
+    sh.hurtCd = SHADOW.hurtCooldown;
+    sh.takeHit({ damage: amount, knock: SHADOW.knock, launch: 0, fromX });
+    this.vfx.hitSpark(sh.x, sh.y + sh.hh, Math.sign(sh.x - fromX) || 1, 0.6, P.violetGlow);
+    if (sh.dead) this.vfx.shadowBurst(sh.x, sh.y + 0.5, 24, P.violetDeep);
   }
 
   _damagePlayer(amount, fromX) {
@@ -354,6 +482,13 @@ export class Game {
     // which is the lesson the attack is there to teach.
     if (Math.abs(p.x - x) <= d.radius && p.grounded && p.y < y + 2.5) {
       this._damagePlayer(d.damage, x);
+    }
+    // The shadow is standing on the same floor and has no way to read the tell.
+    // Sparing it here would make walking one into the arena strictly better
+    // than not, which is the choice the mechanic is supposed to pose, not win.
+    const sh = this.shadow;
+    if (sh && !sh.dead && sh.hurtCd <= 0 && Math.abs(sh.x - x) <= d.radius && sh.grounded) {
+      this._damageShadow(d.damage, x);
     }
   }
 
@@ -513,6 +648,78 @@ export class Game {
     this.entityRoot.add(e.root);
     this.vfx.shadowBurst(s.x, y + 0.6, 22, P.violetDeep);
     this.audio.play('systemOpen');
+  }
+
+  // -- SORGI ----------------------------------------------------------------
+
+  /** Hand a finished body over to a corpse, rig and all. */
+  _leaveCorpse(e) {
+    // The oldest body gives up its shard if they are all spoken for. Bodies do
+    // not pile up, and the pool never has to grow mid-run.
+    if (!this.shardPool.length) this._removeCorpse(0);
+    const corpse = new Corpse(e.x, e.y, e.root, this.shardPool.pop());
+    this.corpses.push(corpse);
+    this.entityRoot.add(corpse.shard);
+    if (this._taughtCorpse) return;
+    this._taughtCorpse = true;
+    // Once, ever. The launcher went undiscovered for two playtest rounds and
+    // the style meter for three, both of them taught purely diegetically. The
+    // shard is still the tell that matters; this is the line that tells the
+    // player there is a tell to read.
+    this.audio.play('systemOpen');
+    this.hud.window({
+      title: 'THE SYSTEM',
+      big: 'A BODY REMAINS',
+      body: 'Stand over it, hold S and press K. The command is SORGI.',
+      duration: 3400,
+    });
+  }
+
+  /** Take a corpse off the field, returning its shard to the pool. */
+  _removeCorpse(i) {
+    const c = this.corpses[i];
+    if (!c) return;
+    this.entityRoot.remove(c.shard);
+    this.entityRoot.remove(c.body);
+    this.shardPool.push(c.shard);
+    this.corpses.splice(i, 1);
+  }
+
+  /** The nearest claimable body, or null. Asked by the player each frame. */
+  nearestCorpse(x, y) {
+    let best = null;
+    let bd = SHADOW.extractRange;
+    for (const c of this.corpses) {
+      if (c.expired) continue;
+      // Side-on game: horizontal distance decides, height only has to be
+      // roughly level, so a body on a ledge above you is not claimable.
+      if (Math.abs(c.y - y) > SHADOW.extractReachY) continue;
+      const d = Math.abs(c.x - x);
+      if (d < bd) {
+        bd = d;
+        best = c;
+      }
+    }
+    return best;
+  }
+
+  /** The channel completed. Raise it — and let go of whatever came before. */
+  extract(corpse) {
+    this._removeCorpse(this.corpses.indexOf(corpse));
+    // Replacement, not addition. The old one does not drop a body: raising a
+    // shadow from your own shadow would make the corpse window irrelevant and
+    // the whole mechanic self-sustaining.
+    if (this.shadow) this.entityRoot.remove(this.shadow.root);
+
+    const s = new Shadow(this.level, this.ctx, corpse.x, corpse.y);
+    this.shadow = s;
+    this.entityRoot.add(s.root);
+
+    this.vfx.shadowBurst(corpse.x, corpse.y + 0.7, 34, P.violet);
+    this.vfx.groundBurst(corpse.x, corpse.y, 1.2);
+    this.cam.shake(0.2);
+    this.audio.play('levelup');
+    this.hud.toast('SORGI', 'gold');
   }
 
   onTelegraph(name) {

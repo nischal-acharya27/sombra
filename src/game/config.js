@@ -173,7 +173,87 @@ export const BEAST = {
   // The pounce is the entire threat. Bodies are harmless to touch, so a clean
   // kill costs nothing and crowding is a positioning problem, not chip damage.
   pounce: { range: 4.6, windup: 0.42, vx: 13.5, vy: 12, damage: 14, active: 0.5, recover: 0.55 },
+  // How close it walks before it stops. Crowding the player's own hitbox is the
+  // enemy's mistake to avoid, not the player's problem to solve.
+  stopAt: 2.0,
   exp: 30,
+  contactDamage: 0,
+};
+
+/**
+ * SORGI — the extraction, the corpse window, and what rises from it.
+ *
+ * The ally runs the beast's own state machine (see `Shadow` in game/shadow.js),
+ * so this block is shaped like `BEAST` and is read through the same paths.
+ *
+ * `channel` and `corpseWindow` are the whole cost of the mechanic. There is no
+ * mana price on purpose — a mana price is bookkeeping, and you would work out
+ * once whether the bolt or the shadow is the better spend and then always pick
+ * it. Standing still for 0.8 s in a live fight is a decision you have to make
+ * again every time, and it gambles against the telegraph system already in
+ * place.
+ */
+export const SHADOW = {
+  /** Seconds a body stays claimable. The shrinking shard is this number. */
+  corpseWindow: 4.0,
+  /**
+   * How many bodies can lie about at once, and therefore how many shard rigs
+   * the game pre-builds. Comfortably above the four beasts of the bridge
+   * ambush. The oldest body gives up its shard if this is ever reached, which
+   * is also the reason the number exists: allocating a shard mid-run would
+   * spend the suite's seeded randomness. See buildShard in render/models.js.
+   */
+  maxCorpses: 12,
+  /** Immobile channel. Long enough to be a real exposure, short enough to try. */
+  channel: 0.8,
+  /** How near the hunter must be to a body to start the channel. */
+  extractRange: 2.4,
+  /** ...and how near in height, so a body on a ledge above you is not claimable. */
+  extractReachY: 2.0,
+
+  hp: 58,
+  hw: BEAST.hw,
+  hh: BEAST.hh,
+  // The beast's own speed, not a faster one. Keeping up is `recallAt`'s job, and
+  // an ally that outruns the thing it was raised from stops reading as the same
+  // creature — which is the only reason the recolour works.
+  speed: BEAST.speed,
+  // Its own, because these are what an *ally* needs rather than what the enemy
+  // needs: how far it looks for something to fight, and how close it crowds the
+  // hunter it is following.
+  chaseRange: 26,
+  stopAt: 2.4,
+  // The beast's pounce exactly, carrying its own damage.
+  //
+  // Identical timings are the point, not laziness: the player has already
+  // learned to read this wind-up, and an ally whose leap reads differently would
+  // make them learn a second tell for no gain. Damage is the one number that
+  // must not be shared — the ally exists to change a fight, not to win it while
+  // the hunter watches, and a shared number would mean every future tune of the
+  // enemy silently tuned the player's ally.
+  pounce: { ...BEAST.pounce, damage: 11 },
+  /** Knockback its pounce deals, and takes. */
+  knock: 5,
+
+  /**
+   * Grace after being hit.
+   *
+   * A pounce's hitbox is live for half a second, and the ally walks straight
+   * into it — without this it would take that damage on every frame of the
+   * leap and evaporate. Same job as the hunter's `hurtInvuln`, shorter because
+   * the shadow is not asked to escape anything.
+   */
+  hurtCooldown: 0.55,
+
+  /** Horizontal distance from the hunter at which it re-forms beside them. */
+  recallAt: 22,
+  /** ...and how far below, which is what saves it from every pit in the level. */
+  recallBelow: 14,
+  /** Where it re-forms: just behind the hunter, and a little off the ground. */
+  recallBehind: 1.6,
+  recallAbove: 0.4,
+
+  exp: 0, // it is not an enemy; nothing is paid for killing it
   contactDamage: 0,
 };
 

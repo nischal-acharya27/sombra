@@ -45,6 +45,7 @@ response.
 | **Shadow Slash** — three-hit chain | `J` or `Z` |
 | **Ascensão** — launcher on the ground, **Shadow Descent** dive in the air | `K` or `X` |
 | **Décret** — piercing bolt, 16 MP | `L` or `C` |
+| **SORGI** — raise a shadow from a body, 0.8 s immobile | hold `S`, press `K` |
 | Pause | `Esc` |
 
 ## The fight
@@ -67,6 +68,26 @@ all of its speed through a swing, and you can still steer during one.
 
 The style meter rewards **variety**, not volume: repeating a move scores a
 fraction of its value, and taking a hit costs you more than half the meter.
+
+### SORGI
+
+Kill a shadow beast and its body stays for about four seconds, marked by a
+violet shard that shrinks as the window closes — the timer is the shard, not a
+number in a corner. Stand over it, hold `S` and press `K`, and the hunter roots
+in place for a short channel. Take a hit during it and the channel breaks. Let
+it finish and the beast rises in your colours, follows you, and pounces on
+whatever you are fighting.
+
+You get **one**. Extracting again replaces it, it has its own health, and when
+it dies your only route to another is another body. It follows you out of the
+encounter and into the boss arena — which contains no other enemies and so no
+corpses, making the bridge ambush a real choice: spend the shadow to survive it,
+or protect it for the Guardian.
+
+The price is never mana. It is standing still in a live fight, which is a gamble
+against the same tells everything else in the game is built on. Its kills give
+you EXP so the ally never reads as a punishment, and no style — and since style
+drives mana regeneration, leaning on it quietly costs you rank.
 
 ### One rule for every enemy
 
@@ -216,6 +237,7 @@ src/
     game.js           combat resolution, encounters, progression
     player.js         movement, the move list, rig animation
     enemies.js        shadow beasts, wisps, projectiles
+    shadow.js         SORGI: claimable corpses and the raised ally
     boss.js           the Gate Guardian
     level.js          the gate: geometry, collision, encounter data
     camera.js         2.5D chase camera with trauma-based shake

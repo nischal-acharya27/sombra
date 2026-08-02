@@ -55,6 +55,15 @@ export const P = {
   beastEye: 0xff3b52,
   wispCore: 0x7fe6ff,
 
+  // The raised shadow. Same rig and same silhouette as the beast it came from,
+  // so colour is doing the entire friend-or-foe read — and the eyes carry most
+  // of it, because the beast's eyes are already where the player is looking.
+  // Its tell is a crimson flare; the ally's is the System's cyan.
+  shadowBody: 0x4a3ba0,
+  shadowBodyDark: 0x2e2470,
+  shadowSpine: 0x7f5cff,
+  shadowEye: 0x5fd8ff,
+
   bossPlate: 0x3b3550,
   bossPlateDark: 0x221e33,
   bossCore: 0xb072ff,

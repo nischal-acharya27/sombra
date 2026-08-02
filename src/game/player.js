@@ -2,7 +2,7 @@
 
 import { Actor } from './actor.js';
 import { buildHunter } from '../render/models.js';
-import { PHYS, PLAYER, ATTACKS, MAGIC } from './config.js';
+import { PHYS, PLAYER, ATTACKS, MAGIC, SHADOW } from './config.js';
 import { clamp, damp, lerp, approach } from '../engine/mathx.js';
 
 const seg = (u, a, b) => clamp((u - a) / (b - a), 0, 1);
@@ -32,6 +32,8 @@ export class Player extends Actor {
     this.magicCd = 0;
     this.hurtT = 0;
     this.slamDiving = false;
+    this.extractT = 0; // SORGI channel remaining
+    this.extractTarget = null;
     this.lock = 0; // rooted for this long, ignoring all input
     this.animT = 0;
     this.runPhase = 0;
@@ -57,6 +59,8 @@ export class Player extends Actor {
     this.jumps = 0;
     this.airAttacks = 0;
     this.airDashes = PLAYER.airDashes;
+    this.extractT = 0;
+    this.extractTarget = null;
     this.lock = 0;
   }
 
@@ -125,6 +129,7 @@ export class Player extends Actor {
       this.hurtT -= dt;
       if (this.hurtT <= 0) this.state = this.grounded ? 'idle' : 'fall';
     }
+    if (this.state === 'extract') this._tickExtract(dt);
 
     if (this.state !== 'hurt') this._actions(input);
     this._move(dt, input);
@@ -148,6 +153,7 @@ export class Player extends Actor {
    */
   _actions(input) {
     if (this.lock > 0) return; // rooted — slam landing recovery
+    if (this.state === 'extract') return; // committed to the channel
 
     const a = this.attack;
     const canCancel = !a || a.t >= a.def.cancel;
@@ -175,6 +181,27 @@ export class Player extends Actor {
       input.pressed('magic');
       this.ctx.audio?.play('deny');
       this.ctx.toast?.('NOT ENOUGH MANA', 'warn');
+    }
+
+    // SORGI, and it has to be tested before the launcher below or the launcher
+    // consumes the press first.
+    //
+    // `down` is held, which is the whole reason this is not plain heavy. Bodies
+    // are harmless and corpses stay claimable for seconds, so they exist
+    // mid-fight and standing next to one is *correct* play — overloading heavy
+    // would turn the move you reach for when a crowd closes into a 0.8 s root,
+    // decided by whether a body happened to be in range. Gating it on "only
+    // when nothing is near" would fix that and gut the design, because standing
+    // still mid-fight being a gamble is the entire cost of the mechanic.
+    //
+    // `pressed()` is the last term, as everywhere in this file: establish there
+    // is a body to claim, then consume.
+    if (canCancel && this.grounded && input.down('down')) {
+      const corpse = this.ctx.nearestCorpse?.(this.x, this.y);
+      if (corpse && input.pressed('heavy')) {
+        this._startExtract(corpse);
+        return;
+      }
     }
 
     if (canCancel && input.pressed('heavy')) {
@@ -288,6 +315,47 @@ export class Player extends Actor {
     this.ctx.audio?.play(def.sfx);
   }
 
+  // -- SORGI ----------------------------------------------------------------
+
+  _startExtract(corpse) {
+    if (this.attack) this._endAttack();
+    this.state = 'extract';
+    this.extractT = SHADOW.channel;
+    this.extractTarget = corpse;
+    this.vx = 0;
+    this.facing = corpse.x > this.x ? 1 : -1;
+    this.ctx.audio?.play('systemOpen');
+  }
+
+  /**
+   * Run the channel down.
+   *
+   * The corpse can expire out from under the hunter partway through, and it is
+   * left to: that is the same gamble as taking a hit, arriving from the other
+   * direction. Starting a channel on a body with half a second left is a
+   * mistake the player is allowed to make and should be able to see coming,
+   * which is what the shrinking shard is for.
+   */
+  _tickExtract(dt) {
+    this.extractT -= dt;
+    if (!this.extractTarget || this.extractTarget.expired) {
+      this._cancelExtract();
+      return;
+    }
+    if (this.extractT <= 0) {
+      const corpse = this.extractTarget;
+      this.extractTarget = null;
+      this.state = this.grounded ? 'idle' : 'fall';
+      this.ctx.extract?.(corpse);
+    }
+  }
+
+  _cancelExtract() {
+    this.extractTarget = null;
+    this.extractT = 0;
+    if (this.state === 'extract') this.state = this.grounded ? 'idle' : 'fall';
+  }
+
   _endAttack() {
     if (this.attack?.key === 'slam') this.slamDiving = false;
     this.attack = null;
@@ -315,7 +383,8 @@ export class Player extends Actor {
     // key through a swing and releasing it produced identical trajectories to
     // two decimal places: the input was simply not being read.
     // `measureAirAttack` in tools/sim.js fails if that ever returns to zero.
-    const rooted = attacking && a.key !== 'slam' && this.grounded;
+    // The SORGI channel roots too, and it is the only cost the mechanic has.
+    const rooted = (attacking && a.key !== 'slam' && this.grounded) || this.state === 'extract';
     const swinging = attacking && a.key !== 'slam' && !this.grounded;
 
     if (this.state === 'dash') {
@@ -398,7 +467,13 @@ export class Player extends Actor {
       if (this.vy < 0 && this.state === 'jump') this.state = 'fall';
     }
 
-    if (this.grounded && !attacking && this.state !== 'hurt' && this.state !== 'cast') {
+    if (
+      this.grounded &&
+      !attacking &&
+      this.state !== 'hurt' &&
+      this.state !== 'cast' &&
+      this.state !== 'extract'
+    ) {
       this.state = Math.abs(this.vx) > 0.6 ? 'run' : 'idle';
     }
   }
@@ -430,6 +505,10 @@ export class Player extends Actor {
     this.ctx.shake?.(0.34);
     this.ctx.audio?.play('hurt');
     if (this.attack) this._endAttack();
+    // A hit breaks the channel. Every route that damages the hunter funnels
+    // through here — melee, bolts, the boss's shockwave — so this one line
+    // covers all of them and no caller has to know extraction exists.
+    if (this.state === 'extract') this._cancelExtract();
     if (this.hp <= 0) {
       this.state = 'dead';
       this.vx = (this.x < fromX ? -1 : 1) * 5;
@@ -502,6 +581,23 @@ export class Player extends Actor {
       target.hipLz = -0.4;
       target.hipRz = 0.3;
       setNow.on = true;
+    } else if (this.state === 'extract') {
+      // Down on one knee, off-hand out over the body. The root has to read as
+      // a thing the hunter is *doing*, or 0.8 s of ignored input reads as the
+      // controls having died.
+      const u = 1 - this.extractT / SHADOW.channel;
+      target.torsoZ = -0.30;
+      target.headZ = 0.34;
+      target.hipsY = -0.30 - u * 0.06;
+      target.hipLz = 0.95;
+      target.kneeLz = -1.45;
+      target.hipRz = -0.55;
+      target.kneeRz = -0.35;
+      target.shLz = 1.15 + u * 0.35;
+      target.elLz = -0.30;
+      target.shRz = 0.55;
+      target.swordZ = -2.95;
+      target.coat = 0.45;
     } else if (this.state === 'cast') {
       const u = 1 - this.castT / 0.28;
       target.shLz = 1.9 - u * 0.4;

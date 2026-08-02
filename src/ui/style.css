@@ -395,8 +395,18 @@ html, body {
   align-items: center;
   justify-content: center;
   gap: 22px;
-  background: radial-gradient(ellipse at 50% 45%, rgba(20, 10, 46, 0.55), rgba(4, 3, 10, 0.92));
-  backdrop-filter: blur(2px);
+  /* Denser than it was, because there is no blur behind it any more.
+   *
+   * These overlays carried `backdrop-filter: blur(2px)`, which is a per-frame
+   * composite over whatever the canvas is drawing — and the title screen draws
+   * a slowly drifting camera behind it for as long as the page is open. That
+   * makes it a permanent cost on the first thing a visitor sees, for a 2px
+   * blur nobody is looking at. The gradient was already doing the separation
+   * work; it now does all of it.
+   *
+   * Not to be confused with the frame-skip, which was the compositor layer on
+   * `.sys-window` and is fixed. See the note there. */
+  background: radial-gradient(ellipse at 50% 45%, rgba(20, 10, 46, 0.72), rgba(4, 3, 10, 0.97));
   z-index: 10;
 }
 

@@ -139,16 +139,38 @@ class Enemy extends Actor {
 // Shadow beast
 // ---------------------------------------------------------------------------
 
+/**
+ * The quadruped grunt — and, pointed at a different target and wearing a
+ * different skin, the shadow the hunter raises from one. See `Shadow` in
+ * game/shadow.js.
+ *
+ * Every number below is read from `this.cfg` rather than from `BEAST` directly,
+ * which is what makes that reuse a subclass and not a copy. Behaviour that an
+ * ally must *not* share is behind `_canCommit`.
+ */
 export class Beast extends Enemy {
-  constructor(level, ctx, x, y) {
-    super(level, ctx, BEAST, { x, y, hw: BEAST.hw, hh: BEAST.hh, maxHp: BEAST.hp });
-    this.root = buildBeast();
+  constructor(level, ctx, x, y, cfg = BEAST, skin = null) {
+    super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
+    this.root = buildBeast(skin);
     this.n = this.root.userData.nodes;
     this.finishSetup();
     this.pounceCd = rand(0.4, 1.2);
     this.phase = 0; // pounce sub-phase timer
     this.homeX = x;
     this.legPhase = rand(0, 6);
+    /** A beast's body is claimable. Wisps and the Guardian leave nothing. */
+    this.leavesCorpse = true;
+  }
+
+  /**
+   * Whether it may commit to a pounce at all.
+   *
+   * Always, for a beast. The shadow overrides it: an ally trailing the hunter
+   * is running this same chase state with the hunter as its target, and without
+   * this gate it would pounce them.
+   */
+  _canCommit() {
+    return true;
   }
 
   update(dt, player) {
@@ -161,7 +183,7 @@ export class Beast extends Enemy {
 
     const dx = player.x - this.x;
     const dist = Math.abs(dx);
-    const canSee = dist < BEAST.chaseRange && Math.abs(player.y - this.y) < 6;
+    const canSee = dist < this.cfg.chaseRange && Math.abs(player.y - this.y) < 6;
 
     if (this.stagger > 0) {
       this.stagger -= dt;
@@ -180,16 +202,17 @@ export class Beast extends Enemy {
         this.state = 'chase';
         this.faceToward(player.x);
 
-        if (dist < BEAST.pounce.range && this.pounceCd <= 0 && this.grounded) {
+        if (this._canCommit() && dist < this.cfg.pounce.range && this.pounceCd <= 0 && this.grounded) {
           this.state = 'windup';
-          this.phase = BEAST.pounce.windup;
+          this.phase = this.cfg.pounce.windup;
           this.vx = 0;
           this.ctx.audio?.play('growl');
           break;
         }
         // Walk in, but stop short: crowding the player's own hitbox is the
-        // enemy's mistake to avoid, not the player's problem to solve.
-        const want = dist > 2.0 ? this.facing * BEAST.speed : 0;
+        // enemy's mistake to avoid, not the player's problem to solve. The
+        // shadow uses the same rule to keep out from under the hunter's feet.
+        const want = dist > this.cfg.stopAt ? this.facing * this.cfg.speed : 0;
         // Don't walk off a ledge chasing.
         const ahead = this.x + this.facing * 0.9;
         if (want !== 0 && !this.level.hasFloorAhead(ahead, this.y)) this.vx = 0;
@@ -204,9 +227,9 @@ export class Beast extends Enemy {
         this.faceToward(player.x);
         if (this.phase <= 0) {
           this.state = 'pounce';
-          this.phase = BEAST.pounce.active;
-          this.vx = this.facing * BEAST.pounce.vx;
-          this.vy = BEAST.pounce.vy;
+          this.phase = this.cfg.pounce.active;
+          this.vx = this.facing * this.cfg.pounce.vx;
+          this.vy = this.cfg.pounce.vy;
           this.grounded = false;
           this.ctx.audio?.play('pounce');
           this.ctx.vfx.dust(this.x, this.y, 6);
@@ -216,14 +239,14 @@ export class Beast extends Enemy {
 
       case 'pounce': {
         this.phase -= dt;
-        if (this.grounded && this.phase < BEAST.pounce.active - 0.12) {
+        if (this.grounded && this.phase < this.cfg.pounce.active - 0.12) {
           this.state = 'recover';
-          this.phase = BEAST.pounce.recover;
+          this.phase = this.cfg.pounce.recover;
           this.vx = 0;
           this.ctx.vfx.dust(this.x, this.y, 5);
         } else if (this.phase <= 0) {
           this.state = 'recover';
-          this.phase = BEAST.pounce.recover;
+          this.phase = this.cfg.pounce.recover;
         }
         break;
       }
@@ -275,7 +298,7 @@ export class Beast extends Enemy {
     let neck = 0;
 
     if (this.state === 'windup') {
-      const u = 1 - this.phase / BEAST.pounce.windup;
+      const u = 1 - this.phase / this.cfg.pounce.windup;
       bodyY = -0.16 - u * 0.06;
       bodyZ = 0.16;
       neck = -0.3;
