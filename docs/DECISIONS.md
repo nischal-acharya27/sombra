@@ -175,12 +175,9 @@ gives level 1 a dramatic arc it currently lacks.
   key doesn't — this is comfort, not accuracy. Revisit only if the playtest says
   the hand position is the problem.
 
-- **The encounter frame-skip.** Reported in round 2 as new. It is not: it is
-  present in the round-1 build, and in the first playable build, and went
-  unnoticed for three rounds of play. Deferred on evidence, not on hope, so that
-  nobody investigates it from scratch a fifth time.
-
-  Ruled out, each with a measurement rather than an argument:
+- ~~**The encounter frame-skip.**~~ **Resolved 2026-08-02** — see below. Left in
+  this section, struck through, because the shape of the search is worth more
+  than the answer was.
 
   | Theory | Killed by |
   |---|---|
@@ -191,9 +188,33 @@ gives level 1 a dramatic arc it currently lacks.
   | Shader compilation | +1 program on the first beast, then flat. Nothing compiles at the bridge or the boss |
   | Accumulation or a leak | Programs and geometries both flat between encounters |
 
-  What is left, unresolved: it correlates exactly with encounters that open a
-  System window, and not at all with what spawns. The Guardian's +78 geometries
-  are the only real allocation in the game and it is not where the worst spike
-  is. If it is ever picked up again, start from the DOM and the compositor, not
-  from the simulation — and measure before mitigating, which is the mistake this
-  bug has now caused twice.
+  What survived that table was a correlation: every encounter that opens a
+  System window skipped, the chasm — the one that opens none — never did, and
+  nothing correlated with what spawned. The Guardian's +78 geometries are the
+  only real allocation in the game and are not where the worst spike is.
+
+  **The cause was the compositor layer, not the blur.** `.sys-window` carried
+  `will-change: opacity, transform` and `transform: translateZ(0)`, which
+  promote the element onto its own layer. Over a full-screen WebGL canvas the
+  browser then keeps a separate texture and re-composites it every frame the
+  window is alive — which is precisely a burst of 32–84 ms frames lasting as
+  long as the window does, each carrying 0.8 ms of JavaScript. Those properties
+  had been added to accelerate the `backdrop-filter`, so removing the filter and
+  leaving them behind removed the cheaper half and kept the expensive one.
+
+  Three builds isolate it, and the middle one is the control:
+
+  | Build | `backdrop-filter` | Own layer | Skip |
+  |---|---|---|---|
+  | round 1 → round 3 | yes | yes | yes |
+  | filter removed | **no** | yes | yes |
+  | layer removed too | no | **no** | **none** |
+
+  **The lesson is not "avoid `will-change`".** It is that four theories in a row
+  were about work done *once* — allocating a texture, compiling a shader,
+  building a model — while the evidence said the cost lasted as long as the
+  window was on screen and allocated nothing. The counters that finally settled
+  it (`renderer.info.programs`, `.memory.geometries`) are cheap and need no
+  frame timing at all; they should have been the first measurement rather than
+  the fifth. And the one thing that did get fixed blind — the warm-up — cost two
+  rounds by making a wrong theory look addressed.

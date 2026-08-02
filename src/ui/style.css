@@ -308,17 +308,18 @@ html, body {
   padding: 20px 26px 22px;
   text-align: center;
   animation: sysIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-  /* No `backdrop-filter`, and no compositor layer either.
+  /* Nothing here promotes this element onto its own compositor layer, and that
+   * is deliberate — it was the frame-skip.
    *
-   * The filter was a genuine per-frame cost: it re-blurs whatever is behind it
-   * on every frame it is composited, and what is behind this window is a moving
-   * 3D canvas, so the price was paid for the window's entire lifetime rather
-   * than once at open. Removing it did not fix the reported frame-skip, which
-   * was later found in the round-1 build too — see `docs/DECISIONS.md`.
+   * This window used to carry `backdrop-filter: blur(3px)` plus the
+   * `will-change` and `translateZ(0)` that accelerate it. Over a full-screen
+   * WebGL canvas an own-layer element makes the browser keep a separate texture
+   * and re-composite it every frame the window is alive, so the cost lasts as
+   * long as the window rather than being paid once when it opens. Removing the
+   * filter alone changed nothing; removing the layer with it fixed it.
    *
-   * `translateZ(0)` and `will-change` went with it. They existed to give the
-   * filter its own layer; with no filter they promote a layer over the canvas
-   * for nothing. */
+   * Do not reintroduce `will-change`, `translateZ(0)`, `backdrop-filter` or a
+   * `filter` here without measuring. See `docs/DECISIONS.md`. */
 }
 .sys-window.out { animation: sysOut 0.24s ease-in forwards; }
 .sys-window h3 {
