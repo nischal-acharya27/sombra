@@ -42,6 +42,7 @@ export class VFX {
   constructor(scene) {
     this.scene = scene;
     this.t = 0;
+    this.pending = []; // deferred beats — see `later`
 
     // --- particle system ---
     this.p = {
@@ -88,6 +89,26 @@ export class VFX {
         // wider than the hunter is tall — it hid the very hit it was drawing
         // attention to. Thin ring, low alpha, and offset clear of the body.
         new THREE.RingGeometry(0.92, 1.24, 28, 1, 0, 2.05),
+        new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+          fog: false,
+          toneMapped: false,
+        })
+      );
+      return m;
+    });
+
+    // The finisher's arc. A near-zero inner radius makes this a filled sector
+    // — the "slice of pizza" the playtest asked for — where the light swings
+    // stay thin rings. The shape is the tell that this swing reaches further.
+    this.wedges = this._pool(8, () => {
+      const m = new THREE.Mesh(
+        new THREE.RingGeometry(0.10, 1.5, 34, 1, 0, 1.5),
         new THREE.MeshBasicMaterial({
           color: 0xffffff,
           transparent: true,
@@ -303,26 +324,40 @@ export class VFX {
   slashArc(player, key) {
     const spec = ARC_SPECS[key];
     if (!spec) return;
-    const a = this._take(this.arcs);
+    this._arc(player.x, player.y, player.facing, spec);
+    // A move may strike twice. The second sweep is fired at an opposing angle,
+    // so the finisher draws a cross rather than a wider version of the same
+    // swipe — a different shape reads as a different move; a bigger one does
+    // not, which is exactly what the playtest reported.
+    if (spec.echo) {
+      const { delay, ...over } = spec.echo;
+      const [x, y, f] = [player.x, player.y, player.facing];
+      this.later(delay, () => this._arc(x, y, f, { ...spec, ...over }));
+    }
+  }
+
+  _arc(px, py, facing, spec) {
+    const a = this._take(spec.shape === 'wedge' ? this.wedges : this.arcs);
     a.position.set(
-      player.x + player.facing * spec.ox,
-      player.y + spec.oy,
+      px + facing * spec.ox,
+      py + spec.oy,
       0.85 // in front of the character, so it is never occluded by the body
     );
     // Ring geometry sweeps counter-clockwise from +X; rotate so the crescent
     // starts where the blade starts, and mirror it when facing left.
-    a.rotation.set(0, 0, spec.rot * player.facing);
-    a.scale.set(spec.scale * player.facing, spec.scale, 1);
+    a.rotation.set(0, 0, spec.rot * facing);
+    a.scale.set(spec.scale * facing, spec.scale, 1);
     a.material.color.setHex(spec.color);
-    a.material.opacity = 0.34;
+    a.material.opacity = spec.alpha ?? 0.34;
     Object.assign(a.userData, {
       kind: 'arc',
       life: spec.life,
       maxLife: spec.life,
-      spin: spec.spin * player.facing,
+      spin: spec.spin * facing,
       grow: spec.grow,
       base: spec.scale,
-      flip: player.facing,
+      flip: facing,
+      alpha: spec.alpha ?? 0.34,
     });
   }
 
@@ -440,10 +475,72 @@ export class VFX {
     s.userData.h = h;
   }
 
+  // -- deferred effects -----------------------------------------------------
+
+  /**
+   * Run `fn` after `delay` seconds of *effect* time.
+   *
+   * Driven from `update`, which runs on the render clock, so a queued beat
+   * still plays during hit-stop instead of being frozen with the simulation —
+   * which is what you want, since the whole point of a delayed impact is that
+   * it lands while everything else is held still.
+   */
+  later(delay, fn) {
+    this.pending.push({ t: delay, fn });
+  }
+
+  _runPending(dt) {
+    for (let i = this.pending.length - 1; i >= 0; i--) {
+      const q = this.pending[i];
+      q.t -= dt;
+      if (q.t > 0) continue;
+      this.pending.splice(i, 1);
+      q.fn();
+    }
+  }
+
+  /**
+   * The finisher's second beat.
+   *
+   * The playtest asked for a *design* change and was explicit that a bigger
+   * reach was not it: "It is still similar. What I wanted was a design change,
+   * rather than a 'reach' change." So the finisher stops being a larger version
+   * of the first two swings and becomes a different event — it lands twice,
+   * in its own colour, and it is the only move in the game that puts a ring on
+   * the ground from a standing hit.
+   */
+  finisherImpact(x, y, dir, groundY) {
+    this.hitSpark(x, y, dir, 1.5, P.amber);
+    this.later(0.09, () => {
+      this.hitSpark(x + dir * 0.35, y + 0.15, dir, 1.9, P.amber);
+      // On the floor, not relative to the chest. Derived from the hit height it
+      // landed a beast's ring at y = -0.3, i.e. under the ground, where the one
+      // element meant to be unmistakable was invisible.
+      // Tight. `shockRing` grows to radius × 2.4, so 1.7 drew a four-unit ring
+      // around a sword hit — slam's territory, not a swing's.
+      this.shockRing(x, groundY + 0.04, 0.95, P.amber);
+      for (let i = 0; i < 14; i++) {
+        this.emit({
+          x: x + rand(-0.4, 0.4),
+          y: y + rand(-0.5, 0.6),
+          z: rand(-0.35, 0.35),
+          vx: dir * rand(3, 13),
+          vy: rand(-2.5, 5),
+          size: rand(0.10, 0.26),
+          color: i % 3 === 0 ? P.bone : P.amber,
+          life: rand(0.20, 0.44),
+          grav: 5,
+          drag: 2.2,
+        });
+      }
+    });
+  }
+
   // -- update ---------------------------------------------------------------
 
   update(dt) {
     this.t += dt;
+    this._runPending(dt);
     const p = this.p;
     for (let i = 0; i < MAX_PARTICLES; i++) {
       if (p.life[i] <= 0) {
@@ -472,7 +569,7 @@ export class VFX {
     g.attributes.aSize.needsUpdate = true;
     g.attributes.aAlpha.needsUpdate = true;
 
-    for (const pool of [this.arcs, this.rings, this.smears, this.flashes, this.labels]) {
+    for (const pool of [this.arcs, this.wedges, this.rings, this.smears, this.flashes, this.labels]) {
       for (const o of pool.items) {
         if (!o.visible) continue;
         o.userData.life -= dt;
@@ -484,7 +581,7 @@ export class VFX {
         const u = o.userData.life / o.userData.maxLife;
         switch (o.userData.kind) {
           case 'arc': {
-            o.material.opacity = u * u * 0.34;
+            o.material.opacity = u * u * (o.userData.alpha ?? 0.34);
             o.rotation.z += o.userData.spin * dt;
             const s = o.userData.base * (1 + (1 - u) * o.userData.grow);
             o.scale.set(s * o.userData.flip, s, 1);
@@ -544,7 +641,22 @@ function radialTexture(size = 128) {
 const ARC_SPECS = {
   light1: { ox: 1.55, oy: 1.05, scale: 1.05, rot: 1.5, spin: -9, life: 0.16, grow: 0.28, color: 0xdfe8ff },
   light2: { ox: 1.55, oy: 1.05, scale: 1.05, rot: -1.9, spin: 9, life: 0.16, grow: 0.28, color: 0xdfe8ff },
-  light3: { ox: 1.75, oy: 1.05, scale: 1.45, rot: 1.9, spin: -7, life: 0.26, grow: 0.4, color: P.violetGlow },
+  // The finisher, and the only entry with an `echo`. Amber rather than the
+  // white-blue of the light swings or the violet of everything magical, so it
+  // is a different *colour* as well as a different shape — the playtest could
+  // see the wedge and still called it "still similar", and one changed variable
+  // was evidently not enough to break the family resemblance.
+  light3: {
+    ox: 1.55, oy: 1.05, scale: 1.3, rot: 1.75, spin: -6, life: 0.26, grow: 0.35,
+    // Much heavier alpha than the light swings' 0.34-of-a-thin-ring. The wedge
+    // was already here at 0.24 and the playtest still called the finisher "still
+    // similar" — additive amber at a quarter opacity over a lit purple sky is
+    // very nearly nothing. The old warning about a solid white fan swallowing
+    // the hit still stands, which is why this is amber and offset clear of the
+    // body rather than white and centred on it.
+    color: P.amber, shape: 'wedge', alpha: 0.62,
+    echo: { delay: 0.085, rot: -0.4, spin: 7.5, scale: 1.45, life: 0.30, alpha: 0.5 },
+  },
   launcher: { ox: 1.15, oy: 0.95, scale: 1.3, rot: -2.5, spin: 8, life: 0.24, grow: 0.45, color: P.cyan },
   air1: { ox: 1.45, oy: 1.0, scale: 1.0, rot: 1.4, spin: -9, life: 0.15, grow: 0.28, color: 0xdfe8ff },
   air2: { ox: 1.5, oy: 1.0, scale: 1.1, rot: -1.8, spin: 9, life: 0.17, grow: 0.32, color: 0xdfe8ff },

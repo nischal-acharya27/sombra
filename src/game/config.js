@@ -108,10 +108,12 @@ export const MAGIC = {
   // seconds. Enough that reaching for it is never a resource crisis, far too
   // little to replace the sword — see the `ranged` probe in tools/sim.js.
   cost: 16,
-  damage: 33,
+  // Kept from the round-3 build. `WISP.hp` is 30, so at 33 damage one cast
+  // killed a wisp outright and at pierce 3 one cast killed a whole cluster.
+  damage: 23,
   speed: 34,
   life: 1.5,
-  pierce: 3,
+  pierce: 1,
   cooldown: 0.34,
   knock: 5,
   hitstop: 0.06,

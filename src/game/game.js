@@ -291,6 +291,14 @@ export class Game {
 
     this.freeze = Math.max(this.freeze, hitstop);
     this.cam.shake(shake);
+
+    // Kept from the round-3 build: the finisher lands twice, in amber, and is
+    // the only sword hit that puts a ring on the ground.
+    if (move === 'light3') {
+      this.vfx.finisherImpact(e.x, hy, dir, e.y);
+      this.vfx.later(0.09, () => this.cam.shake(shake * 0.7));
+    }
+
     this._addStyle(style, move);
 
     if (e.dead) this._onKill(e);
