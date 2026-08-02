@@ -91,10 +91,20 @@ addEventListener('keydown', (e) => {
 // the simulation directly rather than waiting on animation frames, because a
 // browser throttles rAF whenever the tab is not focused — which makes any
 // wall-clock automated playtest measure nothing at all.
+//
+// `?sim&seed=N` runs it against a different top-level seed. The project's own
+// rule is that one seed is not evidence, and until this existed the only way to
+// obey it was to edit `runSuite`'s default — which is both a diff you have to
+// remember to revert and a fresh page load per seed anyway. A page load per
+// seed is not incidental: the suite mutates the game object, so seeds have to
+// be run in separate loads or later ones inherit earlier ones' state.
 if (location.search.includes('sim')) {
   document.getElementById('boot').classList.add('hidden');
   document.getElementById('title').classList.add('hidden');
-  import('../tools/sim.js').then((m) => m.runSuite(game, input));
+  const seed = Number(new URLSearchParams(location.search).get('seed'));
+  import('../tools/sim.js').then((m) =>
+    Number.isFinite(seed) && seed !== 0 ? m.runSuite(game, input, seed) : m.runSuite(game, input)
+  );
 } else {
   loop.start();
   document.getElementById('boot').classList.add('hidden');

@@ -18,6 +18,30 @@ would multiply unvalidated content. Both previous projects stopped at exactly
 this point — playable, never played — and that is the failure mode this
 ordering exists to avoid.
 
+**Amended 2026-08-03: breadth is now the milestone.** The rule above is
+retired, not forgotten, and it is worth being precise about what changed rather
+than pretending it was wrong.
+
+It rested on two conditions, and both have since been met. Level 1 was
+unplayed; it has now been played four times, and the findings of all four are
+in `PLAYTEST.md`. And the depth the rule was protecting was SORGI specifically
+— named in this document as the thing that had to exist first. It exists, it is
+verified, and the player has confirmed the mechanic works. A rule whose
+preconditions have been satisfied has done its job; keeping it would be
+mistaking the guard for the thing guarded.
+
+What the rule was actually right about survives, and is carried into
+`SPEC-CAMPAIGN.md` as the build order rather than as a prohibition: gate 2 is
+built end to end and played before gates 3–10 are authored. The failure mode is
+still multiplying unvalidated content, and one validated gate is what stops it.
+The guard moved; it was not removed.
+
+The honest risk of this amendment: the previous rule was overturned by the
+person it constrained, on the grounds that its conditions were met, and that is
+exactly how a load-bearing rule dies quietly in every project that has ever
+had one. The check is the checkpoint above. If gate 2 is authored and gates
+3–10 begin before it has been played, this amendment was a rationalisation.
+
 **Playtesting comes before building.** ARISE is a substantial system resting on
 a core loop no human has played. If the slash feels weak or the beast's tell
 doesn't read, a bigger system on top won't rescue it. See `PLAYTEST.md`.
@@ -55,6 +79,194 @@ across hundreds of unrelated LitRPG works.
 Names are drawn from across the Romance languages, which is the better choice
 independent of the legal question — an invented magic system reads as authored
 when its vocabulary isn't English.
+
+## Campaign, audience and platform
+
+Settled in a design interview on 2026-08-03, when the project acquired an
+end goal it did not previously have: **a free Android game carrying ads.** That
+goal reaches backwards into the story, the level count and the combat, so it is
+recorded before any of them.
+
+### Two premises that were checked and found false
+
+Both were believed at the start of the interview, and both would have led
+somewhere wrong.
+
+**The game is not multi-lingual.** `index.html` is `lang="en"` and every string
+is an English literal inline in JS. What exists is Romance-language *move
+naming* — Sombra, Décret, Ascensão — which is a naming aesthetic recorded under
+§ Naming and positioning, not an i18n layer. The syncretic mythology below
+therefore had to justify itself on its own merits rather than inheriting a
+rationale from a feature that does not exist.
+
+**The game is not touch-capable.** `input.js` binds eleven actions and SORGI is
+a two-key chord. Android is a control-scheme redesign, not a packaging step, and
+that redesign constrains what a level may ask for. See the touch budget below.
+
+### Audience: content for 9+, declared 13+
+
+These are two separate fields in Play Console and only one of them costs money.
+Content rating is how mild the game is. Target audience is who you declare you
+are building for. Declaring any under-13 group triggers the Families policy:
+certified ad SDKs only, non-personalised ads, and a reported ~70% cut to eCPM
+**across the entire userbase, not only the children**.
+
+So the game is built mild enough for a nine-year-old and declares 13+. A
+nine-year-old can still play it; they are simply not the declared target.
+
+**Known risk, not hidden:** Play can reclassify an app whose art and store
+listing plainly appeal to children, and this game's soft cel-shaded pastel look
+is genuinely borderline. That risk is managed by how the listing is written and
+it is not zero.
+
+**What 9+ costs the design, and what it unexpectedly buys.** SORGI could not
+remain "stand over a corpse and raise the dead". It became "release a soul that
+got stuck, and escort it" — see § The campaign below. That is a text change and
+not a mechanic change: not one line of `shadow.js` behaviour is affected. It
+also turns the mechanic from decorative to load-bearing in the story, which is
+a better outcome than the one being compromised away from.
+
+### The touch budget
+
+Adopted as a design rule now; the touch scheme itself is built later. Three
+constraints, and every gate is authored against them:
+
+1. **No chord may be required.** SORGI's `hold S + K` needs a touch equivalent
+   that is a single target.
+2. **Jump margins stay at or above 25% reserve.** This is not a guess. `level.js`
+   records that 4.5-unit gaps left a 4% margin and *both scripted bots died there
+   repeatedly*; they were widened to 3.8 against a measured 6.08-unit running
+   jump, which is 26%. A thumb on a virtual pad with no key travel and no
+   tactile edge is strictly worse than a bot.
+3. **No beat may require a direction plus two buttons at once.**
+
+The reason to adopt these before the scheme exists is that they cost a paragraph
+today and cost ten re-authored gates later. The reason to distrust them is that
+they are written against an imagined input device: **the only proof a thumb can
+clear a 26% margin is a thumb.** Gate 2 is to be played on a real phone before
+gate 3 is authored.
+
+The budget is not only a rule. Constraint 2 is a *static assertion* the suite can
+run against all ten gates in milliseconds — see § The level-data seam.
+
+### Monetisation
+
+**Interstitials** every two to three gate clears. Ten gates give nine natural
+boundaries for free; every boundary is too aggressive at roughly 130 s per gate.
+
+**Rewarded video is restricted to a "second wind" in boss arenas, once per
+attempt.** The unrestricted version — continue anywhere on death — is the
+highest-earning placement in this genre and it was refused, so the reasoning
+needs to be on record. This game's combat rests on one claim defended across
+three playtest rounds: every threat announces itself, so you always know what
+killed you. A general continue converts every skill gate into an ad gate, and
+the player who cannot read the Guardian's tell stops having to learn it. Bounding
+it to bosses puts the offer exactly where `PLAYTEST.md` already measured real
+frustration — four or five attempts on the Guardian — and nowhere else.
+
+This trades revenue for design integrity, knowingly. If retention data later
+says the game is losing players at a non-boss wall, that is the evidence that
+would reopen it.
+
+### The campaign
+
+Ten gates. The syncretic brief — Greek, Hindu, Buddhist, Japanese, Chinese —
+was taken as a structural problem rather than a decorative one, because the
+decorative version is a theme park where gate 3 is Greek and gate 4 is Japanese,
+and that is both shallow and a poor way to treat living religions.
+
+**The traditions share a real, historically transmitted architecture**, and the
+campaign is built on the parts that genuinely overlap rather than on parts
+forced together:
+
+- **Yama is one figure across four of them.** Vedic Yama → Buddhist Yama →
+  Chinese Yanluo Wang → Japanese Enma is documented transmission. Greek supplies
+  the structural parallel in Minos, Rhadamanthys and Aeacus.
+- **All five have a river of the dead**, and the forgetting at the crossing pairs
+  Greek Lethe with Chinese Meng Po's broth almost exactly.
+- **Rebirth is shared, including by Greece** — samsara, and Orphic
+  metempsychosis.
+- **The hells are already enumerated as stages** — Diyu's courts, Naraka's eight
+  hot and eight cold. The source material is natively structured as levels.
+
+**Premise: the Wheel has stopped.** Souls that should be judged and reborn are
+backing up, and the overflow tears into the living world. Those breaches are the
+gates. The hunter is not a monster-slayer; they are doing the psychopomp's work
+the machinery abandoned.
+
+**Yama stopped judging because he could no longer bear it.** Legible to a
+nine-year-old — someone put down a hard job because it hurt too much — without
+being childish, and the resolution is taking up the work rather than killing
+him. Gate 1 has foreshadowed this since it was built and nobody planned it: the
+Kneeling Stone is a colossus knelt with its head bowed and one dead violet eye,
+which is a judge who stopped judging.
+
+**Structure:** the breached world, the crossing, then ascending through the six
+realms of rebirth — hells, hungry ghosts, animals, humans, asuras, devas — then
+Yama's court, then the Wheel. Greek lives in the frame (river, ferryman, judges)
+rather than as one gate's costume, which is honest to the one tradition here
+with no enumerated realms.
+
+Ascent was chosen over a straight descent through the hells for two reasons.
+Visual variety: a deva-realm gate and a hungry-ghost gate look nothing alike,
+whereas ten hells is ten shades of dark, and § Art direction's darkening lerp
+works far better as six distinct realm palettes than as one long fade to black.
+And it yields an ending that means something at 9+ — *even the god realm is
+impermanent* — which is the actual Buddhist point and lands as a beat rather
+than a lecture.
+
+**The shadow is the emotional spine.** Each one is a soul being escorted toward
+rebirth, and the campaign ends by letting it go. The mechanic leaned on for ten
+gates becomes the thing surrendered.
+
+### Wardens and bosses
+
+**Every gate ends with a named Warden.** A Warden is an existing archetype
+parameterised with elevated stats, a title, and one signature addition to its
+moveset — no new file, no new state machine, a telegraph the player already
+knows. Ten Wardens cost roughly what one Guardian costs, because they are
+configured rather than written.
+
+**Four of them are Guardian-class bosses** — bespoke and multi-phase, at gates
+3, 6, 8 and 10. The boss *is* that gate's Warden, escalated, rather than an
+additional fight: every gate gets a face, no gate pays twice, and the escalation
+reads as rank in the fiction.
+
+Ten bosses was refused on scope. `boss.js` is 575 lines for one Guardian, and
+that Guardian is not yet re-tuned for a shadow-carrying player.
+
+### Progression: rank carries, the moveset never grows
+
+Gate completion and hunter rank persist; the moveset is frozen at seven verbs
+forever. The hunter grows numerically and narratively — D toward S, which is the
+genre's spine and what the README already sells — and never gains a new button.
+
+This is not a preference. It falls out of the touch budget: there is nowhere to
+put an eighth control on a phone screen that a thumb also has to steer with. The
+constraint is a gift rather than a limitation — no new verb also means no new
+telegraph to teach, and it lets the suite place a bot at a known rank for each
+gate deterministically.
+
+A relic or equipment layer was considered and refused. It is the strongest
+retention and rewarded-ad hook available, and it is bookkeeping with a shop
+attached — which this document already rejected once, when it refused a mana
+cost for SORGI on precisely those grounds.
+
+### Text is centralised now, translated later
+
+All narrative and UI strings move into one module as the campaign is authored.
+No translation ships at launch, no locale switching UI, no build step.
+
+The timing is the entire decision. Routing ten gates of prose through a string
+table while writing it is nearly free; extracting it from ten gates of inline
+literals afterwards is a slog. Translating *now* would be spending effort on
+reach before knowing whether the game retains anyone.
+
+One constraint turns out not to bind, and it is worth recording so nobody
+re-derives it: **the no-asset-files rule does not block localisation**, because
+all text in this game is DOM text styled by CSS and Android's WebView supplies
+system fonts for Devanagari, CJK and the rest. If text were rendered into
+textures this would be impossible. It is not.
 
 ## ARISE / shadow extraction — specified, not yet built
 
@@ -253,12 +465,165 @@ elsewhere, and has been for as long as the assertion has existed. Widening the
 sweep moves the estimate a long way on a fixed build too — the same build reads
 54% at eight seeds and 65% at twenty-four.
 
+**Corrected 2026-08-03. Four of those five numbers do not reproduce, and the
+bit-identity claim above is false.** Re-measured on `0e508b3`, the committed
+SORGI build:
+
+    seed             recorded      measured
+    20260728          54% PASS      54% PASS     ✓
+    1                 85% FAIL      89% FAIL     ✗
+    99991            102% FAIL      98% FAIL     ✗
+    20260802          89% FAIL      82% PASS     ✗  — and it flips the verdict
+    7777777           69% PASS      70% PASS     ✗
+
+Only the default seed reproduces. The recorded verdict of "fails three of five"
+is now two of five, because 20260802 crosses the threshold in the other
+direction.
+
+This was found while adding the shadow-carrying bot, and the first suspicion was
+that the new row had disturbed the old ones. It had not, and the check is worth
+recording because it is the cheap one: `git stash push tools/sim.js`, re-run the
+same seed, compare. The reverted build reads 89% on seed 1 too. Whatever
+produced the original table, it was not this build — most likely it was the
+pre-SORGI build, and the bit-identity claim was verified on the default seed and
+then asserted of all five.
+
+**This strengthens the restatement below rather than undermining it.** An
+estimator whose point values do not survive a rebuild is exactly an estimator
+that should never have been compared against a point threshold. It also stands
+as a warning about this document: a number recorded here without saying which
+build produced it is a number that cannot be checked later, and four of these
+five could not be.
+
 This is recorded and **not** acted on. It is a real weakness in the only
 independent check the project has, the obvious fixes are all forms of turning a
 dial on the instrument, and the standing warning at the top of that assertion —
 do not close the gap by making the naive bot worse — applies just as much to
 closing it by choosing a kinder sample. It wants a decision of its own, taken
 deliberately, not one taken in passing while landing a feature.
+
+**Decided 2026-08-03, deliberately and on its own.** The assertion is restated
+as a claim about a distribution rather than a point.
+
+The evidence that settles it is already above and was misread as a fact about
+the build: *the same fixed build reads 54% at eight seeds and 65% at
+twenty-four.* A number that moves eleven points on a build that did not change
+is not measuring the build. It is an estimator with a standard error far wider
+than the effect being tested, compared against a threshold — 85% — that was
+never derived from anything. Three of five seeds "failing" is not five
+observations of a property; it is five draws from a wide distribution.
+
+So the assertion becomes: **the median damage gap across twenty-four fixed
+seeds exceeds a threshold set from the measured distribution**, reported with
+its spread rather than as a pass or fail on one number.
+
+This is neither of the two things the standing warning forbids, and the
+distinction is the whole point. Handicapping the naive bot changes the system
+under test. Choosing a kinder sample changes which draws are counted. Taking
+more samples changes neither — it reduces the error on an estimate of a
+quantity that was always the same. The naive bot is untouched, no seed is
+excluded, and the threshold is derived rather than asserted.
+
+What this does not fix, and must not be claimed to: it does not make the
+telegraph design more true. It makes the measurement of it honest enough to be
+worth reading, which it currently is not. If the median gap turns out to sit
+near zero, that is a finding about the combat design and the answer is not
+another change to the instrument.
+
+## The level-data seam, and what the suite checks across ten gates
+
+Both halves of the campaign work hit one seam, and it is currently welded to
+gate 1.
+
+`level.js` holds `SEGMENTS` and `ENCOUNTERS` as module-level `const` arrays and
+`Level`'s constructor takes only `scene`. `game.js` imports `SPAWN_X`, `VOID_Y`
+and `ARENA_TOP` as module constants. `sim.js` is coupled to the same layout:
+`bossFight` teleports to `p.x = 178`, encounters are skipped by
+`e.id !== 'guardian'`, and `checkGaps` reads live geometry.
+
+**The seam: a gate is a data descriptor, and `Level` takes one.** Geometry,
+encounters, the per-gate constants, the realm's palette and the Warden's
+configuration all move into one object per gate. `Level` becomes the thing that
+turns any such descriptor into geometry and answers collision queries against
+it, which is most of what it already does.
+
+**Gate 1 moves through the seam first, with zero behaviour change and the suite
+still green.** Authoring new content and changing the shape that holds it are
+two jobs, and doing them together means a failure has two candidate causes and
+no clean baseline. Gate 1 is the only content with four rounds of playtest
+behind it, which makes it the only usable control.
+
+### The failure mode changes, and so does the instrument
+
+Today's bugs are mechanic bugs and bots playing find them. Tomorrow's dominant
+bug is an **authoring** bug — a gap two units too wide, a spawn inside a
+barrier, a platform that cannot be reached, a lock that strands the player.
+Those are far cheaper to catch statically than by simulation, and the constants
+needed to catch them are already measured and recorded in `level.js`.
+
+Three tiers:
+
+1. **Static checks on all ten gates, every run.** Gap widths against the
+   measured reserve ratio, spawn points clear of barriers, a reachability proof
+   from spawn to exit, no lock that can strand. Milliseconds, and it makes
+   constraint 2 of the touch budget machine-checkable rather than a rule
+   somebody has to remember while authoring.
+2. **One full-campaign playthrough** — a single bot playing all ten gates end to
+   end, carrying a shadow. Not ten per-gate runs: this project has already been
+   bitten by state that `reset()` does not clear, and a per-gate harness is
+   structurally blind to exactly that class of bug.
+3. **The deep analysis — telegraph gap, boss sweeps, juggle probes — on a
+   designated sample of two or three gates**, not all ten. That analysis is what
+   makes the suite slow, and a slow suite is a skipped suite, and this suite is
+   the project's only independent check.
+
+**The acknowledged cost of tier 3:** seven gates never receive telegraph-gap
+analysis. Given that assertion is being restated as a distribution claim
+precisely because it was not measuring reliably at one gate, concentrating it
+where it can be run properly is an honest allocation — but it is a real
+reduction in coverage and should not be described as anything else.
+
+### Three debts are paid before gate 2 is authored
+
+All three were recorded, all three were deferred, and the campaign plan makes
+two of them prerequisites rather than debts.
+
+- ~~**The shadow-carrying bot.**~~ **Paid 2026-08-03.** It *is* tier 2 above.
+  Measured on `0e508b3` plus the new row, across the five top-level seeds:
+
+      seed        clears   raised   into the arena carrying   dmg carried / empty
+      20260728     7/8       7           7/8                    116 / 87
+      1            7/8       8           7/7                     98 / 96
+      99991        7/8       8           6/7                    105 / 133
+      20260802     7/8       7           7/7                     63 / 112
+      7777777      6/8       6           6/8                    129 / 94
+
+  **The gate is clearable carrying a shadow, on every seed tried**, at six or
+  seven of eight — at or above the empty-handed bot's own rate. The bot raised a
+  shadow on every seed, which is the row's guard against passing vacuously, and
+  carried one into the Guardian's arena in six or seven of the runs that reached
+  it. That last column is the design claim from § ARISE — the arena holds no
+  bodies, so what you walk in with is all you get — measured for the first time.
+
+  **Damage is a wash and the spread is enormous**: 102 carried against 104
+  empty-handed on average, with individual seeds ranging from 63/112 to 129/94.
+  The ally's help and the cost of standing still for the channel roughly cancel.
+  Recorded as a baseline, not as a target, and it is the number the Guardian
+  re-tune will move on purpose.
+
+  The bot claims a body only once the fight around it is over. That models a
+  careful player rather than a reckless one, and it deliberately does not
+  measure the mid-fight gamble — which is a different probe for a different
+  claim, and naming that here so the row is not later mistaken for evidence
+  about it.
+- **The Guardian re-tune.** Four Guardian-class bosses are committed. Tuning the
+  first properly, with a bot, produces a repeatable *method* for the other
+  three; skipping it produces four bosses tuned by feel with no way to attribute
+  which change did what. This document already states the rule: the boss must
+  not be re-tuned by feel, because with one playtester who is also the developer
+  the suite is the only independent check there is. At that re-tune `ranged`
+  becomes a hard gate — kiting must not win a majority of seeds.
+- **The telegraph-gap restatement.** See § The telegraph gap is a coin-flip.
 
 ## Art direction
 
@@ -270,10 +635,23 @@ gives level 1 a dramatic arc it currently lacks.
 
 ## Deferred, deliberately
 
-- **Persistence / meta-progression.** Replay value only matters once the loop is
-  good. Nothing currently survives a reload.
-- **More enemy types.** Two plus a boss is enough to give the shadow a
-  melee/ranged choice and prove the mechanic.
+- ~~**Persistence / meta-progression.**~~ **Reversed 2026-08-03.** Replay value
+  only matters once the loop is good — and the loop is now good enough that ten
+  gates are being built on it. Nobody clears ten gates in one sitting on a
+  phone, so a save is no longer a feature sitting on top of the game; it is the
+  substrate the whole campaign and its monetisation rest on. It also converts a
+  decision this document explicitly said was *not* a persistence decision — "the
+  teaching line fires once per page load" — into one. See § Campaign, audience
+  and platform.
+- ~~**More enemy types.**~~ **Reversed 2026-08-03.** Two plus a boss was enough
+  to prove the mechanic, which is exactly what it was chosen for and exactly
+  what it did. It is not enough to carry ten realms: beast-and-wisp in the god
+  realm and beast-and-wisp in the hells is one game wearing ten hats. Three new
+  archetypes are added, chosen as tactical verbs rather than skins. The reason
+  the original deferral was wise still binds and is carried forward as a cost,
+  not a veto — every new enemy is a new telegraph that has to be taught,
+  verified and defended, and telegraph readability is what three playtest rounds
+  were spent on.
 - **Gamepad.** Movement is digital left/right, so a stick offers no fidelity a
   key doesn't — this is comfort, not accuracy. Revisit only if the playtest says
   the hand position is the problem.

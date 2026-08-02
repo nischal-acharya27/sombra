@@ -8,7 +8,7 @@
 // and winnability* can, and both are easy to break while tuning. Every bot
 // below has caught a real bug at least once.
 
-import { PLAYER, ATTACKS } from '../src/game/config.js';
+import { PLAYER, ATTACKS, SHADOW } from '../src/game/config.js';
 
 const DT = 1 / 120;
 /** Seeds per playthrough sweep. Eight runs cost about a second. */
@@ -371,7 +371,7 @@ function checkGaps(game, arcs) {
  * gaps, swing at anything close. If a dumb bot can finish, the level contains
  * no unpassable geometry — which is the only claim this test makes.
  */
-function playthrough(game, input, { maxSeconds = 400, readTells = false } = {}) {
+function playthrough(game, input, { maxSeconds = 400, readTells = false, carryShadow = false } = {}) {
   game.start();
   const bot = new Bot(game, input, REACTION);
   const p = game.player;
@@ -381,16 +381,72 @@ function playthrough(game, input, { maxSeconds = 400, readTells = false } = {}) 
   let stuckAt = p.x;
   let stuckFor = 0;
   let chasing = false;
+  // SORGI bookkeeping. All inert unless `carryShadow`.
+  let extractFor = 0; // seconds left in a committed extraction attempt
+  let extractPressed = false;
+  let shadowsRaised = 0;
+  let lastShadow = null;
+  let bossSeen = false;
+  let shadowAtBoss = false;
   const steps = Math.floor(maxSeconds / DT);
 
   for (let i = 0; i < steps; i++) {
     if (game.state !== 'playing') break;
+
+    // Read before anything can `continue` past it. `game.shadow` is a single
+    // slot that is nulled when the ally dies, so identity change is the only
+    // way to count raises — a counter on the game would miss a replacement.
+    if (game.shadow !== lastShadow) {
+      if (game.shadow) shadowsRaised++;
+      lastShadow = game.shadow;
+    }
+    // The arena holds no enemies and therefore no bodies, so what the hunter
+    // walks in with is all there is. That is the design claim this records.
+    if (!bossSeen && game.activeEncounter?.boss) {
+      bossSeen = true;
+      shadowAtBoss = !!game.shadow;
+    }
 
     const target = nearestEnemy(game);
     const dist = target ? Math.abs(target.x - p.x) : Infinity;
     attackCd -= DT;
     magicCd -= DT;
     dashCd -= DT;
+
+    // SORGI. The bot claims a body once the fight around it is over, which is
+    // how a careful human plays it: the channel roots for 0.8 s and any hit
+    // breaks it, so extracting mid-fight is a gamble — and a gamble is not what
+    // this row is measuring. What it measures is whether the gate is clearable
+    // by someone carrying a shadow, which is now the normal way it is played
+    // and something the suite has never been able to say anything about.
+    //
+    // Range and reach come from `game.nearestCorpse`, the same call the player
+    // makes each frame, so this bot cannot drift out of agreement with the rule
+    // it is testing.
+    //
+    // An attempt is committed rather than re-decided per frame. `press` carries
+    // the bot's reaction latency, so `down` has to still be held when the press
+    // matures, and a bot that re-evaluated every frame would release it early
+    // and never extract at all.
+    if (carryShadow) {
+      if (extractFor <= 0 && !game.shadow && p.grounded && dist > 7 && game.nearestCorpse(p.x, p.y)) {
+        extractFor = REACTION + SHADOW.channel + 0.25;
+        extractPressed = false;
+      }
+      if (extractFor > 0) extractFor = game.shadow ? 0 : extractFor - DT;
+      if (extractFor > 0) {
+        bot.hold('left', false);
+        bot.hold('right', false);
+        bot.hold('down', true);
+        if (!extractPressed) {
+          bot.press('heavy');
+          extractPressed = true;
+        }
+        bot.step();
+        continue;
+      }
+      bot.hold('down', false);
+    }
 
     // Every threat in the game announces itself before it commits. A bot that
     // watches for that and dashes should clear the gate; one that ignores it
@@ -540,6 +596,9 @@ function playthrough(game, input, { maxSeconds = 400, readTells = false } = {}) 
     level: game.level_,
     damageTaken: Math.round(game.damageTaken),
     hp: Math.round(p.hp),
+    shadowsRaised,
+    shadowAtBoss,
+    reachedBoss: bossSeen,
   };
 }
 
@@ -872,20 +931,29 @@ function runAll(game, input, seed) {
   // jitter, spawn scatter and wisp drift phases are all live in a run, so a
   // single sample was never evidence about the level; it was evidence about a
   // seed, and every tuning decision measured against it inherited that.
-  const sweep = (n, readTells) => {
+  const sweep = (n, opts) => {
     const runs = [];
     for (let i = 0; i < RUNS_PER_SWEEP; i++) {
-      runs.push(scope(n * 100 + i, () => playthrough(game, input, { readTells })));
+      runs.push(scope(n * 100 + i, () => playthrough(game, input, opts)));
     }
     const cleared = runs.filter((r) => r.ok).length;
     // Mean damage over *every* run, cleared or not. A bot that dies has spent
     // its whole health bar by definition, so dying is not rewarded by the
     // average — which it would be if only clears were counted.
     const damage = runs.reduce((a, r) => a + (r.damageTaken ?? PLAYER.maxHp), 0) / runs.length;
-    return { runs, cleared, of: runs.length, damage, best: runs.find((r) => r.ok) ?? runs[0] };
+    return {
+      runs,
+      cleared,
+      of: runs.length,
+      damage,
+      best: runs.find((r) => r.ok) ?? runs[0],
+      raised: runs.reduce((a, r) => a + (r.shadowsRaised ?? 0), 0),
+      reachedBoss: runs.filter((r) => r.reachedBoss).length,
+      atBoss: runs.filter((r) => r.shadowAtBoss).length,
+    };
   };
-  report.naive = sweep(3, false);
-  report.playthrough = sweep(4, true);
+  report.naive = sweep(3, { readTells: false });
+  report.playthrough = sweep(4, { readTells: true });
   // Melee has to be a winning answer; kiting deliberately is not. Mana regen
   // caps the bolt at roughly a tenth of melee DPS, so `ranged` is a balance
   // probe — if it ever starts winning comfortably, the bolt is overtuned and
@@ -904,6 +972,16 @@ function runAll(game, input, seed) {
   // never going to catch that, and the cheapest fix is to have nothing after it
   // to disturb. A new probe belongs here too, for the same reason.
   report.extraction = scope(8, () => extraction(game, input));
+  // And this one goes after *that*, for the same reason again.
+  //
+  // Eight more playthroughs is the largest block of frames in the suite, and
+  // extraction allocates: `Shadow extends Beast`, so raising one builds a rig
+  // and spends Math.random draws on three.js UUIDs. Placed anywhere earlier it
+  // would re-roll every row below it and there would be no way to tell a real
+  // regression from the reshuffle. Placed last it cannot disturb anything, and
+  // the check that this is true is that every pre-existing number in the report
+  // is bit-identical to the build before this row existed.
+  report.carried = sweep(9, { readTells: true, carryShadow: true });
   report.ms = Math.round(performance.now() - t0);
 
   print(report);
@@ -1039,6 +1117,42 @@ function print(r) {
   lines.push('  it needs re-tuning anyway once a carried shadow exists, and tuning it');
   lines.push('  twice is how you end up unable to attribute either result. At that');
   lines.push('  re-tune this becomes a hard gate — kiting must not win a majority.');
+  lines.push('');
+
+  lines.push('CARRYING A SHADOW   (the way the game is actually played)');
+  const c = r.carried;
+  const carriedOk = c.cleared * 2 > c.of;
+  // A bot that never managed to extract would clear the gate and pass this row
+  // while testing nothing at all. That is the failure mode worth guarding: the
+  // row has to prove it used the mechanic before its clear rate means anything.
+  const usedIt = c.raised > 0;
+  lines.push(row('carries a shadow', c, ok(carriedOk)));
+  lines.push(`  shadows raised   ${c.raised} over ${c.of} runs   ${ok(usedIt)}`);
+  lines.push(
+    `  reached the arena carrying one   ${c.atBoss}/${c.reachedBoss} of the runs that got there   baseline`
+  );
+  lines.push(
+    `  damage taken   carried ${c.damage.toFixed(0)}   empty-handed ${r.playthrough.damage.toFixed(0)}   baseline`
+  );
+  lines.push('');
+  lines.push('  The bot claims a body once the fight around it is over, which is how a');
+  lines.push('  careful human plays it — the channel roots for 0.8 s and any hit breaks');
+  lines.push('  it. Extracting mid-fight is a gamble, and a gamble is not what this row');
+  lines.push('  measures. It measures whether the gate is clearable while carrying a');
+  lines.push('  shadow, which the suite could not say anything about until now.');
+  lines.push('');
+  lines.push('  The last two numbers are recorded baselines, not gates. The Guardian is');
+  lines.push('  still tuned for a shadow-less hunter, so asserting on either of them now');
+  lines.push('  would be asserting against numbers that are about to move on purpose.');
+  if (!usedIt) {
+    lines.push('');
+    lines.push('  NO SHADOW WAS EVER RAISED, so the clear rate above is measuring the');
+    lines.push('  ordinary bot. Check that beasts still leave bodies, that the corpse');
+    lines.push('  window outlives the encounter, and that `down` is still held when the');
+    lines.push("  latency-delayed `heavy` matures — that last one is why the attempt is");
+    lines.push('  committed for a fixed window rather than re-decided every frame.');
+  }
+
   lines.push('', `seed ${r.seed}   ·   suite ran in ${r.ms} ms`);
 
   el.textContent = lines.join('\n');
