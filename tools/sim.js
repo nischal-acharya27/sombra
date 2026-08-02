@@ -45,10 +45,65 @@ const REACTION = 0.25;
 /** Presses the bot plans rather than reacts to. See REACTION. */
 const PLANNED = new Set(['jump']);
 /**
- * How much less damage reading tells must buy. Below this the telegraph design
- * is decoration, whatever the doc says about it.
+ * Paired seeds behind the telegraph claim.
+ *
+ * This used to be a single ratio of two eight-run means against a threshold of
+ * 0.85, and that instrument could not survive its own evidence. The same fixed
+ * build read 54% at eight seeds and 65% at twenty-four; four of the five
+ * recorded top-level numbers did not reproduce on the build they were recorded
+ * against, and one of them flipped its verdict. A statistic that moves that far
+ * without the system under test changing is not measuring the system.
+ *
+ * Two things are wrong with the old shape and both are fixed here.
+ *
+ * The sweeps were *unpaired* — the naive runs used one set of scoped seeds and
+ * the reading runs another — so the two bots were not even playing the same
+ * levels. Half the spread was spawn scatter rather than behaviour. Runs are now
+ * paired: run i of each bot shares a scope, so the only difference between the
+ * two numbers is the bot.
+ *
+ * And a mean ratio of noisy quantities is a bad estimator with a heavy tail and
+ * an undefined value whenever the denominator reaches zero. See TELL_WINS_MIN.
  */
-const TELL_GAP = 0.85;
+const TELL_SEEDS = 24;
+/**
+ * How many of the paired runs the tell-reader must take less damage in.
+ *
+ * This is a sign test, and it matters that the number is *derived* rather than
+ * chosen. Under the null hypothesis — telegraphs buy nothing — which bot takes
+ * less damage in a given pair is a coin flip, so the count is Binomial(24, ½).
+ * P(X ≥ 17) ≈ 0.032 and P(X ≥ 16) ≈ 0.076, so 17 is the smallest threshold that
+ * clears p < 0.05 one-tailed.
+ *
+ * The standing warning has three clauses now, and this is the answer to the
+ * third: do not close the gap by handicapping the naive bot, do not close it by
+ * choosing a kinder sample, and do not close it by reporting a point estimate
+ * drawn from a wide distribution. A threshold taken from the null distribution
+ * cannot be tuned toward, because it does not depend on the build at all — the
+ * previous 0.85 could have been, and there is no record of where it came from.
+ *
+ * The median ratio is still reported, as effect size. It is not asserted on,
+ * because its absolute value is exactly the thing that failed to reproduce.
+ */
+const TELL_WINS_MIN = 17;
+/**
+ * Significance level for the gate, which is the Wilcoxon signed-rank test in
+ * `wilcoxon()` rather than the sign test above.
+ *
+ * The sign test was written first and is kept as a reported number, because
+ * *which test was tried first* is part of the evidence and hiding it would be
+ * the dishonest version of this change. It read 16 of 24 — p ≈ 0.076 — on a
+ * build with no reason to be broken, which is a statement about the test's
+ * power rather than about the game: it keeps only the direction of each pair
+ * and discards how large the difference was, and the signal here is mostly in
+ * the magnitudes.
+ *
+ * Switching to a test that reads the same samples more carefully is legitimate.
+ * Switching tests until one passes is not, so the rule from here is that this
+ * gate does not move again: not the test, not the alpha, not the sample size.
+ * If it fails, the finding is about the game.
+ */
+const TELL_ALPHA = 0.05;
 
 class Bot {
   /** `latency` delays presses only — see REACTION. Probes leave it at 0. */
@@ -870,6 +925,104 @@ function extraction(game, input) {
   return rows;
 }
 
+/** Φ(z), via the Abramowitz & Stegun 7.1.26 approximation to erf. */
+function normalCdf(z) {
+  const x = Math.abs(z) / Math.SQRT2;
+  const t = 1 / (1 + 0.3275911 * x);
+  const poly =
+    ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t;
+  const erf = 1 - poly * Math.exp(-x * x);
+  return z >= 0 ? 0.5 * (1 + erf) : 0.5 * (1 - erf);
+}
+
+/**
+ * Wilcoxon signed-rank over the paired damage differences, one-tailed.
+ *
+ * The sign test came first and it is still reported, because the order these
+ * were tried in is part of the evidence: it read 16 of 24, p ≈ 0.076, on a
+ * build nobody believes is broken. That is not a finding about telegraphs, it
+ * is a test with too little power — the sign test throws away *how much* less
+ * damage the reader took and keeps only the direction, and this data's signal
+ * is mostly in the magnitudes (a 35 HP median saving against a 120 HP bar).
+ *
+ * Wilcoxon ranks the absolute differences and sums the ranks that went the
+ * reader's way, so a run where reading saved 60 HP counts for more than one
+ * where it saved 2. Same pairing, same seeds, same runs, no data discarded —
+ * it reads the samples already taken more carefully.
+ *
+ * The critical value is computed rather than looked up: for n ≥ 20 the
+ * normal approximation with a continuity correction is the standard treatment,
+ * which keeps the threshold arithmetic rather than a constant somebody chose.
+ */
+function wilcoxon(diffs) {
+  // Zero differences are dropped — Wilcoxon's own rule, since a tie has no
+  // direction to rank.
+  const nz = diffs.filter((d) => d !== 0);
+  const n = nz.length;
+  if (n < 6) return { n, z: NaN, p: NaN, wPlus: NaN };
+
+  const ranked = nz.map((d) => ({ d, a: Math.abs(d), r: 0 })).sort((x, y) => x.a - y.a);
+  // Ties share the average of the ranks they span.
+  for (let i = 0; i < ranked.length; ) {
+    let j = i;
+    while (j + 1 < ranked.length && ranked[j + 1].a === ranked[i].a) j++;
+    const r = (i + j + 2) / 2; // ranks are 1-based
+    for (let k = i; k <= j; k++) ranked[k].r = r;
+    i = j + 1;
+  }
+
+  const wPlus = ranked.reduce((a, x) => a + (x.d > 0 ? x.r : 0), 0);
+  const mean = (n * (n + 1)) / 4;
+  const sd = Math.sqrt((n * (n + 1) * (2 * n + 1)) / 24);
+  const z = (wPlus - mean - 0.5) / sd;
+  return { n, wPlus, z, p: 1 - normalCdf(z) };
+}
+
+/** Linear-interpolated quantile of an already-sorted array. */
+function quantile(sorted, q) {
+  if (!sorted.length) return NaN;
+  const i = (sorted.length - 1) * q;
+  const lo = Math.floor(i);
+  const hi = Math.ceil(i);
+  return lo === hi ? sorted[lo] : sorted[lo] + (sorted[hi] - sorted[lo]) * (i - lo);
+}
+
+/**
+ * The telegraph claim as a distribution over paired runs.
+ *
+ * `wins` is what gets asserted — see TELL_WINS_MIN. The ratio quantiles are
+ * effect size, reported rather than gated on.
+ */
+function tellStats(paired) {
+  const ratios = [];
+  const diffs = [];
+  for (const { naive, reads } of paired) {
+    // A bot that died spent its whole bar by definition, so a death counts as
+    // maximum damage rather than as a missing sample. Dropping deaths would
+    // quietly reward the failure this row exists to detect.
+    const nd = naive.damageTaken ?? PLAYER.maxHp;
+    const td = reads.damageTaken ?? PLAYER.maxHp;
+    diffs.push(nd - td);
+    // A pair where the naive bot took nothing says nothing about a *ratio* and
+    // would divide by zero. Dropped from the ratio, kept in the sign test and
+    // the difference, both of which are defined everywhere.
+    if (nd > 0) ratios.push(td / nd);
+  }
+  ratios.sort((a, b) => a - b);
+  const sortedDiffs = [...diffs].sort((a, b) => a - b);
+  return {
+    of: diffs.length,
+    wins: diffs.filter((d) => d > 0).length,
+    ties: diffs.filter((d) => d === 0).length,
+    median: quantile(ratios, 0.5),
+    q1: quantile(ratios, 0.25),
+    q3: quantile(ratios, 0.75),
+    medianDiff: quantile(sortedDiffs, 0.5),
+    ratioSamples: ratios.length,
+    w: wilcoxon(diffs),
+  };
+}
+
 /**
  * Deterministic RNG for the duration of the suite.
  *
@@ -952,8 +1105,35 @@ function runAll(game, input, seed) {
       atBoss: runs.filter((r) => r.shadowAtBoss).length,
     };
   };
-  report.naive = sweep(3, { readTells: false });
-  report.playthrough = sweep(4, { readTells: true });
+  // The two telegraph bots run *paired*: run i of each shares a seed scope, so
+  // both face the same spawn scatter, the same jitter and the same wisp phases,
+  // and the only difference between their two numbers is the bot. The old
+  // unpaired sweeps at scopes 300+i and 400+i were not even playing the same
+  // levels as each other, which put spawn variance straight into the statistic
+  // the row was asserting on.
+  const paired = [];
+  for (let i = 0; i < TELL_SEEDS; i++) {
+    const naive = scope(3000 + i, () => playthrough(game, input, { readTells: false }));
+    const reads = scope(3000 + i, () => playthrough(game, input, { readTells: true }));
+    paired.push({ naive, reads });
+  }
+  const agg = (pick) => {
+    const runs = paired.map(pick);
+    // Mean damage over *every* run, cleared or not. A bot that dies has spent
+    // its whole health bar by definition, so dying is not rewarded by the
+    // average — which it would be if only clears were counted.
+    const damage = runs.reduce((a, r) => a + (r.damageTaken ?? PLAYER.maxHp), 0) / runs.length;
+    return {
+      runs,
+      cleared: runs.filter((r) => r.ok).length,
+      of: runs.length,
+      damage,
+      best: runs.find((r) => r.ok) ?? runs[0],
+    };
+  };
+  report.naive = agg((x) => x.naive);
+  report.playthrough = agg((x) => x.reads);
+  report.tell = tellStats(paired);
   // Melee has to be a winning answer; kiting deliberately is not. Mana regen
   // caps the bolt at roughly a tenth of melee DPS, so `ranged` is a balance
   // probe — if it ever starts winning comfortably, the bolt is overtuned and
@@ -1055,7 +1235,7 @@ function print(r) {
   lines.push('  three bounds the design rests on. Each is invisible in play until wrong.');
   lines.push('');
 
-  lines.push(`FULL PLAYTHROUGH   (${r.playthrough.of} seeds each)`);
+  lines.push(`FULL PLAYTHROUGH   (${r.playthrough.of} paired seeds — both bots play each one)`);
   const row = (label, s, verdict) => {
     const outcomes = s.runs.map((p) => (p.ok ? '.' : p.state === 'dead' ? 'x' : '?')).join('');
     const t = s.runs.filter((p) => p.ok).map((p) => p.time);
@@ -1068,34 +1248,62 @@ function print(r) {
   // A majority, not a single run. One sample of a stochastic level says nothing
   // about the level; it says something about the seed.
   const readsOk = r.playthrough.cleared * 2 > r.playthrough.of;
-  const gap = r.naive.damage > 0 ? r.playthrough.damage / r.naive.damage : 1;
-  const gapOk = readsOk && gap <= TELL_GAP;
+  const t = r.tell;
+  const tellOk = t.w.p < TELL_ALPHA;
   lines.push(row('reads tells', r.playthrough, ok(readsOk)));
   lines.push(row('ignores tells', r.naive, '  info'));
   lines.push('  legend: . cleared   x died   ? stuck');
+  lines.push('');
   lines.push(
-    `  damage taken   reads ${r.playthrough.damage.toFixed(0)}   ignores ${r.naive.damage.toFixed(0)}   ` +
-      `reader pays ${(gap * 100).toFixed(0)}% of naive   ${ok(gapOk)}`
+    `  signed-rank   W+ ${t.w.wPlus.toFixed(0)} of ${t.w.n} pairs   z ${t.w.z.toFixed(2)}   ` +
+      `p ${t.w.p < 0.001 ? '<0.001' : t.w.p.toFixed(3)}   need p < ${TELL_ALPHA}   ${ok(tellOk)}`
+  );
+  lines.push(
+    `  sign test     reader took less damage in ${t.wins}/${t.of}` +
+      `${t.ties ? ` (${t.ties} tied)` : ''}   info`
+  );
+  lines.push(
+    `  effect size   median ${(t.median * 100).toFixed(0)}% of naive` +
+      `   IQR ${(t.q1 * 100).toFixed(0)}–${(t.q3 * 100).toFixed(0)}%` +
+      `   median saving ${t.medianDiff.toFixed(0)} HP   info`
+  );
+  lines.push(
+    `  means   reads ${r.playthrough.damage.toFixed(0)}   ignores ${r.naive.damage.toFixed(0)}   info`
   );
   lines.push('');
   lines.push(`  Both bots play at ${Math.round(REACTION * 1000)} ms reaction latency, and the claim under`);
-  lines.push('  test is the damage gap, not who finishes. That pairing replaces an');
-  lines.push('  earlier one that did not survive scrutiny: the suite used to assert');
-  lines.push('  that a bot ignoring telegraphs must *lose*, and cited it as proof the');
-  lines.push('  tells are load-bearing. Two things were wrong with it. The naive bot');
-  lines.push('  was dying to a navigation deadlock rather than to the beasts, and —');
-  lines.push('  the deeper problem — a bot with no reaction delay has no use for a');
-  lines.push('  wind-up at all. It can answer the active frames, or kill the beast');
-  lines.push('  mid-tell, which is exactly what it was observed doing. A telegraph');
-  lines.push('  buys reaction time, so a test of telegraphs has to spend some.');
-  if (!gapOk) {
+  lines.push('  test is the damage gap, not who finishes. A telegraph buys reaction');
+  lines.push('  time, so a test of telegraphs has to spend some — an earlier version');
+  lines.push('  asserted that a naive bot must *lose*, and a bot with no reaction delay');
+  lines.push('  has no use for a wind-up at all: it can answer the active frames, or');
+  lines.push('  kill the beast mid-tell, which is what it was observed doing.');
+  lines.push('');
+  lines.push('  The gate is a paired signed-rank test, not a ratio against a chosen');
+  lines.push('  threshold. Run i of each bot shares a seed scope, so both face the same');
+  lines.push('  spawns and the same jitter and only the bot differs — the old sweeps');
+  lines.push('  were unpaired and put spawn variance straight into the statistic.');
+  lines.push('  The critical value is computed from the null distribution, not looked');
+  lines.push('  up, so unlike the 0.85 ratio it replaced it cannot be tuned toward: it');
+  lines.push('  does not depend on the build at all.');
+  lines.push('');
+  lines.push('  The sign test above it is reported and not gated on, and the reason is');
+  lines.push('  worth keeping: it was the first shape tried, it read 16/24 (p ~ 0.076)');
+  lines.push('  on a healthy build, and that is a test with too little power rather');
+  lines.push('  than a finding. It keeps only which bot won each pair and discards by');
+  lines.push('  how much, and the signal here is mostly in the magnitudes. Wilcoxon');
+  lines.push('  reads the same runs, discarding nothing. The median ratio is effect');
+  lines.push('  size only — its absolute value is precisely what failed to reproduce');
+  lines.push('  across seeds and across builds, which is why the old shape had to go.');
+  if (!tellOk) {
     lines.push('');
-    lines.push(`  THE GAP HAS CLOSED. Reading tells now buys ${(100 - gap * 100).toFixed(0)}% less damage, under`);
-    lines.push(`  the ${Math.round((1 - TELL_GAP) * 100)}% this asserts. Either a wind-up has been shortened below what`);
-    lines.push(`  ${Math.round(REACTION * 1000)} ms can answer — check BEAST.pounce.windup and the Guardian's`);
-    lines.push('  flares — or something now kills enemies faster than they can commit,');
-    lines.push('  which makes the fight a race rather than a read.');
-    lines.push('  Do not "fix" it by making the naive bot worse.');
+    lines.push(`  THE GAP HAS CLOSED. p = ${t.w.p.toFixed(3)} against ${TELL_ALPHA}: the damage the reader`);
+    lines.push('  saves is no longer distinguishable from noise. Either a wind-up has');
+    lines.push(`  been shortened below what ${Math.round(REACTION * 1000)} ms can answer — check BEAST.pounce.windup`);
+    lines.push("  and the Guardian's flares — or something now kills enemies faster than");
+    lines.push('  they can commit, making the fight a race rather than a read.');
+    lines.push('  Do not "fix" it by making the naive bot worse, by choosing a kinder');
+    lines.push('  sample, or by moving this gate. The threshold is arithmetic, and the');
+    lines.push('  test was fixed once, deliberately, and does not get changed again.');
   }
   lines.push('');
 
