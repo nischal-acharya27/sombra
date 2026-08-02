@@ -6,7 +6,6 @@
 // horizontally (so jumps don't make the world lurch), and pull back when a
 // fight needs more room.
 
-import * as THREE from 'three';
 import { damp, clamp, lerp, noise1 } from '../engine/mathx.js';
 
 const BASE = {

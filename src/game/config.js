@@ -25,7 +25,6 @@ export const PLAYER = {
   accel: 96,
   airAccel: 58,
   friction: 15,
-  airDrag: 1.6,
   turnBoost: 2.1, // extra accel when reversing, so direction changes feel sharp
 
   maxHp: 120,
@@ -39,7 +38,6 @@ export const PLAYER = {
   dashInvuln: 0.19, // slightly longer than the dash: the escape must actually work
   dashCooldown: 0.30,
   airDashes: 1,
-  dashMpCost: 0,
   // Air swings per airtime, reset on landing. Air attacks suppress gravity for
   // their hang-time frames — that is what keeps a juggle in the air — so
   // without a cap, mashing attack is a slow-fall button and every pit in the

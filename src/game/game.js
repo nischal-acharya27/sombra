@@ -5,7 +5,7 @@
 // enemies do not import the HUD.
 
 import * as THREE from 'three';
-import { Level, ENCOUNTERS, SPAWN_X, VOID_Y, ARENA_TOP, EXIT_X } from './level.js';
+import { Level, ENCOUNTERS, SPAWN_X, VOID_Y, ARENA_TOP } from './level.js';
 import { Player } from './player.js';
 import { Beast, Wisp, Bolt } from './enemies.js';
 import { Guardian } from './boss.js';
@@ -14,7 +14,7 @@ import { VFX } from '../render/vfx.js';
 import { P } from '../render/palette.js';
 import { MAGIC, STYLE, PROGRESSION, PLAYER, WISP } from './config.js';
 import { boxHit } from './actor.js';
-import { clamp, rand, lerp } from '../engine/mathx.js';
+import { clamp, rand } from '../engine/mathx.js';
 
 export class Game {
   constructor(world, hud, audio, input) {

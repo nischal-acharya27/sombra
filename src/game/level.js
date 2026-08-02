@@ -12,7 +12,7 @@ import * as THREE from 'three';
 import { P } from '../render/palette.js';
 import { toonMaterial, glowMaterial, outlineFor } from '../render/toon.js';
 import { GrassField, scatterGrass, makeRock, makeCrystal, makeTree, makeMist, buildBackdrop } from '../render/env.js';
-import { rand, randInt } from '../engine/mathx.js';
+import { rand } from '../engine/mathx.js';
 
 export const VOID_Y = -26; // below this you have fallen out of the world
 

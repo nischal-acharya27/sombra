@@ -7,7 +7,6 @@ import { Audio } from './engine/audio.js';
 import { HUD } from './ui/hud.js';
 import { Game } from './game/game.js';
 import { STATUE_X } from './game/level.js';
-import { damp } from './engine/mathx.js';
 
 const world = new World(document.getElementById('view'));
 const hud = new HUD();

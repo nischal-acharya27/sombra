@@ -1,6 +1,5 @@
 // The hunter: movement, the move list, and the animation that sells both.
 
-import * as THREE from 'three';
 import { Actor } from './actor.js';
 import { buildHunter } from '../render/models.js';
 import { PHYS, PLAYER, ATTACKS, MAGIC } from './config.js';
@@ -40,11 +39,6 @@ export class Player extends Actor {
 
     this.root = buildHunter();
     this.n = this.root.userData.nodes;
-    this.swordTip = new THREE.Object3D();
-    this.swordTip.position.y = 1.1;
-    this.n.sword.add(this.swordTip);
-    this._worldTip = new THREE.Vector3();
-    this._prevTip = new THREE.Vector3();
   }
 
   reset(x, y) {
@@ -451,10 +445,6 @@ export class Player extends Actor {
     return true;
   }
 
-  heal(amount) {
-    this.hp = clamp(this.hp + amount, 0, this.maxHp);
-  }
-
   // -- animation ------------------------------------------------------------
 
   _animate(dt) {
@@ -728,14 +718,4 @@ export class Player extends Actor {
     }
   }
 
-  /**
-   * World-space sword tip, for trail ribbons. Returns the previous sample too,
-   * so callers can emit a quad rather than a point.
-   */
-  sampleTip() {
-    this._prevTip.copy(this._worldTip);
-    this.n.sword.updateWorldMatrix(true, false);
-    this.swordTip.getWorldPosition(this._worldTip);
-    return { now: this._worldTip, prev: this._prevTip };
-  }
 }
