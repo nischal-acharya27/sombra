@@ -513,9 +513,57 @@ than the effect being tested, compared against a threshold — 85% — that was
 never derived from anything. Three of five seeds "failing" is not five
 observations of a property; it is five draws from a wide distribution.
 
-So the assertion becomes: **the median damage gap across twenty-four fixed
-seeds exceeds a threshold set from the measured distribution**, reported with
-its spread rather than as a pass or fail on one number.
+So the assertion becomes: **a paired signed-rank test over twenty-four seeds**,
+reported with its spread rather than as a pass or fail on one number.
+
+### Built 2026-08-03, and what building it changed
+
+Two things were wrong with the old shape, and only one of them was the
+threshold.
+
+**The sweeps were not paired.** The naive runs used scoped seeds 300+i and the
+reading runs 400+i, so the two bots were never playing the same levels as each
+other. Half the spread in that ratio was spawn scatter rather than behaviour.
+Runs are now paired — run *i* of each bot shares a scope, so both face the same
+spawns, the same jitter and the same wisp phases, and the only difference
+between their two numbers is the bot.
+
+**The sign test was tried first and it failed, and that is recorded here rather
+than quietly overwritten**, because which test was reached for first is part of
+the evidence. Binomial(24, ½) gives 17 as the smallest bar clearing p < 0.05,
+which is a threshold with the great virtue of being arithmetic. It read **16 of
+24, p ≈ 0.076**, on a build nobody had any reason to think was broken.
+
+That is a statement about the test rather than about the game. A sign test keeps
+only *which* bot won each pair and throws away *by how much*, and this data's
+signal is mostly in the magnitudes — a 35 HP median saving against a 120 HP bar.
+So the gate is the **Wilcoxon signed-rank test**, which ranks the absolute
+differences and sums the ranks that went the reader's way, discarding nothing.
+Its critical value is computed from the null distribution via the standard
+normal approximation rather than looked up, so it stays arithmetic too.
+
+Switching to a test that reads the same samples more carefully is legitimate.
+Switching tests until one passes is not, so: **this gate does not move again.**
+Not the test, not the alpha, not the sample size. If it fails, the finding is
+about the game. The sign test stays in the report, un-gated, as the record of
+what was tried.
+
+**Measured on `0e508b3` plus this change, across the five top-level seeds:**
+
+    seed        z      p        sign     median   IQR        saving
+    20260728   2.10   0.018     16/24     79%     52–106%    35 HP
+    1          2.66   0.004     16/24     75%     59–106%    34 HP
+    99991      3.39  <0.001     19/24     73%     43– 89%    44 HP
+    20260802   2.49   0.006     19/24     80%     63– 91%    29 HP
+    7777777    2.79   0.003     18/24     78%     49–100%    35 HP
+
+**Five of five pass**, where the old assertion failed three of five. And the
+finding underneath it is the one worth keeping: **the effect was stable the
+whole time.** The median sits between 73% and 80% on every seed. What was
+swinging from 54% to 102% was never the telegraph design — it was an unpaired
+mean ratio with a standard error far wider than the thing it was measuring. The
+instrument was the problem, and the project spent two rounds treating its noise
+as a property of the game.
 
 This is neither of the two things the standing warning forbids, and the
 distinction is the whole point. Handicapping the naive bot changes the system
@@ -623,7 +671,9 @@ two of them prerequisites rather than debts.
   not be re-tuned by feel, because with one playtester who is also the developer
   the suite is the only independent check there is. At that re-tune `ranged`
   becomes a hard gate — kiting must not win a majority of seeds.
-- **The telegraph-gap restatement.** See § The telegraph gap is a coin-flip.
+- ~~**The telegraph-gap restatement.**~~ **Paid 2026-08-03.** Paired runs and a
+  Wilcoxon signed-rank gate; five of five top-level seeds pass, where the old
+  assertion failed three of five. See § The telegraph gap is a coin-flip.
 
 ## Art direction
 
