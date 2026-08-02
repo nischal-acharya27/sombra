@@ -137,6 +137,14 @@ This is not optional tooling. Browsers throttle `requestAnimationFrame` in an
 unfocused tab, so any automated playtest that waits on wall-clock time advances
 the simulation by a fraction of a second and silently measures nothing.
 
+`?sim&seed=N` runs the whole suite against a different top-level seed, and it is
+worth using. Every number this project has recorded from a single seed has later
+turned out to be optimistic, unreproducible, or both — the boss was measured
+winning with 100 HP left and sweeps at 61–96, and a recorded table of five
+telegraph figures had four that did not survive a rebuild. **Green on one seed
+is not green.** Run at least the five in `DECISIONS.md` before believing a
+result.
+
 Every test runs in **its own seed scope**, and the playthrough runs **eight
 seeds** rather than one. Both of those were bought the hard way. The suite used
 to run a single sequential stream, so a change that made the playthrough two
