@@ -10,10 +10,18 @@ useful than a polished summary — it usually means the answer is "it depends",
 which is itself the finding. Tag lines `[feel]`, `[bug]` or `[balance]`.
 
 ```bash
-cd /Users/nischal/Desktop/Vault/03_Projects/Games/sombra && python3 -m http.server 8000
+python3 tools/serve.py
 ```
 
 Then <http://localhost:8000>. `Esc` pauses, `R` restarts from the pause screen.
+
+**Not `python3 -m http.server`,** which is what this line used to say.
+It sends no `Cache-Control`, the browser keeps your ES modules, and the way that
+fails here is that you play the *old* build and write notes about the new one —
+round 3 § "Start the server with the new script" records a round-2 verdict that
+happened to. Also play in a real browser window rather than an embedded one:
+embedded browsers throttle `requestAnimationFrame`, which is enough on its own
+to make the game feel wrong.
 
 > Played on: `809c2ec` (SOMBRA rename) · keyboard · no ARISE mechanic yet.
 
@@ -361,4 +369,29 @@ And the beasts appear right away, so reading the texts while fighting them is no
 The magic power (shooting) should be nerfed a bit. Now, it hits all the enemies on the way. 
 It should only hurt one opponent on the way, not everyone on the path of the power. And it deals a lot of damage. 
 Maybe reduce the power to ~70% of what it is now.
+
+---
+
+# Spot-check — build `bed0f8b`, 2026-08-03
+
+Not a round. One clear of gate 1, played to answer one question that
+`tools/sim.js` is structurally unable to answer.
+
+`88ff685` narrowed five of gate 1's nine gaps from 4.0 to 3.8, by moving each
+take-off lip 0.2 to the right, because at 4.0 they sat at 23% jump reserve
+against the 25% the touch budget asks for. The suite proved the gate was still
+clearable on all five recorded seeds and could say nothing at all about whether
+the traversal still *read* the way four rounds of tuning had left it.
+
+> Cleared the gate. Runs smoothly. No observed change.
+
+That is the result the change needed. All five moved gaps were crossed and none
+of them announced itself, so the correction was a budget fix rather than a
+retune — which is the distinction that decides whether gate 1 is still usable as
+the control the next nine gates are compared against.
+
+**What this is not.** One clear by the developer, who knew what had changed and
+where to look. It rules out a regression obvious enough to notice; it does not
+establish that the gate feels identical, and nobody should quote it as though it
+did.
 
