@@ -44,7 +44,8 @@ const SKY_FRAG = /* glsl */ `
 `;
 
 export class World {
-  constructor(canvas) {
+  /** @param realm the realm to open on — see `src/game/gates/`. */
+  constructor(canvas, realm) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
     this.renderer.shadowMap.enabled = true;
@@ -53,13 +54,17 @@ export class World {
     this.renderer.toneMappingExposure = 1.05;
 
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.Fog(P.fog, P.fogNear, P.fogFar);
+    // Sky and fog are the realm's, and `applyRealm` below is what sets them.
+    // Built empty here rather than with gate 1's numbers so there is exactly
+    // one place those numbers arrive from.
+    this.scene.fog = new THREE.Fog(0x000000, 1, 100);
 
     this.camera = new THREE.PerspectiveCamera(42, 16 / 9, 0.4, 400);
     this.camera.position.set(0, 6, 20);
 
     this._buildSky();
     this._buildLights();
+    this.applyRealm(realm);
 
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
@@ -76,11 +81,27 @@ export class World {
     this.resize();
   }
 
+  /**
+   * Point the sky and the fog at a realm.
+   *
+   * Every colour is set in place and nothing here allocates, because this is
+   * what a gate transition will call — and a gate transition is the largest
+   * allocation event the game will ever have.
+   */
+  applyRealm(realm) {
+    this.skyUniforms.uZenith.value.setHex(realm.sky.zenith);
+    this.skyUniforms.uMid.value.setHex(realm.sky.mid);
+    this.skyUniforms.uHorizon.value.setHex(realm.sky.horizon);
+    this.scene.fog.color.setHex(realm.fog.color);
+    this.scene.fog.near = realm.fog.near;
+    this.scene.fog.far = realm.fog.far;
+  }
+
   _buildSky() {
     this.skyUniforms = {
-      uZenith: { value: new THREE.Color(P.skyZenith) },
-      uMid: { value: new THREE.Color(P.skyMid) },
-      uHorizon: { value: new THREE.Color(P.skyHorizon) },
+      uZenith: { value: new THREE.Color() },
+      uMid: { value: new THREE.Color() },
+      uHorizon: { value: new THREE.Color() },
       uTime: { value: 0 },
     };
     const sky = new THREE.Mesh(

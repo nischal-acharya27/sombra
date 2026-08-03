@@ -6,31 +6,17 @@
 // Leveling half arrives as accent only — violet for shadow magic, cyan for the
 // System, amber for damage.
 
+// Sky, fog and terrain are not here: they belong to a realm, and each gate
+// descriptor under `src/game/gates/` carries its own. What is left is what
+// every gate shares — the light it is lit by, the System's accents, and what
+// the characters are made of.
 export const P = {
-  // Sky dome, top to bottom.
-  skyZenith: 0x140b2e,
-  skyMid: 0x3a2160,
-  skyHorizon: 0x8a5a86,
-  // Fog matches the horizon so distance dissolves rather than clipping.
-  fog: 0x5c3f68,
-  fogNear: 26,
-  fogFar: 132,
-
   sunLight: 0xffd9c2,
   sunDim: 0x6f5aa8,
+  // Also every toon material's default rim colour, which is why it is shared
+  // rather than a realm's.
   skyFill: 0x9fb6ff,
   groundBounce: 0x4a2f52,
-
-  // Terrain
-  grassLight: 0x7fae7a,
-  grassDark: 0x40704f,
-  grassBlade: 0x8fc48c,
-  grassBladeTip: 0xd8e9a8,
-  dirt: 0x6b5847,
-  rock: 0x6d6a7d,
-  rockDark: 0x3f3d4d,
-  rockMoss: 0x5d7a5e,
-  stoneCarved: 0x8b869a,
 
   // Shadow realm accents
   violet: 0x9d5cff,
