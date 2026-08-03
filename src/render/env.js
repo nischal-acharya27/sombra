@@ -52,16 +52,17 @@ const WIND_CHUNK = /* glsl */ `
 export class GrassField {
   /**
    * @param {{x:number,y:number,z:number}[]} points  one entry per blade
+   * @param {{blade:number,tip:number}} colors  from the realm being built
    */
-  constructor(points) {
+  constructor(points, { blade, tip }) {
     const geo = bladeGeometry();
     this.uniforms = { uTime: { value: 0 } };
 
     const material = toonMaterial({
-      color: P.grassBlade,
+      color: blade,
       steps: 3,
       rim: 0.35,
-      rimColor: P.grassBladeTip,
+      rimColor: tip,
       rimBias: 0.35,
       side: THREE.DoubleSide,
     });
@@ -98,7 +99,7 @@ export class GrassField {
       m.compose(pos, q, scl);
       this.mesh.setMatrixAt(i, m);
       // Per-blade tint so the field isn't one flat colour.
-      color.setHex(Math.random() < 0.22 ? P.grassBladeTip : P.grassBlade);
+      color.setHex(Math.random() < 0.22 ? tip : blade);
       color.offsetHSL(rand(-0.03, 0.03), rand(-0.08, 0.05), rand(-0.09, 0.09));
       this.mesh.setColorAt(i, color);
     }
@@ -143,8 +144,12 @@ export function scatterGrass(out, { x, y, w, d = 3.4, density = 20 }) {
 // Props
 // ---------------------------------------------------------------------------
 
-/** A chunky faceted rock. Low-poly icosahedron with the vertices kicked around. */
-export function makeRock(radius = 1, { color = P.rock, detail = 1, outline = 0.02 } = {}) {
+/**
+ * A chunky faceted rock. Low-poly icosahedron with the vertices kicked around.
+ * `color` has no default: rock is a realm's colour, and a default here would be
+ * a second place to look for it.
+ */
+export function makeRock(radius = 1, { color, detail = 1, outline = 0.02 }) {
   const geo = new THREE.IcosahedronGeometry(radius, detail);
   const pos = geo.attributes.position;
   for (let i = 0; i < pos.count; i++) {
@@ -169,7 +174,7 @@ export function makeRock(radius = 1, { color = P.rock, detail = 1, outline = 0.0
   return g;
 }
 
-/** A mana crystal — the level's only naturally bright object. */
+/** A mana crystal — the gate's only naturally bright object. */
 export function makeCrystal(height = 1.2, color = P.violet) {
   const g = new THREE.Group();
   const geo = new THREE.ConeGeometry(height * 0.26, height, 5);
@@ -269,13 +274,13 @@ export function makeMist(width, height, { color = P.violetGlow, opacity = 0.055,
  * the fog does the aerial perspective, so each layer only needs to be further
  * away to read as lighter and flatter.
  */
-export function buildBackdrop(scene, { from, to }) {
+export function buildBackdrop(scene, { from, to, ridges }) {
   const group = new THREE.Group();
 
   const layers = [
-    { z: -34, h: [7, 16], color: P.rockDark, step: 7, y: -3 },
-    { z: -58, h: [14, 30], color: 0x4a3f60, step: 11, y: -5 },
-    { z: -92, h: [26, 52], color: 0x5d5077, step: 17, y: -8 },
+    { z: -34, h: [7, 16], color: ridges[0], step: 7, y: -3 },
+    { z: -58, h: [14, 30], color: ridges[1], step: 11, y: -5 },
+    { z: -92, h: [26, 52], color: ridges[2], step: 17, y: -8 },
   ];
 
   for (const layer of layers) {
@@ -296,7 +301,7 @@ export function buildBackdrop(scene, { from, to }) {
   // world" cue available for the cost of a few dozen triangles.
   for (let i = 0; i < 26; i++) {
     const r = rand(0.6, 2.6);
-    const shard = makeRock(r, { color: P.rockDark, outline: 0 });
+    const shard = makeRock(r, { color: ridges[0], outline: 0 });
     shard.position.set(rand(from - 20, to + 20), rand(6, 40), rand(-70, -16));
     shard.rotation.set(rand(0, 3), rand(0, 3), rand(0, 3));
     shard.userData.drift = { base: shard.position.y, amp: rand(0.5, 1.8), speed: rand(0.15, 0.4), phase: rand(0, 7) };

@@ -6,13 +6,16 @@ import { Input } from './engine/input.js';
 import { Audio } from './engine/audio.js';
 import { HUD } from './ui/hud.js';
 import { Game } from './game/game.js';
-import { STATUE_X } from './game/level.js';
+import { GATE_1 } from './game/gates/gate1.js';
 
-const world = new World(document.getElementById('view'));
+// The gate is chosen here and nowhere else: `World` opens on its realm and
+// `Game` runs it. Everything downstream reads what it needs from the
+// descriptor, which is what makes a second gate a second file.
+const world = new World(document.getElementById('view'), GATE_1.realm);
 const hud = new HUD();
 const audio = new Audio();
 const input = new Input();
-const game = new Game(world, hud, audio, input);
+const game = new Game(world, hud, audio, input, GATE_1);
 
 let paused = false;
 let titleT = 0;
@@ -41,13 +44,14 @@ const loop = new Loop(
   () => (paused ? 0 : game.timeScale())
 );
 
-/** A slow drift across the Kneeling Stone while the title is up. */
+/** A slow drift across the gate's landmark while the title is up. */
 function titleCamera(dt) {
   titleT += dt;
   const c = world.camera;
-  const x = STATUE_X - 16 + Math.sin(titleT * 0.07) * 9;
+  const lx = game.gate.landmark.x;
+  const x = lx - 16 + Math.sin(titleT * 0.07) * 9;
   c.position.set(x, 13 + Math.sin(titleT * 0.11) * 1.4, 30);
-  c.lookAt(STATUE_X + 2, 11, -12);
+  c.lookAt(lx + 2, 11, -12);
   if (Math.random() < 0.35) game.vfx.ambientMote(x + (Math.random() - 0.5) * 30, 4 + Math.random() * 14);
 }
 

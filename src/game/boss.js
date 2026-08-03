@@ -18,9 +18,10 @@ import { clamp, damp, lerp, rand, pick } from '../engine/mathx.js';
 const WHITE = new THREE.Color(0xffffff);
 
 export class Guardian extends Actor {
-  constructor(level, ctx, x, y) {
-    super(level, { x, y, hw: GUARDIAN.hw, hh: GUARDIAN.hh, maxHp: GUARDIAN.hp });
+  constructor(level, ctx, x, y, cfg = GUARDIAN) {
+    super(level, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
     this.ctx = ctx;
+    this.cfg = cfg;
 
     this.root = buildGuardian();
     this.n = this.root.userData.nodes;
@@ -67,7 +68,7 @@ export class Guardian extends Actor {
       case 'charging':
         return { x0: this.x - 1.7, x1: this.x + 1.7, y0: this.y, y1: this.y + 3.4 };
       case 'sweeping': {
-        const a = GUARDIAN.attacks.sweep;
+        const a = this.cfg.attacks.sweep;
         if (this.sub > a.active) return null;
         const cx = this.x + f * (a.reach * 0.5 + 0.6);
         return { x0: cx - a.reach * 0.5, x1: cx + a.reach * 0.5, y0: this.y, y1: this.y + 2.9 };
@@ -78,7 +79,7 @@ export class Guardian extends Actor {
   }
 
   currentAttackDamage() {
-    const a = GUARDIAN.attacks;
+    const a = this.cfg.attacks;
     switch (this.state) {
       case 'charging': return { damage: a.charge.damage, knock: a.charge.knock };
       case 'sweeping': return { damage: a.sweep.damage, knock: a.sweep.knock };
@@ -92,7 +93,7 @@ export class Guardian extends Actor {
     this.hitFlash = 0.09;
     // No knockback and no stagger from ordinary hits: a boss you can shove is
     // a boss that never gets to finish an attack. Poise is the whole point.
-    if (!this.enraged && this.hp <= this.maxHp * GUARDIAN.enrageAt) this._enrage();
+    if (!this.enraged && this.hp <= this.maxHp * this.cfg.enrageAt) this._enrage();
     if (this.hp <= 0) {
       this.hp = 0;
       this.dead = true;
@@ -126,8 +127,8 @@ export class Guardian extends Actor {
 
     const dx = player.x - this.x;
     const dist = Math.abs(dx);
-    const speedMul = this.enraged ? GUARDIAN.enrageSpeedMul : 1;
-    const A = GUARDIAN.attacks;
+    const speedMul = this.enraged ? this.cfg.enrageSpeedMul : 1;
+    const A = this.cfg.attacks;
 
     switch (this.state) {
       case 'entering': {
@@ -142,8 +143,8 @@ export class Guardian extends Actor {
         this.cooldown -= dt;
         // Close the gap, but stop at melee spacing rather than standing on top
         // of the player.
-        const want = dist > 5.5 ? Math.sign(dx) * GUARDIAN.speed * speedMul
-          : dist < 3.2 ? -Math.sign(dx) * GUARDIAN.speed * 0.5
+        const want = dist > 5.5 ? Math.sign(dx) * this.cfg.speed * speedMul
+          : dist < 3.2 ? -Math.sign(dx) * this.cfg.speed * 0.5
           : 0;
         this.vx = damp(this.vx, want, 0.002, dt);
         if (this.cooldown <= 0) this._chooseAttack(dist);
@@ -236,7 +237,7 @@ export class Guardian extends Actor {
         this.vx = damp(this.vx, 0, 0.0004, dt);
         if (this.phase <= 0) {
           this.state = 'idle';
-          const [lo, hi] = GUARDIAN.cooldown;
+          const [lo, hi] = this.cfg.cooldown;
           this.cooldown = rand(lo, hi) * (this.enraged ? 0.62 : 1);
         }
         break;
@@ -250,7 +251,7 @@ export class Guardian extends Actor {
   }
 
   _windupTime() {
-    return GUARDIAN.attacks[this.attackName].windup * (this.enraged ? 0.78 : 1);
+    return this.cfg.attacks[this.attackName].windup * (this.enraged ? 0.78 : 1);
   }
 
   _chooseAttack(dist) {
@@ -267,7 +268,7 @@ export class Guardian extends Actor {
   }
 
   _commit(player) {
-    const A = GUARDIAN.attacks;
+    const A = this.cfg.attacks;
     this.coreFlare = 1;
     // One hit per committed attack, whichever attack it is.
     this.chargeHitSet.clear();
@@ -307,7 +308,7 @@ export class Guardian extends Actor {
   }
 
   _slamLand() {
-    const a = GUARDIAN.attacks.slam;
+    const a = this.cfg.attacks.slam;
     this.state = 'recover';
     this.phase = a.recover;
     this.vx = 0;
@@ -390,7 +391,7 @@ export class Guardian extends Actor {
   _animate(dt) {
     const n = this.n;
     const k = 1 - Math.pow(0.0004, dt);
-    const A = GUARDIAN.attacks;
+    const A = this.cfg.attacks;
 
     // The core is the health bar and the telegraph in one object.
     const hpFrac = this.hp / this.maxHp;

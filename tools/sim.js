@@ -718,11 +718,14 @@ function bossFight(game, input, strategy, { maxSeconds = 240, carryShadow = fals
   // that carries it through a sealed barrier in ordinary play.
   const carried = carryShadow ? giveShadow(game, bot) : false;
 
-  // Skip to the arena rather than replaying the level for each strategy.
+  // Skip to the arena rather than replaying the gate for each strategy. Mark
+  // everything that is not the Warden fight as done — by the flag rather than
+  // by an encounter id, so this reads any gate's descriptor and not gate 1's
+  // names.
   p.x = 178;
   p.y = 3.2;
   for (const e of game.encounters) {
-    if (e.id !== 'guardian') {
+    if (!e.boss) {
       e.started = true;
       e.cleared = true;
     }

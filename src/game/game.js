@@ -5,7 +5,7 @@
 // enemies do not import the HUD.
 
 import * as THREE from 'three';
-import { Level, ENCOUNTERS, SPAWN_X, VOID_Y, ARENA_TOP } from './level.js';
+import { Level } from './level.js';
 import { Player } from './player.js';
 import { Beast, Wisp, Bolt } from './enemies.js';
 import { Shadow, Corpse } from './shadow.js';
@@ -28,18 +28,27 @@ function attackDamage(e) {
   return info ? info.damage : null;
 }
 
+/**
+ * The archetypes a gate may name in a spawn, and the one its Warden may name.
+ * A gate says `beast` or `wisp` directly and `warden` for its own — which
+ * archetype that is, and with what numbers, is the Warden block's to say.
+ */
+const ARCHETYPES = { beast: Beast, wisp: Wisp, guardian: Guardian };
+
 export class Game {
-  constructor(world, hud, audio, input) {
+  /** @param gate the gate descriptor to run — see `src/game/gates/`. */
+  constructor(world, hud, audio, input, gate) {
     this.world = world;
     this.hud = hud;
     this.audio = audio;
     this.input = input;
+    this.gate = gate;
 
     this.scene = world.scene;
     this.vfx = new VFX(this.scene);
     this.cam = new GameCamera(world.camera);
 
-    this.level = new Level(this.scene);
+    this.level = new Level(this.scene, gate);
     this.scene.add((this.entityRoot = new THREE.Group()));
 
     this.ctx = {
@@ -104,7 +113,7 @@ export class Game {
     this.moveHistory = [];
     this.styleIdleT = 0;
 
-    this.encounters = ENCOUNTERS.map((e) => ({ ...e, started: false, cleared: false, alive: 0 }));
+    this.encounters = gate.encounters.map((e) => ({ ...e, started: false, cleared: false, alive: 0 }));
     this.activeEncounter = null;
     this.moteT = 0;
   }
@@ -132,7 +141,7 @@ export class Game {
 
     this.player.maxHp = PLAYER.maxHp;
     this.player.maxMp = PLAYER.maxMp;
-    this.player.reset(SPAWN_X, 0.2);
+    this.player.reset(this.gate.spawnX, 0.2);
     this.cam.snapTo(this.player);
     this.cam.setBounds(null);
     this.cam.zoom(11.5);
@@ -188,13 +197,14 @@ export class Game {
     this._updateStyle(dt);
 
     // Cull
+    const voidY = this.gate.voidY;
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const e = this.enemies[i];
-      if (e.removeMe || e.y < VOID_Y) {
+      if (e.removeMe || e.y < voidY) {
         // A beast that finished dying above the void leaves something to claim.
         // Anything that fell out of the world does not — a body suspended over
         // the chasm is either unreachable or a reason to jump after it.
-        if (e.removeMe && e.dead && e.y >= VOID_Y && e.leavesCorpse) this._leaveCorpse(e);
+        if (e.removeMe && e.dead && e.y >= voidY && e.leavesCorpse) this._leaveCorpse(e);
         else this.entityRoot.remove(e.root);
         this.enemies.splice(i, 1);
       }
@@ -202,7 +212,7 @@ export class Game {
     for (let i = this.corpses.length - 1; i >= 0; i--) {
       if (this.corpses[i].expired) this._removeCorpse(i);
     }
-    if (this.shadow && (this.shadow.removeMe || this.shadow.y < VOID_Y)) {
+    if (this.shadow && (this.shadow.removeMe || this.shadow.y < voidY)) {
       this.entityRoot.remove(this.shadow.root);
       this.shadow = null;
       this.hud.toast('SHADOW LOST', 'warn');
@@ -215,7 +225,7 @@ export class Game {
     }
 
     // Falling out of the world.
-    if (this.player.y < VOID_Y && this.state === 'playing') {
+    if (this.player.y < voidY && this.state === 'playing') {
       this.player.hp = 0;
       this.player.state = 'dead';
       this._onDeath();
@@ -634,15 +644,16 @@ export class Game {
 
   _spawn(s) {
     const y = s.y ?? this.level.groundAt(s.x) + 0.1;
-    let e;
-    if (s.type === 'beast') e = new Beast(this.level, this.ctx, s.x, y);
-    else if (s.type === 'wisp') e = new Wisp(this.level, this.ctx, s.x, y);
-    else if (s.type === 'guardian') {
-      e = new Guardian(this.level, this.ctx, s.x, ARENA_TOP);
+    // A Warden stands on the arena floor rather than wherever the ground probe
+    // lands, and carries the elevated numbers its gate gave it.
+    const w = s.type === 'warden' ? this.gate.warden : null;
+    const Archetype = ARCHETYPES[w ? w.archetype : s.type];
+    if (!Archetype) return;
+    const e = new Archetype(this.level, this.ctx, s.x, w ? this.gate.arenaTop : y, w?.stats);
+    if (w) {
       this.boss = e;
       this.hud.boss(true, 1);
     }
-    if (!e) return;
     e.encounter = s.encounter;
     this.enemies.push(e);
     this.entityRoot.add(e.root);
