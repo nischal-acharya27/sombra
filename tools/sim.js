@@ -58,7 +58,7 @@ const PLANNED = new Set(['jump']);
  *
  * The sweeps were *unpaired* — the naive runs used one set of scoped seeds and
  * the reading runs another — so the two bots were not even playing the same
- * levels. Half the spread was spawn scatter rather than behaviour. Runs are now
+ * gates. Half the spread was spawn scatter rather than behaviour. Runs are now
  * paired: run i of each bot shares a scope, so the only difference between the
  * two numbers is the bot.
  *
@@ -455,7 +455,7 @@ function playthrough(game, input, { maxSeconds = 400, readTells = false, carrySh
       if (game.shadow) shadowsRaised++;
       lastShadow = game.shadow;
     }
-    // The arena holds no enemies and therefore no bodies, so what the hunter
+    // The arena holds no enemies and therefore no remnants, so what the hunter
     // walks in with is all there is. That is the design claim this records.
     if (!bossSeen && game.activeEncounter?.boss) {
       bossSeen = true;
@@ -468,7 +468,7 @@ function playthrough(game, input, { maxSeconds = 400, readTells = false, carrySh
     magicCd -= DT;
     dashCd -= DT;
 
-    // SORGI. The bot claims a body once the fight around it is over, which is
+    // SORGI. The bot claims a remnant once the fight around it is over, which is
     // how a careful human plays it: the channel roots for 0.8 s and any hit
     // breaks it, so extracting mid-fight is a gamble — and a gamble is not what
     // this row is measuring. What it measures is whether the gate is clearable
@@ -706,9 +706,9 @@ function giveShadow(game, bot) {
   return !!game.shadow;
 }
 
-function bossFight(game, input, strategy, { maxSeconds = 240, carryShadow = false } = {}) {
+function bossFight(game, input, strategy, { maxSeconds = 240, carryShadow = false, latency = REACTION } = {}) {
   game.start();
-  const bot = new Bot(game, input);
+  const bot = new Bot(game, input, latency);
   const p = game.player;
 
   // Walk in carrying a shadow, when asked. Set up at the spawn point *before*
@@ -820,18 +820,22 @@ function bossSweep(game, input, scope, base, strategy, carryShadow) {
     runs.push(scope(base + i, () => bossFight(game, input, strategy, { carryShadow })));
   }
   const won = runs.filter((r) => r.won).length;
-  const hp = runs.reduce((a, r) => a + r.playerHp, 0) / runs.length;
-  const left = runs.reduce((a, r) => a + r.bossHpLeft, 0) / runs.length;
+  const mean = (pick) => runs.reduce((a, r) => a + pick(r), 0) / runs.length;
   return {
     strategy,
     carryShadow,
     runs,
     won,
     of: runs.length,
-    hp,
-    bossHpLeft: left,
-    seconds: runs.reduce((a, r) => a + r.seconds, 0) / runs.length,
+    hp: mean((r) => r.playerHp),
+    bossHpLeft: mean((r) => r.bossHpLeft),
+    seconds: mean((r) => r.seconds),
     majority: won * 2 > runs.length,
+    // A `+shadow` row that silently failed to raise one would still print
+    // `+shadow` and still pass, and the conclusion drawn from these rows is
+    // precisely that carrying an ally does not change the fight. The
+    // playthrough row already guards this way; these have to as well.
+    carried: runs.filter((r) => r.carried).length,
   };
 }
 
@@ -1010,9 +1014,12 @@ function normalCdf(z) {
  * where it saved 2. Same pairing, same seeds, same runs, no data discarded —
  * it reads the samples already taken more carefully.
  *
- * The critical value is computed rather than looked up: for n ≥ 20 the
+ * The critical value is computed rather than looked up: from about n = 20 the
  * normal approximation with a continuity correction is the standard treatment,
  * which keeps the threshold arithmetic rather than a constant somebody chose.
+ * This suite runs 24 pairs, comfortably inside that. The n < 6 guard below is
+ * not that threshold — it is the point at which no signed-rank test can reach
+ * p < 0.05 at all, so there is nothing to return but NaN.
  */
 function wilcoxon(diffs) {
   // Zero differences are dropped — Wilcoxon's own rule, since a tie has no
@@ -1050,8 +1057,9 @@ function quantile(sorted, q) {
 /**
  * The telegraph claim as a distribution over paired runs.
  *
- * `wins` is what gets asserted — see TELL_WINS_MIN. The ratio quantiles are
- * effect size, reported rather than gated on.
+ * Nothing here is asserted on directly. The gate is the Wilcoxon `w` field —
+ * see TELL_ALPHA. `wins` is the sign test, kept as the record of what was tried
+ * first, and the ratio quantiles are effect size.
  */
 function tellStats(paired) {
   const ratios = [];
@@ -1169,7 +1177,7 @@ function runAll(game, input, seed) {
   // both face the same spawn scatter, the same jitter and the same wisp phases,
   // and the only difference between their two numbers is the bot. The old
   // unpaired sweeps at scopes 300+i and 400+i were not even playing the same
-  // levels as each other, which put spawn variance straight into the statistic
+  // gates as each other, which put spawn variance straight into the statistic
   // the row was asserting on.
   const paired = [];
   for (let i = 0; i < TELL_SEEDS; i++) {
@@ -1194,24 +1202,6 @@ function runAll(game, input, seed) {
   report.naive = agg((x) => x.naive);
   report.playthrough = agg((x) => x.reads);
   report.tell = tellStats(paired);
-  // Melee has to be a winning answer; kiting deliberately is not. Mana regen
-  // caps the bolt at roughly a tenth of melee DPS, so `ranged` is a balance
-  // gate — if it starts winning a majority, the bolt is overtuned and the
-  // fight has stopped being a fight.
-  //
-  // Each strategy is now swept and each is run twice: empty-handed, and walking
-  // in carrying a shadow. Carrying one is the normal way the arena is reached —
-  // the shadow row measures 6 to 7 runs in 8 arriving with an ally — so a boss
-  // verified only against a shadow-less hunter was verified against a case that
-  // mostly does not happen.
-  report.boss = [
-    { ...bossSweep(game, input, scope, 500, 'mash', false), mustWin: true },
-    { ...bossSweep(game, input, scope, 520, 'dodge', false), mustWin: true },
-    { ...bossSweep(game, input, scope, 540, 'ranged', false), mustWin: false },
-    { ...bossSweep(game, input, scope, 560, 'mash', true), mustWin: true },
-    { ...bossSweep(game, input, scope, 580, 'dodge', true), mustWin: true },
-    { ...bossSweep(game, input, scope, 600, 'ranged', true), mustWin: false },
-  ];
   // Last, and that position is the whole point.
   //
   // A scoped seed makes a probe's *randomness* independent, and this one is
@@ -1231,6 +1221,34 @@ function runAll(game, input, seed) {
   // the check that this is true is that every pre-existing number in the report
   // is bit-identical to the build before this row existed.
   report.carried = sweep(9, { readTells: true, carryShadow: true });
+
+  // The boss sweeps go after everything, and the `+shadow` half is why.
+  //
+  // `giveShadow` allocates — `_spawn` builds a Beast rig and `extract` builds a
+  // Shadow — and 24 carrying fights are the largest allocation block in the
+  // suite. The rule this file has broken once already and states twice is that
+  // a probe which allocates cannot sit ahead of rows that must stay comparable.
+  // These used to sit before `extraction` and `carried`, which was the same
+  // mistake the SORGI slice cost most of a session to.
+  //
+  // Melee has to be a winning answer; kiting deliberately is not. Mana regen
+  // caps the bolt at roughly a tenth of melee DPS, so `ranged` is a balance
+  // gate — if it starts winning a majority, the bolt is overtuned and the fight
+  // has stopped being a fight.
+  //
+  // Each strategy runs twice: empty-handed, and walking in carrying a shadow.
+  // Carrying one is the normal way the arena is reached — the row above
+  // measures 6 to 7 runs in 8 arriving with an ally — so a boss verified only
+  // against a shadow-less hunter was verified against the case that mostly does
+  // not happen.
+  report.boss = [
+    { ...bossSweep(game, input, scope, 500, 'mash', false), mustWin: true },
+    { ...bossSweep(game, input, scope, 520, 'dodge', false), mustWin: true },
+    { ...bossSweep(game, input, scope, 540, 'ranged', false), mustWin: false },
+    { ...bossSweep(game, input, scope, 560, 'mash', true), mustWin: true },
+    { ...bossSweep(game, input, scope, 580, 'dodge', true), mustWin: true },
+    { ...bossSweep(game, input, scope, 600, 'ranged', true), mustWin: false },
+  ];
   report.ms = Math.round(performance.now() - t0);
 
   print(report);
@@ -1329,7 +1347,7 @@ function print(r) {
   );
   lines.push(
     `  sign test     reader took less damage in ${t.wins}/${t.of}` +
-      `${t.ties ? ` (${t.ties} tied)` : ''}   info`
+      `${t.ties ? ` (${t.ties} tied)` : ''}, would need ${TELL_WINS_MIN}   info`
   );
   lines.push(
     `  effect size   median ${(t.median * 100).toFixed(0)}% of naive` +
@@ -1381,23 +1399,35 @@ function print(r) {
     // `mustWin` reads as "a majority must win"; the kiting row inverts it —
     // that strategy is required to *fail* a majority, which is the gate the
     // design has always claimed and never been able to check.
-    const pass = b.mustWin ? b.majority : !b.majority;
+    //
+    // A carrying row additionally has to prove it carried. Without that, a
+    // silently broken `giveShadow` prints `+shadow`, passes, and supports the
+    // conclusion that an ally changes nothing.
+    const carriedOk = !b.carryShadow || b.carried === b.of;
+    const pass = (b.mustWin ? b.majority : !b.majority) && carriedOk;
     lines.push(
       `  ${b.strategy.padEnd(7)}${b.carryShadow ? '+shadow' : '       '}  ` +
         `wins ${String(b.won)}/${b.of}  hp left ${b.hp.toFixed(0).padStart(4)}  ` +
-        `boss hp ${b.bossHpLeft.toFixed(0).padStart(4)}  ${b.seconds.toFixed(1).padStart(5)}s  ${ok(pass)}`
+        `boss hp ${b.bossHpLeft.toFixed(0).padStart(4)}  ${b.seconds.toFixed(1).padStart(5)}s  ` +
+        `${b.carryShadow ? `raised ${b.carried}/${b.of}  ` : ''}${ok(pass)}`
     );
   }
   lines.push('  mash and dodge must both win a majority; ranged must not win one.');
-  lines.push('  Boss probes run at zero latency so their numbers stay comparable with');
-  lines.push('  older builds.');
+  lines.push(`  All six run at the same ${Math.round(REACTION * 1000)} ms reaction latency the playthrough`);
+  lines.push('  bots use. They used to run at zero, justified as keeping them comparable');
+  lines.push('  with older builds — but sweeping them broke that comparability anyway');
+  lines.push('  (a single seed read 100 HP left where eight read 61–96), so the reason');
+  lines.push('  had already stopped applying. It mattered: a bot that never mistimes a');
+  lines.push('  dodge is exactly where an ally is worth least, which made zero latency');
+  lines.push('  the measurement least able to see a shadow trivialise the fight — and');
+  lines.push('  seeing that was the whole purpose of the carrying rows.');
   lines.push('');
   lines.push('  Each strategy runs twice: empty-handed, and walking in with a shadow.');
   lines.push('  Carrying one is the normal way this arena is reached — 6 to 7 runs in 8');
   lines.push('  arrive with an ally — so a boss verified only against a shadow-less');
   lines.push('  hunter was verified against the case that mostly does not happen. The');
-  lines.push('  arena holds no other enemies and therefore no bodies, so whatever walks');
-  lines.push('  in is all there is for the whole fight.');
+  lines.push('  arena holds no other enemies and therefore no remnants, so whatever');
+  lines.push('  walks in is all there is for the whole fight.');
   lines.push('');
 
   lines.push('CARRYING A SHADOW   (the way the game is actually played)');
@@ -1416,9 +1446,9 @@ function print(r) {
     `  damage taken   carried ${c.damage.toFixed(0)}   empty-handed ${r.playthrough.damage.toFixed(0)}   baseline`
   );
   lines.push('');
-  lines.push('  The bot claims a body once the fight around it is over, which is how a');
-  lines.push('  careful human plays it — the channel roots for 0.8 s and any hit breaks');
-  lines.push('  it. Extracting mid-fight is a gamble, and a gamble is not what this row');
+  lines.push('  The bot claims a remnant once the fight is over, which is how a careful');
+  lines.push('  human plays it — the channel roots for 0.8 s and any hit breaks it.');
+  lines.push('  Extracting mid-fight is a gamble, and a gamble is not what this row');
   lines.push('  measures. It measures whether the gate is clearable while carrying a');
   lines.push('  shadow, which the suite could not say anything about until now.');
   lines.push('');
@@ -1428,7 +1458,7 @@ function print(r) {
   if (!usedIt) {
     lines.push('');
     lines.push('  NO SHADOW WAS EVER RAISED, so the clear rate above is measuring the');
-    lines.push('  ordinary bot. Check that beasts still leave bodies, that the corpse');
+    lines.push('  ordinary bot. Check that beasts still leave remnants, that the claim');
     lines.push('  window outlives the encounter, and that `down` is still held when the');
     lines.push("  latency-delayed `heavy` matures — that last one is why the attempt is");
     lines.push('  committed for a fixed window rather than re-decided every frame.');
