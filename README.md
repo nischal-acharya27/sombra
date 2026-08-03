@@ -140,10 +140,16 @@ the simulation by a fraction of a second and silently measures nothing.
 `?sim&seed=N` runs the whole suite against a different top-level seed, and it is
 worth using. Every number this project has recorded from a single seed has later
 turned out to be optimistic, unreproducible, or both — the boss was measured
-winning with 100 HP left and sweeps at 61–96, and a recorded table of five
+winning with 100 HP left and sweeps at 61–111, and a recorded table of five
 telegraph figures had four that did not survive a rebuild. **Green on one seed
 is not green.** Run at least the five in `DECISIONS.md` before believing a
 result.
+
+The converse also holds, and it is measured: **red on one seed is not red
+either.** The telegraph gate is a signed-rank test at n = 24, which has enough
+false negatives that roughly two arbitrary seeds in nine fail on a healthy
+build. Those five recorded seeds are the reference set; a regression means the
+gate moving on *those*. See `DECISIONS.md` § "The gate's false-negative rate".
 
 Every test runs in **its own seed scope**, and the playthrough runs **eight
 seeds** rather than one. Both of those were bought the hard way. The suite used
@@ -162,13 +168,23 @@ Current results:
 | Move list | all six attacks connect for their advertised damage |
 | Air attack | a running jump keeps **100%** of top speed through a swing, and the direction key still commands 1.9 units of travel during one |
 | Launcher juggle | `K` → `Space` → `J` connects across a **0.40 s** window; the launched enemy rises 5.39 against a 6.59 jump |
-| Playthrough | the telegraph-reading bot clears **8/8** seeds, average 58 s |
-| Gate Guardian | mash and dodge both win with ~100 HP left |
+| Playthrough | the telegraph-reading bot clears **19/24** paired seeds, average 58 s |
+| Telegraphs | reading tells costs **73–80%** of the damage ignoring them does — signed-rank p ≤ 0.018 on all five recorded seeds |
+| Carrying a shadow | the gate is clearable with an ally at **6–7 of 8**, and one reaches the arena in 6–7 of the runs that get there |
+| Gate Guardian | mash and dodge win **40/40**, with 64–111 HP left; kiting wins **0/40** |
 
 For the boss, melee has to be a winning answer and mana must not be — the
-`ranged` bot is a balance probe, and if it ever starts winning comfortably the
-bolt is overtuned. **It currently wins**, on six of eight seeds, which is a real
-signal and is recorded here rather than quietly tuned away.
+`ranged` bot is the balance gate, and if it ever wins a majority the bolt is
+overtuned. It loses every one of forty runs, leaving the Guardian around 590 of
+its 900 HP.
+
+That is a change from what this file used to claim, and the reason is worth a
+line. These numbers were single runs, and single runs flattered everything: the
+boss read "~100 HP left" where eight seeds read 61–111, and `ranged` was
+recorded as *winning six of eight* — measured by a bot with **zero reaction
+latency**, which is exactly the condition under which kiting works and a human
+does not play. All six boss probes now run at the same 250 ms latency the
+playthrough bots use. Nothing in `config.js` was touched to move any of this.
 
 One claim that used to live here has been **withdrawn**. The suite reported that
 a bot ignoring telegraphs died at the ambush, and that pair — reader clears,

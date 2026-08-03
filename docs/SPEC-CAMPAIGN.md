@@ -286,20 +286,29 @@ independent check the project has. **Acknowledged cost:** seven gates never get
 telegraph-gap analysis, and that is a real reduction in coverage, not a neutral
 reallocation.
 
-**The telegraph gap is restated as a distribution claim** — median damage gap
-across twenty-four fixed seeds against a threshold derived from the measured
-distribution, reported with its spread. Reasoning in `DECISIONS.md`. The
-standing warning is unchanged and now has a third clause: do not close the gap
-by handicapping the naive bot, do not close it by choosing a kinder sample, and
-do not close it by reporting a point estimate from a wide distribution.
+**The telegraph gap is restated as a distribution claim** — paired runs across
+twenty-four seeds, gated on a Wilcoxon signed-rank test at p < 0.05, with the
+median ratio reported as effect size and deliberately not gated on. Built and
+measured; reasoning and results in `DECISIONS.md`. The standing warning is
+unchanged and now has a third clause: do not close the gap by handicapping the
+naive bot, do not close it by choosing a kinder sample, and do not close it by
+reporting a point estimate from a wide distribution.
 
 **New suite probes go last in `runAll`.** Scoped seeds isolate a probe's
-randomness, not what thousands of frames do to the shared `Game` object.
+randomness, not what thousands of frames do to the shared `Game` object. The
+boss sweeps sit last of all, because the `+shadow` half allocates a rig per run.
 
-**The Guardian is re-tuned before gate 3's boss is written**, so that the method
-is proven on the boss that has a baseline. `ranged` becomes a hard gate at that
-re-tune: kiting must not win a majority of seeds. Recorded baseline is a loss
-with the boss at 187 HP.
+**The Guardian keeps the numbers it has, and that was a finding rather than a
+skipped job.** The re-tune was owed on the premise that carrying a shadow into
+the arena would invalidate the verified numbers. Measured across five seeds it
+does not: the ally is worth about +6 HP to `mash` and +1 to `dodge`, and the
+sign is not even consistent. With every gate passing, moving numbers anyway
+would be tuning by feel. `ranged` is now the hard gate it was always described
+as — kiting must not win a majority — and it wins none of forty runs.
+
+The 187 HP baseline this spec used to quote is withdrawn: it was a single run by
+a zero-latency bot. Swept at the same 250 ms latency the playthrough bots use,
+kiting leaves the Guardian around 590 of 900.
 
 ## Out of Scope
 

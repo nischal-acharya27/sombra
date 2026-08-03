@@ -101,9 +101,12 @@ addEventListener('keydown', (e) => {
 if (location.search.includes('sim')) {
   document.getElementById('boot').classList.add('hidden');
   document.getElementById('title').classList.add('hidden');
-  const seed = Number(new URLSearchParams(location.search).get('seed'));
+  // Presence, not truthiness — `?seed=0` is a perfectly good seed, and testing
+  // the value would silently ignore it and run the default instead.
+  const raw = new URLSearchParams(location.search).get('seed');
+  const seed = raw === null ? null : Number(raw);
   import('../tools/sim.js').then((m) =>
-    Number.isFinite(seed) && seed !== 0 ? m.runSuite(game, input, seed) : m.runSuite(game, input)
+    m.runSuite(game, input, ...(seed !== null && Number.isFinite(seed) ? [seed] : []))
   );
 } else {
   loop.start();

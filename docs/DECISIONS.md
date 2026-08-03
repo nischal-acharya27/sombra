@@ -295,6 +295,14 @@ measured as *mash and dodge both win with about 100 HP left*, taken without an
 ally. Carrying a shadow in changes that, so the boss needs re-tuning and
 `sim.js` needs a shadow-carrying bot variant.
 
+> **Wrong, and left standing as the record of a wrong prediction — 2026-08-03.**
+> Both halves failed. The 100 HP figure was one run of a stochastic fight; swept
+> across eight seeds the same build reads 61–111. And carrying a shadow in does
+> *not* change the result — measured, it is worth about +6 HP to `mash` and +1
+> to `dodge`, with an inconsistent sign. The shadow-carrying bot was genuinely
+> needed and was built; the re-tune it was supposed to justify was not owed.
+> See § The level-data seam → three debts.
+
 **Still green-lit after round 2.** The blocking question was whether the
 telegraph design reads to a human, and it does: the player learned the beast's
 tell, confirmed 0.42 s is enough to react to, and described the tell without
@@ -330,12 +338,16 @@ re-tuning once a carried shadow exists, and tuning it twice would make neither
 result attributable. At that re-tune, `ranged` becomes a hard gate — kiting must
 not win a majority of seeds.
 
-**Now a hard gate, and it passes — 2026-08-03.** Kiting wins 11 of 40
-empty-handed and 15 of 40 carrying a shadow, across five top-level seeds, and
-fails to reach a majority on every one. The 187 HP figure above was a single
-run and should be read as such; swept, the boss is left with 63–125 HP. See
-§ The level-data seam → three debts for the full table and for why no Guardian
-number moved.
+**Now a hard gate, and it passes — 2026-08-03.** Kiting wins **none of forty**
+runs across five top-level seeds, empty-handed or carrying a shadow, leaving the
+Guardian around 590 of its 900 HP.
+
+The 187 HP figure above is withdrawn. It was a single run by a bot with zero
+reaction latency, and both halves of that were flattering it: one run of a
+stochastic fight says what happened once, and a kiting bot that never gets
+caught is the best possible case for a strategy whose entire premise is never
+getting caught. See § The level-data seam → three debts for the full table, for
+how the latency error was found, and for why no Guardian number moved.
 
 **Known risk:** this is the first thing in the game that can kill without the
 player. It is the mechanic most likely to make the combat worse.
@@ -572,6 +584,51 @@ mean ratio with a standard error far wider than the thing it was measuring. The
 instrument was the problem, and the project spent two rounds treating its noise
 as a property of the game.
 
+### The gate's false-negative rate, measured — 2026-08-03
+
+"Five of five" is true and reads stronger than it should. Those five are the
+seeds this document had already recorded, and they were the seeds available to
+check because non-default seeds were untestable until `?sim&seed=N` existed.
+Widening to nine:
+
+    seed        reads clears   p        verdict
+    20260728       19/24       0.018    pass
+    1              19/24       0.004    pass
+    99991            —        <0.001    pass
+    20260802         —         0.006    pass
+    7777777          —         0.003    pass
+    7              19/24       0.004    pass
+    123            18/24       0.043    pass
+    0              12/24       0.035    FAIL — on clear rate, not the gap
+    42             20/24       0.106    FAIL — on the gap
+
+**Roughly two seeds in nine fail on a build with nothing wrong with it**, and
+several passes sit just inside the line at 0.035 and 0.043. That is a
+false-negative rate, and it is the honest operating characteristic of a
+signed-rank test at n = 24 against an effect this size. A regression gate that
+cries wolf one run in four or five is a gate people learn to ignore.
+
+**Nothing is being changed in response to this, and that is deliberate.** The
+entry above froze the gate — not the test, not the alpha, not the sample size —
+precisely so that a failure could not be answered by adjusting the instrument.
+Raising n to 48 would fix the power and would also be the exact move that rule
+exists to forbid, taken in direct response to a specific seed failing. If the
+false-negative rate is judged intolerable, that is a decision to take on its own
+and not while looking at seed 42.
+
+What follows instead is a **protocol**: a single red run on an arbitrary seed is
+not evidence of a regression. The five recorded seeds are the reference set, and
+a regression means the gate moving on *those*.
+
+**A second, unrelated finding, and this one is about the game.** On seed 0 the
+tell-reading bot clears **12 of 24 while the naive bot clears 18** — and its
+damage gap still passes. The same ordering shows up mildly on the default seed
+(19 against 22). Reading telegraphs saves damage and costs runs, and the obvious
+mechanism is the dash: the reading bot's answer to a commit is to dash away, and
+dashing away near the chasm is how a bot goes into the void. That is worth
+knowing before three new enemy archetypes are designed around the same tell-and-
+dash loop, and it is recorded rather than acted on.
+
 This is neither of the two things the standing warning forbids, and the
 distinction is the whole point. Handicapping the naive bot changes the system
 under test. Choosing a kinder sample changes which draws are counted. Taking
@@ -690,34 +747,52 @@ two of them prerequisites rather than debts.
   eight arriving with an ally, so a boss verified only against a shadow-less
   hunter was verified against the case that mostly does not happen.
 
-  Measured on `a0ca821`, wins out of 8, mean HP left in brackets:
+  **First measured with the wrong instrument, and a code review caught it.**
+  The boss probes had always run at *zero* reaction latency, justified as
+  keeping them comparable with older builds. Two things were wrong with keeping
+  that. Sweeping them had already broken the comparability it was protecting —
+  a single seed read 100 HP left where eight read 61–111 — so the reason had
+  stopped applying. And it was the worst possible choice for the specific
+  question being asked: a bot that never mistimes a dodge is exactly where an
+  ally is worth least, which made zero latency the measurement *least* able to
+  see a shadow trivialise the fight, and seeing that was the entire purpose of
+  the carrying rows. All six now run at the same 250 ms the playthrough bots
+  use.
+
+  Measured on that instrument, wins out of 8, mean HP left in brackets:
 
       seed        mash      dodge     ranged   mash+S    dodge+S   ranged+S
-      20260728   8/8 (84)  8/8 (78)    2/8    8/8 (76)  8/8 ( 98)    2/8
-      1          8/8 (80)  8/8 (93)    2/8    8/8 (74)  8/8 ( 95)    3/8
-      99991      8/8 (61)  8/8 (96)    2/8    8/8 (85)  8/8 ( 84)    4/8
-      20260802   8/8 (68)  8/8 (91)    3/8    8/8 (78)  8/8 (102)    3/8
-      7777777    8/8 (77)  8/8 (89)    2/8    8/8 (58)  8/8 ( 86)    3/8
+      20260728   8/8 (64)  8/8 (105)   0/8    8/8 (79)  8/8 (108)    0/8
+      1          8/8 (80)  8/8 ( 97)   0/8    8/8 (78)  8/8 (100)    0/8
+      99991      8/8 (80)  8/8 (111)   0/8    8/8 (88)  8/8 (108)    0/8
+      20260802   8/8 (73)  8/8 (104)   0/8    8/8 (72)  8/8 (106)    0/8
+      7777777    8/8 (72)  8/8 ( 98)   0/8    8/8 (81)  8/8 ( 99)    0/8
 
-  **All thirty gate cells pass on all five seeds.** Melee wins, kiting loses
-  a majority everywhere — 11 of 40 empty-handed, 15 of 40 carrying.
+  **All thirty gate cells pass on all five seeds**, and every carrying row
+  raised a shadow in 8 of 8 — a guard added at the same review, because a
+  silently broken `giveShadow` would otherwise print `+shadow`, pass, and
+  support the conclusion below.
+
+  **Re-measuring strengthened the conclusion instead of overturning it, and it
+  was the kiting number that moved.** At zero latency `ranged` won 11 of 40 and
+  touched 4/8 on one seed, one win short of failing its gate. At human latency
+  it wins **none of forty**, leaving the Guardian around 590 of its 900 HP. The
+  old instrument was flattering *kiting*, not the shadow — which makes sense,
+  since kiting is the strategy that depends most on never being caught.
 
   **The premise for the re-tune is disproven.** This document predicted that
   carrying a shadow into the arena would invalidate the verified numbers. It
-  does not: `mash` moves 84 → 76, `dodge` moves 78 → 98, and across seeds the
-  shift is small and not even one-directional. The ally trades damage dealt
+  does not. Averaged over the five seeds the ally is worth about **+6 HP to
+  `mash` and +1 to `dodge`**, and on two seeds it is worth slightly *less* than
+  nothing — the sign is not even consistent. The ally trades damage dealt
   against aggro drawn and roughly breaks even, which is the same wash the
   playthrough row found. So there is no gate demanding a change, and changing
   numbers anyway to satisfy a feeling is precisely the thing this document
   forbids — *the boss must not be re-tuned by feel.*
 
-  **Two things recorded rather than acted on.**
+  **One thing recorded rather than acted on.**
 
-  `ranged +shadow` reached 4/8 on seed 99991, one win short of failing. The gate
-  holds on every seed tried and the margin is thin; it is the first number to
-  look at if the bolt or the shadow is ever touched again.
-
-  And `mash` wins 40 of 40 with roughly two thirds of its health intact, while
+  `mash` wins 40 of 40 with roughly two thirds of its health intact, while
   `PLAYTEST.md` records a human needing four or five attempts at the same fight.
   Both are true, and the gap between them is the honest limit of what this suite
   can say: a bot does not panic, misread a flare, or fumble a dash. **The boss
