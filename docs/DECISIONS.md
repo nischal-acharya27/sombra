@@ -803,6 +803,107 @@ two of them prerequisites rather than debts.
   Wilcoxon signed-rank gate; five of five top-level seeds pass, where the old
   assertion failed three of five. See § The telegraph gap is a coin-flip.
 
+## The gate transition, and what it cost to make it free
+
+**Decided and built 2026-08-03**, with gate 2 — the crossing — as its first
+customer. Gate 1's exit no longer ends the run on a clear screen; it lights an
+arch, the hunter walks through it, and the campaign continues.
+
+**Every gate is built in `Game`'s constructor, and a transition is a visibility
+flag.** This was the highest-risk decision in the campaign work and the reason
+was known before a line was written: three.js draws four `Math.random()` values
+per object for its UUID, `tools/sim.js` seeds `Math.random` globally, and a gate
+is several hundred objects. Building one mid-run would spend the gameplay stream
+and re-roll every enemy's jitter after it — the failure the SORGI slice cost most
+of a session to, at the largest scale the game has to offer it. Constructing
+everything up front happens before the suite seeds anything, so the seeded stream
+never sees it.
+
+Two consequences worth stating plainly, because both are real costs:
+
+- **Boot time and resident geometry grow linearly with the campaign.** At two
+  gates this is not worth measuring. At ten it may be, and that decision belongs
+  to the gate that makes it hurt rather than to this one. The alternative —
+  building lazily and restoring the unseeded `Math.random` around it — trades a
+  measurable cost for a subtle one, which is the wrong trade for the rule this
+  project has already broken once.
+- **`Level` now owns everything it builds**, including the backdrop and the
+  landmark, which used to go straight into the scene. That is what makes a gate
+  something one flag can put away.
+
+**The suite counts the draws rather than trusting the argument.** `GATE
+TRANSITION` puts a counter around the single update that crosses the arch and
+asserts zero, with a shard rig as the control — a counter reading zero because
+nobody wired it up reads exactly like a transition that costs nothing. It was
+watched failing: a `buildShard()` planted in `_stepThrough` turned the row red
+and nothing else, so the row is specific as well as live.
+
+**The first version of that row measured the wrong thing, and the instrument
+said so.** It counted seventy frames of walking up to the arch and read 28
+draws. All of it was the hunter's footfall dust. A row that can go red because
+the boots landed on the transition frame is measuring the boots, so the
+measurement now happens from a standstill on the one frame that pays.
+
+**The arch is a place, not a threshold, and it will not take you on the frame it
+opens.** Both halves were paid for by a review.
+
+The frame rule came first: a Warden dying while the hunter stood in the doorway
+would otherwise open the way and take them through in the same frame — no walk,
+no choice, and in the suite a playthrough that carries straight into the next
+gate and reports the wrong gate's numbers. So the hunter has to have stood
+*outside* the arch since it lit.
+
+The first implementation of that rule armed on `x < exitX`, which made the exit
+a line only crossable rightwards — and **that stranded the hunter.** Gate 1
+spawns its Guardian at x 190, the arch is at 196 and the arena runs to 204, so
+finishing the fight on the right of the arch is ordinary rather than freakish,
+and it left the objective lit with the only way out behind them, reachable by
+walking backwards through it and then forwards again. The arch is now a zone of
+`GATE_ARCH.reach` either side of `exitX`, entered from whichever side you are
+on, and the suite clears gate 1 from x 202 and walks *left* into it as its own
+row. The probe could not have seen this: it only ever stood the hunter short of
+the arch.
+
+**"Has this gate got something to beat" asks after the Warden, not after
+`e.boss`.** The first version tested whether any encounter carried the `boss`
+flag, which is a different question — four of the ten Wardens are bosses, so
+the six that are not would have had an arch that never lit. It now asks whether
+the encounter spawned the gate's `warden`, and whether the *gate* has a Warden
+block at all. Gate 1's Warden encounter is both, so the branch it takes is
+unchanged.
+
+**A gate with no Warden opens on arrival.** The crossing has nothing to beat, so
+its way out is lit from the moment the hunter is standing in it, and it is one
+of those only until the Ferryman is built.
+
+**The arch is a cut, so effects do not cross it.** Particles, damage numbers and
+deferred beats all outlive the moment that made them, and `reset()` used to get
+away with clearing only the deferred ones because it always ran behind a screen
+change. A transition does not: without `VFX.clear()`, the sparks off a Warden's
+death drift through the next realm.
+
+**The hunter arrives whole.** Levelling is the game's only heal and there is
+nothing to restore between gates, so a hunter who beat a Warden at 9 HP would
+carry that into the next gate with no way back from it — and with no persistence
+yet, no way back to anything except gate 1. This is a difficulty decision made
+on the safe side rather than a measured one, and the first gate with a fight on
+both sides of a transition is the one that can test it. **Style does not carry**:
+it is scored within a gate by definition. **Level, EXP, kills, damage and the
+clock do**, and so does the shadow — it is a soul being escorted, and the
+campaign ends by letting it go.
+
+**Gate 1's suite numbers are unchanged, and that was checked rather than
+assumed.** Every section of the report is bit-identical across all five recorded
+seeds except the gate descriptors, which gained gate 2's five rows. The suite is
+75 PASS / 0 FAIL in ~6.8 s.
+
+**What is still not covered, said plainly.** `GAP REACHABILITY` measures the
+gate that happens to be *built* into `game.level`, which is gate 1; the
+crossing's built geometry is proven only by the bot that walks it, not by
+arithmetic against `level.solids`. And the crossing has never been played by a
+human, on a phone or otherwise — `SPEC-CAMPAIGN.md` § Further Notes makes that
+playtest the checkpoint before gates 3–10, and it is still owed.
+
 ## Art direction
 
 The palette **darkens progressively left to right** — pastel at the entrance,

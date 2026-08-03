@@ -24,7 +24,7 @@ wrong diagnoses and several disagreeing playtest verdicts.
 **Verify with `?sim` across seeds before claiming anything works.** One seed is
 not evidence — that mistake is why the suite sweeps rather than samples. The
 five recorded seeds are `20260728`, `1`, `99991`, `20260802`, `7777777`, and the
-suite is 57 PASS / 0 FAIL in ~6.7 s on all five.
+suite is 75 PASS / 0 FAIL in ~6.8 s on all five.
 
 **Red on one arbitrary seed is not a regression.** The telegraph gate has a
 measured false-negative rate — roughly two arbitrary seeds in nine fail on a
@@ -38,8 +38,9 @@ size, precisely so a failure cannot be answered by adjusting the instrument.
 - **Allocate nothing during a run.** Three.js draws four `Math.random()` values
   per object for its UUID and the suite seeds `Math.random` globally, so an
   object built mid-run spends the gameplay stream and re-rolls every enemy's
-  jitter after it. This extends to gate transitions, which will be the largest
-  allocation event the game has ever had.
+  jitter after it. **Gate transitions obey this by pre-building**: `Game`
+  constructs every gate up front and switches between them with a `visible`
+  flag, and the suite's `GATE TRANSITION` row counts the draws to prove it.
 - **New suite probes go last in `runAll`.** Scoped seeds isolate a probe's
   randomness, not what thousands of frames do to the shared `Game` object.
 - **No passive contact damage on anything.** Nothing harms the hunter by

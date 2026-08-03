@@ -191,6 +191,33 @@ export class VFX {
     this.texCache = new Map();
   }
 
+  /**
+   * Drop everything in flight, without allocating.
+   *
+   * Called when the hunter changes gate. Effects outlive the moment that made
+   * them — a damage number rises for a second, a shock ring expands for half of
+   * one — and the arch is a cut: sparks from a Warden that died in one realm
+   * have no business drifting through the next. `pending` goes too, because a
+   * deferred beat holds a closure over the run that queued it.
+   *
+   * Zeroing `life` is all a particle needs; `update` writes the alpha out on
+   * the next frame either way, but doing it here means a single frame rendered
+   * before then does not show the corpse of the last gate.
+   */
+  clear() {
+    this.pending.length = 0;
+    for (let i = 0; i < MAX_PARTICLES; i++) {
+      this.p.life[i] = 0;
+      this.p.alpha[i] = 0;
+    }
+    for (const pool of [this.arcs, this.wedges, this.rings, this.smears, this.flashes, this.labels]) {
+      for (const obj of pool.items) {
+        obj.visible = false;
+        obj.userData.life = 0;
+      }
+    }
+  }
+
   _pool(n, make) {
     const items = [];
     for (let i = 0; i < n; i++) {

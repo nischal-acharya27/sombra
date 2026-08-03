@@ -33,6 +33,19 @@ export const BARRIER = {
   y1: 40,
 };
 
+/**
+ * The way out of a gate.
+ *
+ * `reach` is how near the arch's centre the hunter has to be to be taken
+ * through it, and the arch is a *place* rather than a line for a reason: a
+ * Warden can die with the hunter standing beyond it — gate 1 spawns its
+ * Guardian at x 190, the arch is at 196 and the arena runs to 204 — and a
+ * threshold you can only cross rightwards would strand them, objective lit,
+ * walking the wrong way into a wall. Comfortably inside the arch's legs, which
+ * `Level._buildGateArch` stands at ±3.2.
+ */
+export const GATE_ARCH = { reach: 2.0 };
+
 export const PLAYER = {
   hw: 0.34,
   hh: 0.85,

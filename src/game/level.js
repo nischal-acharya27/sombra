@@ -6,6 +6,14 @@
 // read from `this.gate`, which is what makes a second gate content rather than
 // code.
 //
+// **Everything it builds hangs off `this.group`**, including the backdrop and
+// the landmark, which used to go straight into the scene. That is what makes a
+// gate something the campaign can switch off in one assignment — and switching
+// gates has to cost nothing, because every mesh three.js builds draws four
+// `Math.random()` values for its UUID and the suite seeds that stream. A gate
+// built mid-run would re-roll every enemy's jitter after it. So gates are built
+// once, at construction, and a transition only changes which one is visible.
+//
 // Collision is AABB-only in the XY plane. The game is 2.5D — Z carries depth
 // for the camera and the art, and nothing else. Keeping the simulation planar
 // is what makes attack ranges and jump arcs tunable by hand.
@@ -13,14 +21,13 @@
 import * as THREE from 'three';
 import { P } from '../render/palette.js';
 import { toonMaterial, outlineFor } from '../render/toon.js';
-import { GrassField, scatterGrass, makeRock, makeCrystal, makeTree, makeMist, buildBackdrop } from '../render/env.js';
+import { GrassField, scatterGrass, makeRock, makeCrystal, makeTree, makeMist, makeWater, buildBackdrop } from '../render/env.js';
 import { buildLandmark } from '../render/landmarks.js';
 import { rand } from '../engine/mathx.js';
 import { BARRIER } from './config.js';
 
 export class Level {
   constructor(scene, gate) {
-    this.scene = scene;
     this.gate = gate;
     this.realm = gate.realm;
     this.group = new THREE.Group();
@@ -117,11 +124,12 @@ export class Level {
 
     this._buildLandmark();
     this._buildGateArch();
+    this._buildWater();
 
     this.grass = new GrassField(grassPoints, { blade: R.grassBlade, tip: R.grassBladeTip });
     this.group.add(this.grass.mesh);
 
-    buildBackdrop(this.scene, { from: this.leftEdge - 14, to: this.gate.end + 40, ridges: R.ridges });
+    buildBackdrop(this.group, { from: this.leftEdge - 14, to: this.gate.end + 40, ridges: R.ridges });
 
     // Mist sheets in front of and behind the play plane, for depth.
     for (let x = this.leftEdge - 4; x < this.gate.end + 20; x += 46) {
@@ -191,8 +199,32 @@ export class Level {
     const g = buildLandmark(l.kind);
     g.position.set(l.x, l.y, l.z);
     g.rotation.y = l.rotY;
-    this.scene.add(g);
+    this.group.add(g);
     this.landmark = g;
+  }
+
+  /**
+   * The realm's water, if it has any. Scenery only: it is not a solid, nothing
+   * floats on it, and falling in is still a fall.
+   *
+   * The crossing has black water where gate 1 has void, and that is most of
+   * what makes the two read as different places from the same silhouette. The
+   * broth that makes the hunter *forget* — and lose the shadow they carried in
+   * — is the crossing's mechanic and is not built here; this is the surface it
+   * will happen on.
+   */
+  _buildWater() {
+    const w = this.realm.water;
+    if (!w) return;
+    const from = this.leftEdge - 40;
+    const to = this.gate.end + 40;
+    const g = makeWater(to - from, 140, { color: w.color, sheen: w.sheen });
+    // Centred behind the play plane and reaching a little in front of it, so
+    // the far bank dissolves into fog and the near bank frames the bottom of
+    // the frame without ever covering the fight — the water sits well below it.
+    g.position.set((from + to) / 2, w.y, -40);
+    this.group.add(g);
+    this.water = g;
   }
 
   /** The way out. Lights up only once the Warden is down. */
@@ -279,6 +311,15 @@ export class Level {
   update(dt, t) {
     this.time = t;
     this.grass.update(t);
+    if (this.water) {
+      // Sliding the sheen rather than deforming the surface: a plane that moves
+      // costs two assignments a frame and allocates nothing, and at this
+      // distance a drifting highlight is the whole of what the eye reads as
+      // water anyway.
+      const sheen = this.water.userData.sheen;
+      sheen.position.x = Math.sin(t * 0.09) * 7;
+      sheen.position.z = Math.cos(t * 0.06) * 5;
+    }
     for (const b of this.barriers) {
       const target = b.active ? 0.22 + Math.sin(t * 6) * 0.06 : 0;
       b.mesh.material.opacity += (target - b.mesh.material.opacity) * Math.min(1, dt * 8);
@@ -287,5 +328,29 @@ export class Level {
 
   openExit() {
     this.portal.material.opacity = 0.001; // animated up by the game
+  }
+
+  /** Show this gate, or put it away. The campaign swaps gates with this. */
+  setVisible(on) {
+    this.group.visible = on;
+  }
+
+  /**
+   * Put the gate back the way the hunter found it.
+   *
+   * Everything a run leaves behind in built geometry is here: barriers a
+   * sealed encounter raised, and a portal lit by beating the Warden. A gate
+   * that is left and re-entered has to be indistinguishable from one that was
+   * never entered, and this is the half of that promise `Game` cannot make on
+   * its own — `Game` can forget an encounter ever started, but the barrier it
+   * raised lives in the level.
+   */
+  reset() {
+    for (const b of this.barriers) {
+      b.active = false;
+      b.mesh.material.opacity = 0;
+    }
+    this.portal.material.opacity = 0;
+    this.portal.scale.y = 1;
   }
 }

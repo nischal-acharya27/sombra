@@ -270,11 +270,50 @@ export function makeMist(width, height, { color = P.violetGlow, opacity = 0.055,
 }
 
 /**
+ * A flat sheet of water, and a sheen drifting across it.
+ *
+ * Unlit on purpose. `MeshBasicMaterial` at a near-black colour is the cheapest
+ * thing that reads as deep water, and it is the *right* thing rather than a
+ * shortcut: a toon-shaded surface would take the same key light as the rock and
+ * come back grey. Fog still applies, so the far bank dissolves instead of
+ * ending in a line.
+ *
+ * The sheen is a second, barely-there plane the caller slides around each
+ * frame — see `Level.update`. It is what stops the surface reading as a hole
+ * cut in the world, and it costs no allocation to animate.
+ */
+export function makeWater(width, depth, { color = 0x04070c, sheen = P.violetGlow } = {}) {
+  const g = new THREE.Group();
+
+  const surface = new THREE.Mesh(new THREE.PlaneGeometry(width, depth), new THREE.MeshBasicMaterial({ color }));
+  surface.rotation.x = -Math.PI / 2;
+  g.add(surface);
+
+  // Wider than the water it sits on, by more than it is ever slid. An edge is
+  // the one thing a sheen must not have: at 0.9 of the width its border ran
+  // down the middle of the view as a hard vertical seam, because nothing here
+  // is far enough away for fog to soften it.
+  const gloss = new THREE.Mesh(
+    new THREE.PlaneGeometry(width * 1.1, depth * 1.1),
+    new THREE.MeshBasicMaterial({ color: sheen, transparent: true, opacity: 0.055, depthWrite: false })
+  );
+  gloss.rotation.x = -Math.PI / 2;
+  gloss.position.y = 0.05;
+  g.add(gloss);
+  g.userData.sheen = gloss;
+
+  return g;
+}
+
+/**
  * Parallax backdrop. Successive ridges of jagged silhouettes pushed back in Z;
  * the fog does the aerial perspective, so each layer only needs to be further
  * away to read as lighter and flatter.
+ *
+ * Takes whatever it should hang off rather than the scene: a gate's scenery
+ * belongs to the gate, so that switching gates is one `visible` flag.
  */
-export function buildBackdrop(scene, { from, to, ridges }) {
+export function buildBackdrop(parent, { from, to, ridges }) {
   const group = new THREE.Group();
 
   const layers = [
@@ -308,6 +347,6 @@ export function buildBackdrop(scene, { from, to, ridges }) {
     group.add(shard);
   }
 
-  scene.add(group);
+  parent.add(group);
   return group;
 }

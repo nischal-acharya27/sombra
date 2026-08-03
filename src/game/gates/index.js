@@ -6,5 +6,6 @@
 // is authored but not listed here is a gate nothing checks.
 
 import { GATE_1 } from './gate1.js';
+import { GATE_2 } from './gate2.js';
 
-export const GATES = [GATE_1];
+export const GATES = [GATE_1, GATE_2];

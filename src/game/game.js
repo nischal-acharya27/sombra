@@ -14,7 +14,7 @@ import { GameCamera } from './camera.js';
 import { VFX } from '../render/vfx.js';
 import { buildShard } from '../render/models.js';
 import { P } from '../render/palette.js';
-import { MAGIC, STYLE, PROGRESSION, PLAYER, WISP, SHADOW } from './config.js';
+import { MAGIC, STYLE, PROGRESSION, PLAYER, WISP, SHADOW, GATE_ARCH } from './config.js';
 import { boxHit } from './actor.js';
 import { clamp, rand } from '../engine/mathx.js';
 
@@ -36,19 +36,41 @@ function attackDamage(e) {
 export const ARCHETYPES = { beast: Beast, wisp: Wisp, guardian: Guardian };
 
 export class Game {
-  /** @param gate the gate descriptor to run — see `src/game/gates/`. */
-  constructor(world, hud, audio, input, gate) {
+  /** @param gates the campaign, in order — see `src/game/gates/`. */
+  constructor(world, hud, audio, input, gates) {
     this.world = world;
     this.hud = hud;
     this.audio = audio;
     this.input = input;
-    this.gate = gate;
+    this.gates = gates;
+    this.gateIndex = 0;
+    this.gate = gates[0];
 
     this.scene = world.scene;
     this.vfx = new VFX(this.scene);
     this.cam = new GameCamera(world.camera);
 
-    this.level = new Level(this.scene, gate);
+    // Every gate in the campaign, built now and never again.
+    //
+    // This is the rule about allocation, applied to the one event that most
+    // wants to break it. Three.js draws four `Math.random()` values per object
+    // for its UUID, `tools/sim.js` seeds `Math.random` globally, and a gate is
+    // several hundred objects — so building one mid-run would spend the
+    // gameplay stream and re-roll every enemy's jitter after it, sending fixed
+    // seeds down different playthroughs. Building them all up front happens
+    // before the suite has seeded anything, which makes a transition a change
+    // of `visible` flags and nothing else. `tools/sim.js` puts a draw counter
+    // around it and asserts the cost is zero.
+    //
+    // The price is boot time and resident geometry, linear in the number of
+    // gates. At two it is not worth measuring; the ten-gate campaign will have
+    // to decide whether it still is, and that decision belongs to the gate that
+    // makes it hurt rather than to this one.
+    this.levels = gates.map((g) => new Level(this.scene, g));
+    for (const l of this.levels) l.setVisible(false);
+    this.level = this.levels[0];
+    this.level.setVisible(true);
+
     this.scene.add((this.entityRoot = new THREE.Group()));
 
     this.ctx = {
@@ -94,7 +116,26 @@ export class Game {
     // means "this page load", which is all it can mean.
     this._taughtCorpse = false;
 
-    this.state = 'idle'; // idle | playing | dead | cleared
+    // idle | playing | dead | cleared | ended
+    //
+    // `cleared` is the gate's Warden being down, not the run being over — the
+    // hunter keeps their legs and walks out through the arch. `ended` is the
+    // run being over, which now happens at the last gate's arch rather than a
+    // few seconds after the last Warden falls.
+    this.state = 'idle';
+    /** The arch is lit and walking into it goes somewhere. */
+    this.wayOpen = false;
+    /**
+     * ...and the hunter has stood outside it since it lit.
+     *
+     * The arch takes you when you *walk into* it, and this is the half of that
+     * which says you have to have been outside first. Without it, a Warden
+     * dying while the hunter happens to be standing in the doorway would open
+     * the way and take them through in the same frame — no walk, no choice,
+     * and in the suite a playthrough that carries straight on into the next
+     * gate and reports the wrong gate's numbers.
+     */
+    this.exitArmed = false;
     this.freeze = 0;
     this.t = 0;
     this.runTime = 0;
@@ -113,7 +154,9 @@ export class Game {
     this.moveHistory = [];
     this.styleIdleT = 0;
 
-    this.encounters = gate.encounters.map((e) => ({ ...e, started: false, cleared: false, alive: 0 }));
+    // Re-derived every time a gate is entered. Seeded here so that nothing
+    // touching a freshly constructed `Game` — the suite does — finds it absent.
+    this.encounters = this.gate.encounters.map((e) => ({ ...e, started: false, cleared: false, alive: 0 }));
     this.activeEncounter = null;
     this.moteT = 0;
   }
@@ -125,51 +168,121 @@ export class Game {
     this.state = 'playing';
     this.hud.show(true);
     this.audio.startMusic();
-    this.hud.objective('CLEAR THE GATE');
   }
 
+  /**
+   * Back to the top of the campaign.
+   *
+   * What lives here is what belongs to a *run* rather than to a gate: the
+   * hunter's level, their EXP, the clock, and the shadow they were carrying.
+   * Everything else — the field, the encounters, the geometry — is the gate's,
+   * and `_enterGate` is what puts that back.
+   */
   reset() {
-    for (const e of this.enemies) this.entityRoot.remove(e.root);
-    for (const b of this.bolts) this.entityRoot.remove(b.root);
-    while (this.corpses.length) this._removeCorpse(this.corpses.length - 1);
+    // A restart starts empty-handed. Walking a shadow between gates is the
+    // campaign's whole promise, so `_enterGate` deliberately keeps one; this is
+    // the one place that has to let it go.
     if (this.shadow) this.entityRoot.remove(this.shadow.root);
-    this.enemies.length = 0;
-    this.bolts.length = 0;
-    this.pendingSpawns.length = 0;
     this.shadow = null;
-    this.boss = null;
 
     this.player.maxHp = PLAYER.maxHp;
     this.player.maxMp = PLAYER.maxMp;
-    this.player.reset(this.gate.spawnX, 0.2);
-    this.cam.snapTo(this.player);
-    this.cam.setBounds(null);
-    this.cam.zoom(11.5);
 
     this.level_ = 1;
     this.exp = 0;
     this.kills = 0;
     this.damageTaken = 0;
+    this.runTime = 0;
+
+    this._enterGate(0);
+    this._syncVitals();
+  }
+
+  /**
+   * Leave whatever gate is up and arrive in this one.
+   *
+   * Nothing here builds anything: the levels were all built in the constructor,
+   * and a transition is a `visible` flag, a realm applied to the sky, and a
+   * field swept clear. That is the acceptance criterion this whole design
+   * exists to meet — see the note on `this.levels`.
+   *
+   * The hunter arrives whole. Levelling is the game's only heal, and a gate is
+   * about two minutes long with nothing to restore between them, so a hunter
+   * who beat a Warden at 9 HP would carry that into the next gate and have no
+   * way back from it. Recorded in `docs/DECISIONS.md`; it is a difficulty
+   * decision rather than a technical one, and the gate that first has a fight
+   * on both sides of a transition is the one that can test it.
+   */
+  _enterGate(i) {
+    this.level.reset();
+    this.level.setVisible(false);
+
+    this.gateIndex = i;
+    this.gate = this.gates[i];
+    this.level = this.levels[i];
+    this.level.reset();
+    this.level.setVisible(true);
+    this.world.applyRealm(this.gate.realm);
+    this.player.level = this.level;
+
+    for (const e of this.enemies) this.entityRoot.remove(e.root);
+    for (const b of this.bolts) this.entityRoot.remove(b.root);
+    while (this.corpses.length) this._removeCorpse(this.corpses.length - 1);
+    this.enemies.length = 0;
+    this.bolts.length = 0;
+    this.pendingSpawns.length = 0;
+    this.boss = null;
+
+    this.encounters = this.gate.encounters.map((e) => ({ ...e, started: false, cleared: false, alive: 0 }));
+    this.activeEncounter = null;
+    this.wayOpen = false;
+    this.exitArmed = false;
+    this.state = 'playing';
+
+    this.player.reset(this.gate.spawnX, 0.2);
+    // The shadow comes too, and it has to be *put* there rather than left to
+    // its own recall rule: that rule fires on distance from the hunter, and a
+    // shadow standing at gate 1's arena in gate 2's coordinates is a body in
+    // the wrong world for however many frames it takes to notice.
+    const sh = this.shadow;
+    if (sh) {
+      sh.level = this.level;
+      sh.x = this.player.x - SHADOW.recallBehind;
+      sh.y = this.player.y + SHADOW.recallAbove;
+      sh.vx = 0;
+      sh.vy = 0;
+      sh.state = 'chase';
+    }
+
+    this.cam.snapTo(this.player);
+    this.cam.setBounds(null);
+    this.cam.zoom(11.5);
+
+    // Style is scored within a gate, so it does not travel across one.
     this.style = 0;
     this.combo = 0;
-    this.runTime = 0;
     this.moveHistory.length = 0;
 
-    for (const e of this.encounters) {
-      e.started = false;
-      e.cleared = false;
-      e.alive = 0;
-      this.level.setBarriers(e.id, false);
-    }
-    this.activeEncounter = null;
-    // Deferred beats hold a closure over the run that queued them. Left in
-    // place across a restart, a finisher landed a moment before death shakes
-    // the camera of the new run.
-    this.vfx.pending.length = 0;
+    // The arch is a cut. Effects outlive the moment that made them, so without
+    // this a Warden's death sparks and the damage number over its corpse drift
+    // on into the next realm — and a deferred beat holds a closure over the run
+    // that queued it, so a finisher landed a moment before shakes the camera of
+    // whatever comes next.
+    this.vfx.clear();
     this.hud.boss(false);
     this.hud.setCombo(0);
     this.hud.setStyle(0);
-    this._syncVitals();
+    this.hud.objective('CLEAR THE GATE');
+
+    // The System names the realm, every time, so that ten gates in the hunter
+    // still knows where in the afterlife they are standing.
+    this.audio.play('systemOpen');
+    this.hud.window({ title: 'THE SYSTEM', big: this.gate.name, duration: 1800 });
+
+    // A gate with no Warden has nothing to beat, so its way out is open from
+    // the moment the hunter arrives. The crossing is the first of those, and
+    // is one only until the Ferryman is built.
+    if (!this.gate.warden) this._openTheWay();
   }
 
   /** Loop asks this: 0 freezes the simulation for hitstop. */
@@ -180,7 +293,10 @@ export class Game {
   // -- fixed-step simulation ------------------------------------------------
 
   update(dt) {
-    if (this.state !== 'playing') return;
+    // `cleared` keeps simulating. The Warden is down and the arch is lit, and
+    // the hunter still has to walk to it — the gate's exit is a place you go
+    // to, not a screen that arrives.
+    if (this.state !== 'playing' && this.state !== 'cleared') return;
     this.t += dt;
     this.runTime += dt;
 
@@ -224,15 +340,29 @@ export class Game {
       }
     }
 
-    // Falling out of the world.
-    if (this.player.y < voidY && this.state === 'playing') {
+    // Falling out of the world. No state test: `update` only runs while a gate
+    // is live, and a gate is still live once its Warden is down — a hunter who
+    // walks off a ledge on the way to the arch has still fallen out of it.
+    if (this.player.y < voidY) {
       this.player.hp = 0;
       this.player.state = 'dead';
       this._onDeath();
     }
-    if (this.player.state === 'dead' && this.state === 'playing') this._onDeath();
+    if (this.player.state === 'dead') this._onDeath();
 
     this.level.update(dt, this.t);
+
+    // Stepping through the arch. Last, so that the frame which transitions has
+    // already finished simulating the gate being left.
+    //
+    // A place, not a threshold — approached from either side, because a Warden
+    // can die with the hunter standing beyond the arch and a line you can only
+    // cross rightwards would strand them there. See `GATE_ARCH` in config.
+    if (this.wayOpen) {
+      const inside = Math.abs(this.player.x - this.gate.exitX) <= GATE_ARCH.reach;
+      if (!inside) this.exitArmed = true;
+      else if (this.exitArmed) this._stepThrough();
+    }
   }
 
   // -- per-frame (real time, runs during hitstop) ---------------------------
@@ -623,8 +753,19 @@ export class Game {
     this.cam.setBounds(null);
     this.audio.setIntensity(0.12);
 
-    if (e.boss) {
-      this._onGateCleared();
+    // The gate is beaten when the encounter holding its Warden is done.
+    //
+    // Asked of the spawn rather than of `e.boss`: `boss` says the Warden is of
+    // the highest order, and only four of the ten are. Reading it as "this gate
+    // is over" would leave the six gates whose Warden is not a boss with an
+    // arch that never lights. Gate 1's Warden encounter is both, so this is the
+    // same branch it always took.
+    if (e.spawns?.some((s) => s.type === 'warden')) {
+      this.state = 'cleared';
+      this.hud.boss(false);
+      this.audio.setIntensity(0);
+      this.cam.zoom(15);
+      this._openTheWay();
     } else if (e.lock) {
       this.hud.objective('CLEAR THE GATE');
       this.hud.toast('AREA CLEARED', 'gold');
@@ -785,7 +926,7 @@ export class Game {
   // -- endings --------------------------------------------------------------
 
   _onDeath() {
-    if (this.state !== 'playing') return;
+    if (this.state !== 'playing' && this.state !== 'cleared') return;
     this.state = 'dead';
     this.audio.setIntensity(0);
     this.hud.boss(false);
@@ -795,29 +936,56 @@ export class Game {
     }, 1400);
   }
 
-  _onGateCleared() {
-    this.state = 'cleared';
+  /** The gate after this one, or null at the end of the campaign. */
+  _nextGate() {
+    return this.gates[this.gateIndex + 1] ?? null;
+  }
+
+  /**
+   * Light the arch. Nothing else — whoever calls this decides what beating the
+   * gate did to the state, the camera and the music, because a Warden falling
+   * and a gate having no Warden at all are not the same moment.
+   */
+  _openTheWay() {
+    this.wayOpen = true;
+    this.exitArmed = false;
+    this.level.openExit();
+    this.audio.play('gateOpen');
+    this.hud.objective(this._nextGate() ? 'STEP THROUGH THE GATE' : 'LEAVE THE GATE');
+  }
+
+  /** Into the next gate, or out of the campaign. */
+  _stepThrough() {
+    const next = this.gateIndex + 1;
+    if (next < this.gates.length) this._enterGate(next);
+    else this._endRun();
+  }
+
+  /**
+   * The last arch. The run's numbers are the campaign's, not the last gate's —
+   * the clock, the kills and the levels have been running since gate 1.
+   *
+   * This used to fire 2.6 s after the last Warden died. It fires at the arch
+   * now, because the arch is the thing the hunter walks through and a run that
+   * ends while you are still standing over a body ends without you.
+   */
+  _endRun() {
+    this.state = 'ended';
+    this.wayOpen = false;
     this.hud.boss(false);
     this.hud.objective('');
     this.audio.setIntensity(0);
-    this.level.openExit();
-    this.audio.play('gateOpen');
-    this.cam.zoom(15);
 
     const mins = Math.floor(this.runTime / 60);
     const secs = (this.runTime % 60).toFixed(1).padStart(4, '0');
-    const rank = this._finalRank();
-
-    setTimeout(() => {
-      this.hud.clearStats([
-        ['TIME', `${mins}:${secs}`],
-        ['KILLS', String(this.kills)],
-        ['LEVEL REACHED', String(this.level_)],
-        ['DAMAGE TAKEN', String(Math.round(this.damageTaken))],
-        ['RANK', rank],
-      ]);
-      this.hud.screen('clear', true);
-    }, 2600);
+    this.hud.clearStats([
+      ['TIME', `${mins}:${secs}`],
+      ['KILLS', String(this.kills)],
+      ['LEVEL REACHED', String(this.level_)],
+      ['DAMAGE TAKEN', String(Math.round(this.damageTaken))],
+      ['RANK', this._finalRank()],
+    ]);
+    this.hud.screen('clear', true);
   }
 
   _finalRank() {

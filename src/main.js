@@ -8,17 +8,18 @@ import { HUD } from './ui/hud.js';
 import { Game } from './game/game.js';
 import { GATES } from './game/gates/index.js';
 
-// The gate is chosen here and nowhere else: `World` opens on its realm and
-// `Game` runs it. Everything downstream reads what it needs from the
-// descriptor, which is what makes a second gate a second file.
+// `Game` is handed the whole campaign, and opens on the first of it. It builds
+// every gate up front and switches between them by visibility, because a gate
+// built mid-run would spend the suite's seeded randomness — see the note on
+// `Game.levels`. `World` opens on the first realm and `Game._enterGate` moves
+// it on from there.
 //
-// The first of the campaign, until there is a save file to say otherwise.
-const gate = GATES[0];
-const world = new World(document.getElementById('view'), gate.realm);
+// Runs always start at gate 1, until there is a save file to say otherwise.
+const world = new World(document.getElementById('view'), GATES[0].realm);
 const hud = new HUD();
 const audio = new Audio();
 const input = new Input();
-const game = new Game(world, hud, audio, input, gate);
+const game = new Game(world, hud, audio, input, GATES);
 
 let paused = false;
 let titleT = 0;
@@ -51,7 +52,9 @@ const loop = new Loop(
 function titleCamera(dt) {
   titleT += dt;
   const c = world.camera;
-  const lx = game.gate.landmark.x;
+  // Not every gate has a landmark — the crossing has water instead — so the
+  // drift falls back to the middle of the gate rather than throwing on one.
+  const lx = game.gate.landmark ? game.gate.landmark.x : (game.gate.spawnX + game.gate.end) / 2;
   const x = lx - 16 + Math.sin(titleT * 0.07) * 9;
   c.position.set(x, 13 + Math.sin(titleT * 0.11) * 1.4, 30);
   c.lookAt(lx + 2, 11, -12);
@@ -78,7 +81,9 @@ document.getElementById('again').addEventListener('click', startRun);
 document.getElementById('resume').addEventListener('click', () => setPaused(false));
 
 function setPaused(on) {
-  if (game.state !== 'playing') return;
+  // `cleared` is still a live gate — the Warden is down and the hunter is
+  // walking to the arch — so it pauses like any other part of the run.
+  if (game.state !== 'playing' && game.state !== 'cleared') return;
   paused = on;
   hud.screen('pause', on);
   // Drop anything buffered while paused, so resuming doesn't fire off a swing
@@ -88,7 +93,7 @@ function setPaused(on) {
 
 addEventListener('keydown', (e) => {
   if (e.code === 'Escape') {
-    if (game.state === 'playing') setPaused(!paused);
+    if (game.state === 'playing' || game.state === 'cleared') setPaused(!paused);
   }
   if (e.code === 'KeyR' && (paused || game.state === 'dead')) startRun();
   if (e.code === 'Enter' && game.state === 'idle') startRun();

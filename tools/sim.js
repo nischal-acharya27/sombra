@@ -9,6 +9,7 @@
 // below has caught a real bug at least once.
 
 import { PLAYER, ATTACKS, SHADOW } from '../src/game/config.js';
+import { buildShard } from '../src/render/models.js';
 import { checkGates, controls, crossing } from './gatecheck.js';
 
 const DT = 1 / 120;
@@ -994,6 +995,234 @@ function extraction(game, input) {
   return rows;
 }
 
+/**
+ * Draws taken from whatever `Math.random` currently is, while `fn` runs.
+ *
+ * Wraps rather than replaces, so the seeded stream `withSeed` installed is
+ * still the stream being drawn from and counting cannot itself change a number.
+ */
+function countDraws(fn) {
+  const inner = Math.random;
+  let n = 0;
+  Math.random = () => {
+    n++;
+    return inner();
+  };
+  try {
+    fn();
+  } finally {
+    Math.random = inner;
+  }
+  return n;
+}
+
+/**
+ * The gate transition: what it costs, where it lands, and what it leaves.
+ *
+ * **The cost is the row that matters.** A gate is several hundred three.js
+ * objects and each one draws four `Math.random()` values for its UUID, so a
+ * transition that built anything would spend the gameplay stream mid-run and
+ * re-roll every enemy's jitter after it — the failure this project has already
+ * paid for once, at the scale it would hurt most. `Game` answers that by
+ * building every gate in its constructor, before the suite has seeded anything,
+ * which should make crossing between them free. This counts, rather than
+ * trusting it, because "should" is what the last one said too.
+ *
+ * The fight that opens gate 1's arch is `bossFight`'s subject and is skipped
+ * here the same way it does — by the encounter flags — so that a slow Guardian
+ * cannot make this row expensive and a broken one cannot make it red.
+ */
+function transition(game, input) {
+  const rows = [];
+  const say = (what, ok, detail = '') => rows.push({ what, ok, detail });
+
+  const bot = new Bot(game, input);
+  const p = game.player;
+  const from = game.gates[0];
+
+  /** Gate 1, beaten, with the hunter put down `back` units short of the arch. */
+  const atTheArch = (back) => {
+    game.start();
+    for (const e of game.encounters) {
+      e.started = true;
+      e.cleared = true;
+    }
+    game.activeEncounter = null;
+    game.state = 'cleared';
+    game._openTheWay();
+    p.x = from.exitX - back;
+    p.y = game.level.groundAt(p.x) + 0.1;
+    p.vx = 0;
+    p.vy = 0;
+  };
+
+  // Walk into it. This row is about whether the arch takes you at all.
+  atTheArch(5);
+  bot.hold('right', true);
+  let frames = 0;
+  while (game.gateIndex === 0 && frames < 600) {
+    bot.step();
+    frames++;
+  }
+  bot.releaseAll();
+
+  const arrived = game.gateIndex === 1;
+  const to = game.gate;
+  say('the arch leads to the next gate', arrived, arrived ? `${to.id} — ${to.name}` : `still in ${from.id}`);
+
+  // Walk the crossing. Not `playthrough`: that starts by resetting to gate 1,
+  // and this gate has nothing to fight, so all it needs is the locomotion —
+  // hold right, jump when the ground runs out, spend the second jump only when
+  // actually falling short. The moment the crossing has enemies on it is the
+  // moment the two want to be one bot.
+  const entryX = +p.x.toFixed(1);
+  const entryT = game.runTime;
+  bot.hold('right', true);
+  let steps = 0;
+  const limit = Math.floor(120 / DT);
+  let stuckAt = p.x;
+  let stuckFor = 0;
+  while (arrived && game.state === 'playing' && steps < limit) {
+    const ahead = p.x + 1.0;
+    const groundAhead = game.level.groundAt(ahead, p.y + 0.6);
+    if (p.grounded && (groundAhead === -Infinity || p.y - groundAhead > 2.2)) bot.press('jump');
+    if (!p.grounded && p.vy < 0 && p.jumps < p.maxJumps) {
+      const under = game.level.groundAt(p.x, p.y + 0.6);
+      const landing = nextSolidAhead(game, p.x);
+      const overVoid = under === -Infinity || p.y - under > 2.2;
+      if (overVoid && landing && p.y < landing.y1 + 0.4) bot.press('jump');
+    }
+    if (p.grounded && groundAhead > p.y + 0.6) bot.press('jump');
+    bot.step();
+    steps++;
+    if (Math.abs(p.x - stuckAt) < 0.4) stuckFor += DT;
+    else {
+      stuckAt = p.x;
+      stuckFor = 0;
+    }
+    if (stuckFor > 20) break;
+  }
+  bot.releaseAll();
+
+  const walked = arrived && game.state === 'ended';
+  say(
+    'and the crossing is walkable',
+    walked,
+    walked
+      ? `x ${entryX} → ${to.exitX} in ${(game.runTime - entryT).toFixed(1)}s`
+      : `stopped at x ${p.x.toFixed(1)} — ${game.state}`
+  );
+
+  // Walk into it from the far side.
+  //
+  // A Warden can die with the hunter beyond the arch — gate 1 spawns its
+  // Guardian at x 190, the arch is at 196, and the arena runs to 204 — and the
+  // first version of this could only be crossed rightwards, so clearing the
+  // gate from the wrong side left the hunter stranded with the objective lit
+  // and the only way out behind them. The arch is a place you walk into, from
+  // whichever side you are on.
+  atTheArch(-6);
+  bot.hold('left', true);
+  let back = 0;
+  while (game.gateIndex === 0 && back < 600) {
+    bot.step();
+    back++;
+  }
+  bot.releaseAll();
+  say(
+    'and it takes you from beyond it too',
+    game.gateIndex === 1,
+    game.gateIndex === 1 ? `cleared from x ${from.exitX + 6}, walked back into it` : 'stranded past the arch'
+  );
+
+  // Now the cost, measured on the one frame that pays it.
+  //
+  // From a standstill, and that is not tidiness. A hunter mid-stride kicks up
+  // dust, dust is particles, and particles draw — the first version of this row
+  // counted seventy frames of walking and read 28, all of it boots. A row that
+  // can go red because the footfall landed on the transition frame is measuring
+  // the footfall. So: stand outside the arch, step into it, and count that
+  // single update.
+  atTheArch(4);
+  bot.step(); // arms it — the arch does not take you on the frame it lights
+  p.x = from.exitX;
+  const cost = countDraws(() => bot.step());
+  say(
+    'and the frame that crosses over costs nothing',
+    cost === 0 && game.gateIndex === 1,
+    game.gateIndex === 1 ? `${cost} draws from the seeded stream` : 'it did not cross'
+  );
+
+  // A counter reading zero because nobody wired it up reads exactly like a
+  // transition that costs nothing, so watch it see the thing it looks for. One
+  // shard rig is the smallest honest stand-in for a gate: same class of object,
+  // same UUIDs, same stream. It allocates on purpose, which is safe only
+  // because this probe runs last in `runAll` with nothing after it.
+  const control = countDraws(() => buildShard());
+  say('and the counter can see a draw', control > 0, `${control} for one shard rig`);
+
+  // And gate 1 is still gate 1 afterwards. A campaign that corrupts the gate it
+  // came from is the failure this whole design is arranged against, and it is
+  // invisible from inside a single run.
+  game.start();
+  game.hud.screen('clear', false);
+  for (const r of freshness(game)) rows.push(r);
+  return rows;
+}
+
+/**
+ * Everything a fresh run has that a replayed one might not.
+ *
+ * Read against the *whole* campaign rather than the gate being replayed: a
+ * barrier left standing in the crossing or an arch left lit there is state a
+ * fresh run would not have, and nothing in gate 1 would ever notice it.
+ */
+function freshness(game) {
+  const rows = [];
+  const say = (what, ok, detail = '') => rows.push({ what, ok, detail, replay: true });
+  const g = game.gates[0];
+  const p = game.player;
+  const levels = game.levels;
+
+  say('replay starts at gate 1', game.gateIndex === 0 && game.level === levels[0], game.gate.id);
+  say(
+    'and shows only gate 1',
+    levels.every((l, i) => l.group.visible === (i === 0)),
+    levels.map((l, i) => `${game.gates[i].id} ${l.group.visible ? 'on' : 'off'}`).join(', ')
+  );
+  say(
+    'the hunter is whole, at the entrance',
+    p.x === g.spawnX && !p.dead && p.hp === p.maxHp && p.maxHp === PLAYER.maxHp,
+    `x ${p.x}, ${Math.round(p.hp)}/${Math.round(p.maxHp)} hp`
+  );
+  say(
+    'the field is empty',
+    !game.enemies.length && !game.bolts.length && !game.corpses.length && !game.pendingSpawns.length && !game.shadow,
+    `${game.enemies.length} enemies, ${game.corpses.length} remnants, ${game.shadow ? 'a shadow' : 'no shadow'}`
+  );
+  say(
+    'no encounter has been met',
+    game.encounters.every((e) => !e.started && !e.cleared) && !game.activeEncounter,
+    `${game.encounters.length} waiting`
+  );
+  say(
+    'every barrier in the campaign is down',
+    levels.every((l) => l.barriers.every((b) => !b.active && b.mesh.material.opacity === 0)),
+    `${levels.reduce((a, l) => a + l.barriers.length, 0)} barriers`
+  );
+  say(
+    'every arch in the campaign is dark',
+    levels.every((l) => l.portal.material.opacity === 0) && !game.wayOpen && !game.exitArmed,
+    game.wayOpen ? 'the way is still open' : 'shut'
+  );
+  say(
+    'the run starts from nothing',
+    game.level_ === 1 && game.exp === 0 && game.kills === 0 && game.damageTaken === 0 && game.runTime === 0,
+    `lv ${game.level_}, ${game.kills} kills, ${Math.round(game.damageTaken)} damage`
+  );
+  return rows;
+}
+
 /** Φ(z), via the Abramowitz & Stegun 7.1.26 approximation to erf. */
 function normalCdf(z) {
   const x = Math.abs(z) / Math.SQRT2;
@@ -1265,6 +1494,17 @@ function runAll(game, input, seed) {
   // with. They print further up, where they read best.
   report.gates = checkGates(report.arcs);
   report.controls = controls(report.arcs);
+
+  // Genuinely last, with nothing after it at all.
+  //
+  // This probe restarts gate 1 three times, walks a second gate end to end, and
+  // — in its own control — deliberately builds a rig. It is the most disruptive
+  // thing in the file to anything downstream, so it goes where there is no
+  // downstream. It could have sat ahead of the static checks above, since those
+  // are pure functions of descriptors; putting it there would have meant
+  // writing "this one is different", which is the sentence every probe that
+  // broke a baseline was added with.
+  report.transition = scope(11, () => transition(game, input));
   report.ms = Math.round(performance.now() - t0);
 
   print(report);
@@ -1495,6 +1735,30 @@ function print(r) {
     lines.push("  latency-delayed `heavy` matures — that last one is why the attempt is");
     lines.push('  committed for a fixed window rather than re-decided every frame.');
   }
+
+  lines.push('GATE TRANSITION   (gate 1’s arch into the crossing, and gate 1 again)');
+  for (const t of r.transition) {
+    lines.push(`  ${t.replay ? '· ' : ''}${t.what.padEnd(t.replay ? 44 : 46)} ${t.detail.padEnd(34)} ${ok(t.ok)}`);
+  }
+  lines.push('');
+  lines.push('  The cost row is the one this design exists for. A gate is several');
+  lines.push('  hundred three.js objects, each drawing four Math.random values for its');
+  lines.push('  UUID, and the suite seeds that stream — so a gate built mid-run would');
+  lines.push('  re-roll every enemy after it and send a fixed seed down a different');
+  lines.push('  playthrough. Every gate is therefore built in the constructor, before');
+  lines.push('  anything is seeded, and a transition is a visibility flag. The row');
+  lines.push('  below it is the control: a counter that reads zero because nobody');
+  lines.push('  wired it up reads exactly like a transition that costs nothing.');
+  lines.push('');
+  lines.push('  The arch is walked into from both sides, because a Warden can die with');
+  lines.push('  the hunter standing beyond it and an exit that only opened rightwards');
+  lines.push('  would strand them there with the objective lit.');
+  lines.push('');
+  lines.push('  The `·` rows are gate 1 after the round trip, and they are read across');
+  lines.push('  the whole campaign rather than the gate being replayed — an arch left');
+  lines.push('  lit in the crossing is state a fresh run does not have, and nothing');
+  lines.push('  inside gate 1 would ever notice it.');
+  lines.push('');
 
   lines.push('', `seed ${r.seed}   ·   suite ran in ${r.ms} ms`);
 
