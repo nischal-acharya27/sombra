@@ -9,6 +9,7 @@
 // below has caught a real bug at least once.
 
 import { PLAYER, ATTACKS, SHADOW } from '../src/game/config.js';
+import { checkGates, controls, crossing } from './gatecheck.js';
 
 const DT = 1 / 120;
 /** Seeds per playthrough sweep. Eight runs cost about a second. */
@@ -391,12 +392,15 @@ function measureJuggle(game, input) {
 }
 
 /**
- * Static reachability: does every gap in the level fit inside the measured
- * jump envelope, with the body's width accounted for?
+ * Does every gap in the gate as *built* fit inside the measured jump envelope?
+ *
+ * This reads `level.solids`, so unlike the descriptor checks in `gatecheck.js`
+ * it is a claim about what `Level` produced rather than about what the gate
+ * says. The arithmetic of a crossing is shared with those checks, so the two
+ * cannot come to disagree about what "crossable" means.
  */
 function checkGaps(game, arcs) {
   const solids = [...game.level.solids].sort((a, b) => a.x0 - b.x0);
-  const hw = game.player.hw;
   const out = [];
   for (let i = 0; i < solids.length - 1; i++) {
     const a = solids[i];
@@ -404,18 +408,16 @@ function checkGaps(game, arcs) {
     const gap = b.x0 - a.x1;
     if (gap <= 0.01) continue;
     const rise = b.y1 - a.y1;
-    // Crossing costs the gap plus half a body at each lip.
-    const need = gap + hw * 2;
-    const canSingle = need <= arcs.running.distance && rise <= arcs.running.height - 0.4;
-    const canDouble = need <= arcs.runningDouble.distance && rise <= arcs.runningDouble.height - 0.4;
+    const single = crossing(gap, rise, arcs.running);
+    const double = crossing(gap, rise, arcs.runningDouble);
     out.push({
       at: `${a.x1.toFixed(0)}→${b.x0.toFixed(0)}`,
       gap: +gap.toFixed(1),
       rise: +rise.toFixed(1),
-      need: +need.toFixed(1),
-      single: canSingle,
-      double: canDouble,
-      ok: canDouble,
+      need: +single.need.toFixed(1),
+      single: single.ok,
+      double: double.ok,
+      ok: double.ok,
     });
   }
   return out;
@@ -1252,6 +1254,17 @@ function runAll(game, input, seed) {
     { ...bossSweep(game, input, scope, 580, 'dodge', true), mustWin: true },
     { ...bossSweep(game, input, scope, 600, 'ranged', true), mustWin: false },
   ];
+  // Tier-1 static checks, against every gate descriptor rather than against the
+  // one gate this run happens to have built.
+  //
+  // They read data and do arithmetic — no frames, no allocation, not one draw
+  // from the seeded stream — so they are the one probe in this file that could
+  // sit anywhere without disturbing a row. They go last anyway. The rule is
+  // written without an exemption, obeying it costs nothing, and "this one is
+  // different" is the sentence every probe that broke a baseline was added
+  // with. They print further up, where they read best.
+  report.gates = checkGates(report.arcs);
+  report.controls = controls(report.arcs);
   report.ms = Math.round(performance.now() - t0);
 
   print(report);
@@ -1310,6 +1323,22 @@ function print(r) {
     );
   }
   lines.push(`  ${gapsOk ? 'every gap is clearable' : 'UNREACHABLE GEOMETRY'}`, '');
+
+  lines.push('GATE DESCRIPTORS   (static checks, every gate, every run)');
+  for (const g of r.gates) {
+    lines.push(`  ${g.gate.padEnd(7)} ${g.check.padEnd(16)} ${g.detail.padEnd(44)} ${ok(g.ok)}`);
+  }
+  lines.push('');
+  lines.push('  controls — two descriptors that must pass, one per fault that must not');
+  for (const c of r.controls) {
+    lines.push(`  ${c.check.padEnd(19)} ${c.why.padEnd(41)} ${ok(c.ok)}`);
+  }
+  lines.push('  A static check nobody has watched fail is not known to work, so the');
+  lines.push('  demonstration runs every time rather than once, by hand, for whoever');
+  lines.push('  happened to be looking. Each control asserts only its own check went');
+  lines.push('  red: a check that rejected everything would pass this block and be');
+  lines.push('  caught by the real gates above it going red in the same report.');
+  lines.push('');
 
   lines.push('MOVE LIST');
   for (const m of r.moves) {

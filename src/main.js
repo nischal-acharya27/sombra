@@ -6,16 +6,19 @@ import { Input } from './engine/input.js';
 import { Audio } from './engine/audio.js';
 import { HUD } from './ui/hud.js';
 import { Game } from './game/game.js';
-import { GATE_1 } from './game/gates/gate1.js';
+import { GATES } from './game/gates/index.js';
 
 // The gate is chosen here and nowhere else: `World` opens on its realm and
 // `Game` runs it. Everything downstream reads what it needs from the
 // descriptor, which is what makes a second gate a second file.
-const world = new World(document.getElementById('view'), GATE_1.realm);
+//
+// The first of the campaign, until there is a save file to say otherwise.
+const gate = GATES[0];
+const world = new World(document.getElementById('view'), gate.realm);
 const hud = new HUD();
 const audio = new Audio();
 const input = new Input();
-const game = new Game(world, hud, audio, input, GATE_1);
+const game = new Game(world, hud, audio, input, gate);
 
 let paused = false;
 let titleT = 0;

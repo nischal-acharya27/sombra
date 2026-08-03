@@ -18,6 +18,21 @@ export const PHYS = {
   apexWindow: 3.5, // |vy| under this counts as the apex
 };
 
+/**
+ * The invisible walls an encounter raises while it is live.
+ *
+ * `y0`/`y1` are the collision slab and span the whole playable column — a
+ * barrier is not something you jump over. `hw` is what makes a spawn point
+ * "clear of the barriers": a body materialising inside this slab is ejected by
+ * the collision solver, and the tier-1 checks read the same number `Level`
+ * builds with rather than a second copy of it.
+ */
+export const BARRIER = {
+  hw: 0.6,
+  y0: -10,
+  y1: 40,
+};
+
 export const PLAYER = {
   hw: 0.34,
   hh: 0.85,

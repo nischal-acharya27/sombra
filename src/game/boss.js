@@ -18,6 +18,8 @@ import { clamp, damp, lerp, rand, pick } from '../engine/mathx.js';
 const WHITE = new THREE.Color(0xffffff);
 
 export class Guardian extends Actor {
+  static stats = GUARDIAN;
+
   constructor(level, ctx, x, y, cfg = GUARDIAN) {
     super(level, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
     this.ctx = ctx;

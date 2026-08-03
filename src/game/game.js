@@ -33,7 +33,7 @@ function attackDamage(e) {
  * A gate says `beast` or `wisp` directly and `warden` for its own — which
  * archetype that is, and with what numbers, is the Warden block's to say.
  */
-const ARCHETYPES = { beast: Beast, wisp: Wisp, guardian: Guardian };
+export const ARCHETYPES = { beast: Beast, wisp: Wisp, guardian: Guardian };
 
 export class Game {
   /** @param gate the gate descriptor to run — see `src/game/gates/`. */

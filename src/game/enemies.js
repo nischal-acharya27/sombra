@@ -149,6 +149,9 @@ class Enemy extends Actor {
  * ally must *not* share is behind `_canCommit`.
  */
 export class Beast extends Enemy {
+  /** The block it is built from when a gate does not hand it another. */
+  static stats = BEAST;
+
   constructor(level, ctx, x, y, cfg = BEAST, skin = null) {
     super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
     this.root = buildBeast(skin);
@@ -358,6 +361,8 @@ export class Beast extends Enemy {
 // ---------------------------------------------------------------------------
 
 export class Wisp extends Enemy {
+  static stats = WISP;
+
   constructor(level, ctx, x, y) {
     super(level, ctx, WISP, { x, y, hw: WISP.hw, hh: WISP.hh, maxHp: WISP.hp });
     this.root = buildWisp();

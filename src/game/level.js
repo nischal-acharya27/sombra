@@ -16,6 +16,7 @@ import { toonMaterial, outlineFor } from '../render/toon.js';
 import { GrassField, scatterGrass, makeRock, makeCrystal, makeTree, makeMist, buildBackdrop } from '../render/env.js';
 import { buildLandmark } from '../render/landmarks.js';
 import { rand } from '../engine/mathx.js';
+import { BARRIER } from './config.js';
 
 export class Level {
   constructor(scene, gate) {
@@ -237,17 +238,19 @@ export class Level {
       const [x0, x1] = enc.lock;
       for (const x of [x0, x1]) {
         const barrier = {
-          x0: x - 0.6,
-          x1: x + 0.6,
-          y0: -10,
-          y1: 40,
+          x0: x - BARRIER.hw,
+          x1: x + BARRIER.hw,
+          y0: BARRIER.y0,
+          y1: BARRIER.y1,
           active: false,
           mesh: null,
           encounter: enc.id,
         };
         // A visible shimmer, so a wall you cannot pass is a wall you can see.
+        // The sheet is only as tall as the eye needs; the slab above is what
+        // actually stops a body.
         const mesh = new THREE.Mesh(
-          new THREE.PlaneGeometry(1.2, 14),
+          new THREE.PlaneGeometry(BARRIER.hw * 2, 14),
           new THREE.MeshBasicMaterial({
             color: P.violet,
             transparent: true,
