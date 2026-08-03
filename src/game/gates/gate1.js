@@ -54,33 +54,41 @@ const REALM = {
 /**
  * Solid ground, left to right. Gaps between segments are real gaps — the
  * traversal beats of the gate are the spaces this list leaves out.
+ *
+ * Every gap is 3.8. A crossing therefore needs 4.48 of the measured 6.08-unit
+ * running jump — 26% in reserve. That reserve is the whole point: at 4.5-unit
+ * gaps the margin was small enough that the jump had to start within a few
+ * centimetres of the lip, and both scripted bots died there repeatedly.
+ *
+ * The chasm was authored at 3.8 for that reason and the rest of the gate was
+ * not — the approach, the climb and the bridge were laid out at 4.0 before the
+ * reasoning existed, which is 23% and under the 25% the touch budget in
+ * `docs/SPEC-CAMPAIGN.md` asks for. The tier-1 checks are what noticed; five
+ * take-off lips moved 0.2 to the right and nothing else changed. Landing lips
+ * stayed where they were, so no lock, trigger or spawn was authored against a
+ * number that has since moved.
  */
 const SEGMENTS = [
   // Approach: wide, safe, nothing to fight. Room to learn the controls.
-  { x0: -6, x1: 30, top: 0, trees: 3, crystals: 2, boulders: 3, pillars: 2 },
+  { x0: -6, x1: 30.2, top: 0, trees: 3, crystals: 2, boulders: 3, pillars: 2 },
 
   // First blood — a shallow bowl you cannot leave until it is clear.
-  { x0: 34, x1: 68, top: 0, trees: 2, boulders: 4, crystals: 1, pillars: 1 },
+  { x0: 34, x1: 68.2, top: 0, trees: 2, boulders: 4, crystals: 1, pillars: 1 },
 
   // The climb. Three steps, each a committed jump.
-  { x0: 72, x1: 80, top: 1.6, boulders: 1, crystals: 1 },
-  { x0: 84, x1: 91, top: 3.4, boulders: 1 },
+  { x0: 72, x1: 80.2, top: 1.6, boulders: 1, crystals: 1 },
+  { x0: 84, x1: 91.2, top: 3.4, boulders: 1 },
   { x0: 95, x1: 103, top: 5.2, crystals: 2, boulders: 1 },
 
-  // The chasm: small islands over the void, patrolled by wisps.
-  //
-  // Gaps are 3.8. A crossing therefore needs 4.5 of the measured 6.08-unit
-  // running jump — about a third in reserve. That reserve is the whole point:
-  // at 4.5-unit gaps the margin was 4%, which meant the jump had to start
-  // within a few centimetres of the lip, and both scripted bots died there
-  // repeatedly. The drop below is what makes the chasm read as dangerous;
-  // the gap width only decides whether it is *fair*.
+  // The chasm: small islands over the void, patrolled by wisps. The drop below
+  // is what makes it read as dangerous; the gap width only decides whether it
+  // is *fair*, and it is the same 3.8 the rest of the gate now uses.
   { x0: 106.8, x1: 111.8, top: 5.2, barren: true, depth: 5 },
   { x0: 115.6, x1: 120.6, top: 6.4, barren: true, depth: 5 },
   { x0: 124.4, x1: 129.4, top: 5.0, barren: true, depth: 5 },
 
   // The bridge, and the ambush on it.
-  { x0: 133.2, x1: 162, top: 4.2, boulders: 3, pillars: 3, crystals: 2, trees: 1 },
+  { x0: 133.2, x1: 162.2, top: 4.2, boulders: 3, pillars: 3, crystals: 2, trees: 1 },
 
   // The Warden's arena — long, flat, no cover, nowhere to run.
   { x0: 166, x1: 204, top: ARENA_TOP, depth: 9, boulders: 2, pillars: 2, thickness: 6 },
