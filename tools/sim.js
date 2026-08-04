@@ -11,6 +11,7 @@
 import { PLAYER, ATTACKS, SHADOW } from '../src/game/config.js';
 import { buildShard } from '../src/render/models.js';
 import { checkGates, controls, crossing } from './gatecheck.js';
+import { checkTouch } from './touchcheck.js';
 
 const DT = 1 / 120;
 /** Seeds per playthrough sweep. Eight runs cost about a second. */
@@ -1505,6 +1506,16 @@ function runAll(game, input, seed) {
   // writing "this one is different", which is the sentence every probe that
   // broke a baseline was added with.
   report.transition = scope(11, () => transition(game, input));
+  // And after even that.
+  //
+  // The touch layout is a descriptor like a gate is, and this is the same kind
+  // of check: arithmetic over data, no frames, no allocation, not one draw. It
+  // could sit with the static gate checks above and nothing would move. The
+  // rule says new probes go last, obeying it costs a line, and "this one is
+  // different" is the sentence every probe that broke a baseline was added
+  // with — including, twice, in the comments directly above. It prints further
+  // up, where it reads next to the other static checks.
+  report.touch = checkTouch();
   report.ms = Math.round(performance.now() - t0);
 
   print(report);
@@ -1578,6 +1589,25 @@ function print(r) {
   lines.push('  happened to be looking. Each control asserts only its own check went');
   lines.push('  red: a check that rejected everything would pass this block and be');
   lines.push('  caught by the real gates above it going red in the same report.');
+  lines.push('');
+
+  lines.push('TOUCH LAYOUT   (static checks, every screen size it claims, every run)');
+  for (const t of r.touch.rows) {
+    lines.push(`  ${t.check.padEnd(23)} ${t.detail.padEnd(52)} ${ok(t.ok)}`);
+  }
+  lines.push('');
+  lines.push('  controls — one per fault, each of which must come out red');
+  for (const c of r.touch.controls) {
+    lines.push(`  ${c.check.padEnd(23)} ${c.why.padEnd(41)} ${ok(c.ok)}`);
+  }
+  lines.push('');
+  lines.push('  Constraint 1 of the touch budget — no move may require a chord — is the');
+  lines.push('  `no chord` row, and it is why SORGI has a target of its own rather than');
+  lines.push("  the keyboard's `hold S + K`. Constraint 2 is the jump reserve, checked");
+  lines.push('  against every gate above. Constraint 3 — never a direction plus two');
+  lines.push('  buttons — is not here and cannot be: it is a claim about what a fight');
+  lines.push('  demands, not about what the screen offers, and a thumb is the only');
+  lines.push('  instrument for it. The phone playtest is the instrument.');
   lines.push('');
 
   lines.push('MOVE LIST');

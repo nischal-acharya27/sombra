@@ -37,16 +37,37 @@ response.
 
 ## Controls
 
-| Action | Keys |
-| --- | --- |
-| Move | `A` / `D` or arrows |
-| Jump — press again in mid-air to **double jump** | `Space` |
-| **Shadow Step** — dash, with invincibility frames | `Shift` |
-| **Shadow Slash** — three-hit chain | `J` or `Z` |
-| **Ascensão** — launcher on the ground, **Shadow Descent** dive in the air | `K` or `X` |
-| **Décret** — piercing bolt, 16 MP | `L` or `C` |
-| **SORGI** — raise a shadow from a body, 0.8 s immobile | hold `S`, press `K` |
-| Pause | `Esc` |
+Seven verbs, and permanently seven — the moveset never grows, because there is
+nowhere to put an eighth control on a phone screen that a thumb also has to
+steer with.
+
+| Action | Keys | Touch |
+| --- | --- | --- |
+| Move | `A` / `D` or arrows | the pad, left thumb |
+| Jump — press again in mid-air to **double jump** | `Space` | `JUMP` |
+| **Shadow Step** — dash, with invincibility frames | `Shift` | `STEP` |
+| **Shadow Slash** — three-hit chain | `J` or `Z` | `SLASH` |
+| **Ascensão** — launcher on the ground, **Shadow Descent** dive in the air | `K` or `X` | `RISE` |
+| **Décret** — piercing bolt, 16 MP | `L` or `C` | `DÉCRET` |
+| **SORGI** — raise a shadow from a body, 0.8 s immobile | hold `S`, press `K` | `SORGI` |
+| Pause | `Esc` | — |
+
+The on-screen controls appear on a device whose primary pointer is a finger,
+and `?touch` forces them on anywhere. Two differences from the keyboard, both
+deliberate:
+
+**SORGI is one target.** The keyboard chord is free when a hand is idle; a thumb
+steering with the other hand has nothing to hold `S` with, and the touch budget's
+first constraint is that no move may require a chord.
+
+**A tap is a whole jump.** Jump height is variable — releasing mid-rise keeps
+42% of the velocity — and a tap is 60–120 ms against a 0.37 s rise, so every
+touch jump would otherwise be a cut one. Measured: a tapped jump crossed 4.40
+units where the gate's widest gap needs 4.48. A tap now asserts the jump for the
+rise *plus* the input buffer it may have waited in — a jump pressed just before
+landing is the running jump a crossing needs — and a phone gets the same
+6.08-unit arc the gates are authored against. The cost is that a phone cannot
+ask for a short hop, and no gate requires one.
 
 ## The fight
 

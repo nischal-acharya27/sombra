@@ -904,6 +904,101 @@ arithmetic against `level.solids`. And the crossing has never been played by a
 human, on a phone or otherwise — `SPEC-CAMPAIGN.md` § Further Notes makes that
 playtest the checkpoint before gates 3–10, and it is still owed.
 
+## The touch scheme, and the number the budget was measured against
+
+Built 2026-08-04. Seven controls for seven verbs: a steering pad under the left
+thumb, six buttons arced up and to the left from where the right thumb rests,
+ordered along that arc by how often a hand reaches for the move. Nothing in the
+middle third of the screen, because that is where the camera frames the fight.
+
+The layout is a **descriptor**, not markup — `src/ui/touch.js` — for the reason
+a gate is one: `tools/touchcheck.js` reads it and answers, before anything
+renders, whether all seven verbs are on the screen, whether any control is a
+chord, and whether two targets overlap at any size it claims to support. A
+button covered by another button is a verb the hunter does not have, and
+nothing in play would say so; the input simply never arrives.
+
+**SORGI gets a target of its own**, which is constraint 1 discharged. The
+keyboard keeps `hold S + K` — a chord is free when one hand is idle. `player.js`
+takes both routes to the same `_startExtract`, and the branch is skipped
+entirely on the frames neither route is asking, which is what keeps the keyboard
+path bit-identical.
+
+### What measuring found, and what it cost
+
+**The 6.08-unit running jump the entire touch budget is written against is a
+jump whose button is never released.** The suite's bots only ever write into the
+input buffer; they have no fingers, so they never let go. Jump height is
+variable — releasing mid-rise keeps `jumpCutMul` of the velocity — and a thumb
+tap is 60 to 120 ms against a rise of 0.365 s. Measured on this build, against
+gate 1's widest crossing, which needs 4.48 units:
+
+| jump button held | distance | reserve |
+|---|---|---|
+| never released | 6.08 | 26% ← what `gatecheck.js` asserts |
+| 0.30 s | 5.76 | 22% |
+| 0.22 s | 5.36 | 16% |
+| 0.10 s | 4.40 | **−2% — the gap stops being crossable** |
+
+So the scheme as first written spent the whole reserve, and constraint 2 — the
+one constraint of the three that was supposed to be *machine-checked rather than
+trusted to memory* — was being checked against an input no phone produces. The
+static assertion was not wrong; it was measuring a different device than the one
+about to play the game.
+
+**The fix is a `sustain` on the jump control**: a tap asserts the action long
+enough that the arc a thumb gets is the arc the gates are authored against. It
+is counted in game time inside `Input`, aged in `endFrame` alongside the buffer,
+rather than by a `setTimeout` — the hold has to be a number of frames of
+simulation, so a throttled tab or a paused loop must not spend it, and a
+wall-clock timer would also make it untestable in the stepped harness everything
+else here is verified in.
+
+**The span is the rise plus the buffer, and getting that wrong was the second
+bug.** The first version anchored the guarantee to the finger, which is wrong
+because a press does not become a jump when the finger lands: a jump tapped just
+before the feet touch down waits in the 0.24 s buffer, and `player.js` keeps it
+alive there on purpose. That pre-landing tap *is* the running jump a crossing
+needs. Measured with the guarantee anchored to the finger, a tap made 0.16 s
+early crossed 5.76 units and one made 0.22 s early crossed 5.68 — 22% and 21%,
+under budget again, by a different route. Overshooting costs nothing, because
+the cut only applies while `vy > 0` and a guarantee outliving the rise is
+released into a fall. So the hold covers both spans.
+
+Both failures are now negative controls in `touchcheck.js`: *a jump a thumb can
+only cut short*, and *a hold that forgets the buffered press*. The second one
+exists because a review caught it, and a check nobody has watched fail is not
+known to work.
+
+**The acknowledged cost:** a phone cannot ask for a *short* hop. No gate
+requires one — `gatecheck.js` proves every crossing against the full arc — and a
+gate that did would be authoring against an input half the players do not have.
+That is a real reduction in expressiveness on touch, recorded rather than
+waved past.
+
+`touchcheck.js` asserts `sustain >= rise + buffer`, all three derived from
+`config.js` and `input.js`, so moving `jumpVel` or the buffer cannot leave this
+quietly wrong. That is the same reasoning `gatecheck.js` uses for its reserve
+threshold, and it is here because this failure was invisible for exactly as long
+as nobody had fingers.
+
+**What this does not prove.** Constraint 3 — never a direction plus two buttons
+at once — is a claim about what a *fight* demands rather than what the screen
+offers, and nothing static can check it. Neither can anything here tell you
+whether a 26% margin is comfortable for a real thumb, only that the arc is the
+one that was measured. `SPEC-CAMPAIGN.md` § Further Notes makes the phone
+playtest the checkpoint before gates 3–10, and the budget was adopted with
+"the only proof a thumb can clear a 26% margin is a thumb" written next to it.
+That is still true, and it is still owed. What changed is that the thumb now
+gets the arc the claim was about.
+
+**No pause control**, deliberately. The moveset is frozen at seven and pause is
+not a verb, so an eighth button would be the exact thing the freeze exists to
+prevent. Every screen a run can land on — title, death, clear — already has a
+real button on it, so a gate is completable and repeatable without one. If the
+phone playtest wants pause mid-run, that is a decision to take on its own
+evidence rather than smuggle in here.
+
 ## Art direction
 
 The palette **darkens progressively left to right** — pastel at the entrance,
