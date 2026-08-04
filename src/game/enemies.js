@@ -398,6 +398,8 @@ export class Charger extends Enemy {
     /** One victim per charge — the convention `Game._resolveCombat` reads. */
     this.chargeHitSet = new Set();
     this.leavesCorpse = true;
+    /** Charges left in the current commitment. See `charge.chain`. */
+    this.chargesLeft = 0;
   }
 
   update(dt, player) {
@@ -438,6 +440,10 @@ export class Charger extends Enemy {
           this.state = 'telegraph';
           this.phase = C.windup;
           this.vx = 0;
+          // `charge.chain` — the Ferryman's signature. Charges left after this
+          // one commits, so a fresh commitment (not a chained continuation)
+          // is what resets the count.
+          this.chargesLeft = (C.chain || 1) - 1;
           this.ctx.audio?.play('growl');
           break;
         }
@@ -485,14 +491,24 @@ export class Charger extends Enemy {
         // the encounter it is introduced in would seal shut behind it.
         const ledge = !this.level.hasFloorAhead(this.x + this.facing * 1.0, this.y);
         if (this.phase <= 0 || hit.wall || ledge) {
-          this.state = 'recover';
-          this.phase = C.recover + (hit.wall ? C.wallRecover : 0);
           this.vx = 0;
           this.ctx.vfx.dust(this.x, this.y, 6);
           if (hit.wall) {
             this.ctx.shake?.(C.shake);
             this.ctx.vfx.groundBurst(this.x + this.facing * 0.8, this.y, 1.0);
             this.ctx.audio?.play('slam');
+          }
+          // The chain: run the same telegraph again rather than recovering,
+          // for as many charges as `charge.chain` grants. Not off a ledge —
+          // there is nothing to cross into.
+          if (this.chargesLeft > 0 && !ledge) {
+            this.chargesLeft--;
+            this.state = 'telegraph';
+            this.phase = C.windup;
+            this.ctx.audio?.play('growl');
+          } else {
+            this.state = 'recover';
+            this.phase = C.recover + (hit.wall ? C.wallRecover : 0);
           }
         }
         this._animate(dt);

@@ -365,6 +365,40 @@ export const CHARGER = {
   contactDamage: 0,
 };
 
+/**
+ * The Ferryman — the crossing's Warden.
+ *
+ * A charger, elevated: `docs/DECISIONS.md` § Wardens and bosses is explicit
+ * that this is configuration, not a new file or a new state machine. The
+ * hunter already reads a charge's tell in full, so the one thing this adds is
+ * `charge.chain`: it does not stop at the far bank, it turns around and
+ * crosses back — the same wind-up, the same eye-flare, run twice before the
+ * recovery the hunter was taught to punish. No new telegraph, because there is
+ * nothing left to teach; the ferry crossing twice is the whole idea.
+ */
+export const FERRYMAN = {
+  ...CHARGER,
+  hp: 210,
+  hw: 0.7,
+  hh: 0.7,
+  speed: 3.2,
+  charge: {
+    ...CHARGER.charge,
+    // A longer lane for a longer arena — see gate 2's far bank — and the same
+    // margin arithmetic CHARGER.charge is built from: still far short of what
+    // a dash out of the wind-up needs to clear.
+    range: 9,
+    speed: 19,
+    dur: 0.5,
+    damage: 18,
+    knock: 11,
+    /** Charges twice before it recovers. The signature addition. */
+    chain: 2,
+  },
+  exp: 140,
+  contactDamage: 0,
+};
+
 export const WISP = {
   hp: 30,
   hw: 0.38,

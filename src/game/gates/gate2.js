@@ -3,20 +3,29 @@
 // Gate 1's exit does not lead home. It leads down to the river, and this is the
 // river: grey-blue, walled in by mist, with black water where gate 1 has void.
 //
-// It is a walk, and — now — one fight. Falling into the water forgets rather
-// than kills; see `forgivingVoid` below. The Ferryman is still its own ticket;
-// see `docs/SPEC-CAMPAIGN.md` § The ten gates (02).
+// It is a walk, and two fights. Falling into the water forgets rather than
+// kills; see `forgivingVoid` below.
 //
-// The one fight is the charger, and it is here rather than anywhere else
-// because the crossing is what teaches movement before the hells demand it. It
-// is met **alone**: nothing else spawns in this gate, so the tell is learned in
-// isolation rather than inferred out of a crowd and unlearned later. The
-// `solo debut` check in `tools/gatecheck.js` holds every future archetype to
-// the same thing.
+// The first fight is the charger, met alone: nothing else spawns in this gate
+// but its Warden, so the tell is learned in isolation rather than inferred out
+// of a crowd and unlearned later. The `solo debut` check in
+// `tools/gatecheck.js` holds every future archetype to the same thing.
 //
-// No Warden and no story beats yet. The descriptor still goes through every
-// tier-1 check in `tools/gatecheck.js`, and the crossing's gaps are held to the
-// same touch budget gate 1's are.
+// The far bank is the second: the Ferryman, the crossing's Warden. See
+// `FERRYMAN` in `src/game/config.js` for what "elevated" means here and what
+// its one signature addition is.
+//
+// No story beats yet. The descriptor still goes through every tier-1 check in
+// `tools/gatecheck.js`, and the crossing's gaps are held to the same touch
+// budget gate 1's are.
+
+import { FERRYMAN } from '../config.js';
+
+/**
+ * The far bank — the Ferryman's arena. Flat and open, same as the causeway the
+ * charger taught on, only longer: the chain charge needs room to run twice.
+ */
+const ARENA_TOP = 0;
 
 /**
  * The realm's palette.
@@ -91,23 +100,32 @@ const SEGMENTS = [
   { x0: 92.6, x1: 98.6, top: 1.6, barren: true, depth: 5 },
   { x0: 102.2, x1: 108.2, top: 0.4, barren: true, depth: 5 },
 
-  // The far bank, and the arch out of it.
-  { x0: 112, x1: 150, top: 0, boulders: 3, pillars: 2, crystals: 2 },
+  // The far bank, and the arch out of it. Long and flat: the Ferryman's arena,
+  // and the chain charge needs the room a single-pass lane does not.
+  { x0: 112, x1: 150, top: ARENA_TOP, boulders: 3, pillars: 2, crystals: 2 },
 ];
 
 /**
- * One encounter, one enemy, on the one piece of ground long enough to run on.
+ * The crossing's Warden: an existing archetype, elevated. See `FERRYMAN` in
+ * `src/game/config.js` for the numbers and the one added move.
+ */
+const WARDEN = {
+  archetype: 'charger',
+  title: 'THE FERRYMAN',
+  stats: FERRYMAN,
+};
+
+/**
+ * Two encounters, two enemies met alone: the charger, then the Ferryman.
  *
  * The causeway is thirty units of flat, unobstructed floor, and that is the
  * point: a charger needs a lane, and an archetype introduced in a place that
  * denies it its own mechanic teaches nothing. Sealing it is what makes the
- * lesson unskippable — the crossing has no Warden, so its arch is lit from the
- * moment the hunter arrives, and an unsealed charger is a charger you walk
- * past.
+ * lesson unskippable, and an unsealed charger is a charger you walk past.
  *
  * The seal is also what makes "alone" true rather than merely likely. Nothing
- * else spawns in this gate at all, so there is no wave to hide the tell in and
- * nothing else alive to blame a hit on.
+ * else spawns alongside either fight, so there is no wave to hide a tell in
+ * and nothing else alive to blame a hit on.
  *
  * The intro window says the rule and the tell in one line, from 0 s. Round 3 of
  * the playtest log is unambiguous about the alternative: a rule delivered in
@@ -129,6 +147,19 @@ const ENCOUNTERS = [
     // and clear of both barriers by a wide margin.
     spawns: [{ type: 'charger', x: 79, delay: 0.3 }],
   },
+  {
+    id: 'the-ferryman',
+    trigger: 118,
+    lock: [113, 149],
+    intro: {
+      title: 'GATE WARDEN',
+      body: WARDEN.title,
+      note: 'The same tell — it just does not stop at the far bank. It charges twice.',
+    },
+    // `warden` rather than an archetype name: which enemy that is belongs to
+    // the gate's Warden block, so the encounter does not have to say it twice.
+    spawns: [{ type: 'warden', x: 136, delay: 0.6 }],
+  },
 ];
 
 export const GATE_2 = {
@@ -145,14 +176,12 @@ export const GATE_2 = {
    * See `Game._fallInWater`.
    */
   forgivingVoid: true,
-  /** The far bank, which is where the arch stands. No arena — no Warden yet. */
-  arenaTop: 0,
+  /** The far bank, which is where the arch stands, and where the Ferryman does. */
+  arenaTop: ARENA_TOP,
   exitX: 142,
   end: 150,
 
   segments: SEGMENTS,
   encounters: ENCOUNTERS,
-  // No Warden. The Ferryman is a separate ticket, and a gate with no Warden is
-  // a gate whose way out is open from the moment the hunter arrives — see
-  // `Game._enterGate`. Which is why the charger's encounter is sealed.
+  warden: WARDEN,
 };

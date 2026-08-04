@@ -417,7 +417,7 @@ export class Game {
     const need = PROGRESSION.curve(this.level_);
     this.hud.setProgress(this.level_, this.exp / need);
     if (this.boss && !this.boss.removeMe) {
-      this.hud.boss(true, this.boss.hp / this.boss.maxHp);
+      this.hud.boss(true, this.boss.hp / this.boss.maxHp, this.gate.warden.title);
     }
   }
 
@@ -812,7 +812,7 @@ export class Game {
     const e = new Archetype(this.level, this.ctx, s.x, w ? this.gate.arenaTop : y, w?.stats);
     if (w) {
       this.boss = e;
-      this.hud.boss(true, 1);
+      this.hud.boss(true, 1, w.title);
     }
     e.encounter = s.encounter;
     this.enemies.push(e);

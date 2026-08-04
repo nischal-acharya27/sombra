@@ -1097,6 +1097,22 @@ function transition(game, input) {
   const entryT = game.runTime;
   const run = arrived ? walkGate(game, input, { maxSeconds: 120, readTells: true }) : null;
 
+  // `walkGate` stops the moment its Warden dies — right for every other
+  // caller, which only ever asks "is the gate cleared", never "did you also
+  // walk out of it". This is the one place that asks the second question, so
+  // it finishes the walk itself: hold right until the arch takes the hunter
+  // through, same as the first check above did from a standing start.
+  if (game.state === 'cleared') {
+    const finish = new Bot(game, input);
+    finish.hold('right', true);
+    let extra = 0;
+    while (game.state === 'cleared' && extra < 600) {
+      finish.step();
+      extra++;
+    }
+    finish.releaseAll();
+  }
+
   const walked = arrived && game.state === 'ended';
   say(
     'and the crossing is walkable',
