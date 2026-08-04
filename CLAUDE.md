@@ -25,7 +25,7 @@ wrong diagnoses and several disagreeing playtest verdicts.
 **Verify with `?sim` across seeds before claiming anything works.** One seed is
 not evidence — that mistake is why the suite sweeps rather than samples. The
 five recorded seeds are `20260728`, `1`, `99991`, `20260802`, `7777777`, and the
-suite is 90 PASS / 0 FAIL in ~6.8 s on all five.
+suite is 108 PASS / 0 FAIL in ~6.6 s on all five.
 
 **Red on one arbitrary seed is not a regression.** The telegraph gate has a
 measured false-negative rate — roughly two arbitrary seeds in nine fail on a

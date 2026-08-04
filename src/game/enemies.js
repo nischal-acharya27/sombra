@@ -8,8 +8,8 @@
 
 import * as THREE from 'three';
 import { Actor, boxHit } from './actor.js';
-import { buildBeast, buildWisp } from '../render/models.js';
-import { BEAST, WISP, PHYS, JUGGLE } from './config.js';
+import { buildBeast, buildCharger, buildWisp } from '../render/models.js';
+import { BEAST, CHARGER, WISP, PHYS, JUGGLE } from './config.js';
 import { P } from '../render/palette.js';
 import { clamp, damp, lerp, rand } from '../engine/mathx.js';
 
@@ -352,6 +352,265 @@ export class Beast extends Enemy {
       const sign = i < 2 ? 1 : -1;
       const off = (i % 2) * Math.PI;
       leg.rotation.z = lerp(leg.rotation.z, Math.sin(this.legPhase + off) * 0.75 * sign + legSwing * sign, k);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Charger
+// ---------------------------------------------------------------------------
+
+/**
+ * The enemy that punishes standing still.
+ *
+ * It plants, it announces, it commits to a lane, and it is rooted afterwards
+ * for long enough that reading the tell is not merely safe but *profitable* —
+ * the recovery is the window the hunter kills it in. That triangle is the whole
+ * archetype, and it is the crossing's lesson in movement before the hells ask
+ * for it.
+ *
+ * Three things it shares with the beast rather than reinventing:
+ *
+ * The eye flare, because the hunter has already learned that eyes going bright
+ * means something is about to commit, and a second visual language for the same
+ * idea is a second thing to learn for no gain.
+ *
+ * `chargeHitSet`, which is the Guardian's convention read by `Game`'s combat
+ * pass — one victim per charge, so running through the hunter costs one hit and
+ * not one per frame.
+ *
+ * `leavesCorpse`, because SORGI's promise cannot be selectively true.
+ *
+ * And the rule everything in this file obeys: no contact damage. Standing in
+ * front of a charger is safe. Standing in front of a charge is not.
+ */
+export class Charger extends Enemy {
+  static stats = CHARGER;
+
+  constructor(level, ctx, x, y, cfg = CHARGER) {
+    super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
+    this.root = buildCharger();
+    this.n = this.root.userData.nodes;
+    this.finishSetup();
+    this.phase = 0;
+    this.cooldown = rand(cfg.cooldown[0], cfg.cooldown[1]);
+    this.homeX = x;
+    this.legPhase = rand(0, 6);
+    /** One victim per charge — the convention `Game._resolveCombat` reads. */
+    this.chargeHitSet = new Set();
+    this.leavesCorpse = true;
+  }
+
+  update(dt, player) {
+    this.t += dt;
+    this.hitFlash -= dt;
+    this._flash(dt);
+
+    if (this.state === 'dying') return this._dieAnim(dt);
+    if (this.spawnT > 0) this._spawnAnim(dt);
+
+    const C = this.cfg.charge;
+    const dx = player.x - this.x;
+    const dist = Math.abs(dx);
+    const dy = Math.abs(player.y - this.y);
+    const canSee = dist < this.cfg.chaseRange && dy < 6;
+    // A charge runs along the floor, so a hunter standing on something else is
+    // not in the lane and is not what it commits at.
+    const inLane = dy < this.cfg.laneHeight;
+
+    if (this.stagger > 0) {
+      this.stagger -= dt;
+      if (this.stagger <= 0 && this.state === 'hurt') this.state = 'idle';
+    }
+
+    switch (this.state) {
+      case 'idle':
+      case 'chase': {
+        this.cooldown -= dt;
+        if (!canSee) {
+          this.state = 'idle';
+          this.vx = damp(this.vx, 0, 0.001, dt);
+          break;
+        }
+        this.state = 'chase';
+        this.faceToward(player.x);
+
+        if (this.cooldown <= 0 && this.grounded && inLane && dist > C.minRange && dist < C.range) {
+          this.state = 'telegraph';
+          this.phase = C.windup;
+          this.vx = 0;
+          this.ctx.audio?.play('growl');
+          break;
+        }
+
+        // Crowded, it backs off; far out, it closes. Both are in service of the
+        // same thing: a charger with no room to run has nothing to threaten
+        // with, and one that simply walked into the hunter and stopped would be
+        // an enemy you beat by standing next to it — which is exactly the habit
+        // this archetype exists to break.
+        const want =
+          dist < C.minRange ? -Math.sign(dx) * this.cfg.speed
+          : dist > C.range - 1.5 ? Math.sign(dx) * this.cfg.speed
+          : 0;
+        // Don't back off a ledge, and don't walk off one either.
+        const ahead = this.x + Math.sign(want) * 0.9;
+        if (want !== 0 && !this.level.hasFloorAhead(ahead, this.y)) this.vx = 0;
+        else this.vx = damp(this.vx, want, 0.0008, dt);
+        break;
+      }
+
+      case 'telegraph': {
+        // Planted, head down, eyes bright. It tracks early and commits late —
+        // a wind-up that turned with the hunter all the way through would be an
+        // attack you cannot leave, which is the opposite of a tell.
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0001, dt);
+        if (this.phase > C.windup * 0.35) this.faceToward(player.x);
+        if (this.phase <= 0) {
+          this.state = 'charging';
+          this.phase = C.dur;
+          this.chargeHitSet.clear();
+          this.ctx.audio?.play('pounce');
+          this.ctx.vfx.dust(this.x, this.y, 7);
+        }
+        break;
+      }
+
+      case 'charging': {
+        this.phase -= dt;
+        this.vx = this.facing * C.speed;
+        this.applyGravity(dt, PHYS.gravity);
+        const hit = this.moveAndCollide(dt);
+        // It stops at a ledge rather than running off one. A charger that
+        // drowns itself in the crossing is a fight the hunter never has, and
+        // the encounter it is introduced in would seal shut behind it.
+        const ledge = !this.level.hasFloorAhead(this.x + this.facing * 1.0, this.y);
+        if (this.phase <= 0 || hit.wall || ledge) {
+          this.state = 'recover';
+          this.phase = C.recover + (hit.wall ? C.wallRecover : 0);
+          this.vx = 0;
+          this.ctx.vfx.dust(this.x, this.y, 6);
+          if (hit.wall) {
+            this.ctx.shake?.(C.shake);
+            this.ctx.vfx.groundBurst(this.x + this.facing * 0.8, this.y, 1.0);
+            this.ctx.audio?.play('slam');
+          }
+        }
+        this._animate(dt);
+        this.syncRig();
+        return;
+      }
+
+      case 'recover': {
+        // The punish window, and the reason the tell is worth reading.
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0005, dt);
+        if (this.phase <= 0) {
+          this.state = 'chase';
+          this.cooldown = rand(this.cfg.cooldown[0], this.cfg.cooldown[1]);
+        }
+        break;
+      }
+
+      case 'hurt':
+        this.vx = damp(this.vx, 0, 0.06, dt);
+        break;
+    }
+
+    if (this.juggleT > 0) this.juggleT = this.grounded ? 0 : this.juggleT - dt;
+    this.applyGravity(dt, PHYS.gravity * (this.juggleT > 0 ? JUGGLE.gravityMul : 1));
+    this.moveAndCollide(dt);
+    this._animate(dt);
+    this.syncRig();
+  }
+
+  /** Live only while it is actually running. Standing next to one is safe. */
+  attackBox() {
+    if (this.state !== 'charging' || this.dead) return null;
+    return {
+      x0: this.x - this.hw - 0.25,
+      x1: this.x + this.hw + 0.25,
+      y0: this.y,
+      y1: this.y + this.hh * 2,
+    };
+  }
+
+  /**
+   * What that box is worth. `Game.attackDamage` falls back to a pounce block
+   * for anything that does not answer, and a charger has no pounce — so this is
+   * not optional decoration, it is the only reason its charge does damage.
+   */
+  currentAttackDamage() {
+    if (this.state !== 'charging' || this.dead) return null;
+    return { damage: this.cfg.charge.damage, knock: this.cfg.charge.knock };
+  }
+
+  _animate(dt) {
+    const n = this.n;
+    const k = 1 - Math.pow(0.0002, dt);
+    const C = this.cfg.charge;
+    let bodyZ = 0;
+    let bodyY = 0;
+    let neck = 0;
+    let legSwing = 0;
+
+    if (this.state === 'telegraph') {
+      // Rocked back onto the hind legs, head dropped, horns levelled.
+      const u = 1 - this.phase / C.windup;
+      bodyZ = -0.10 - u * 0.10;
+      bodyY = -0.05 - u * 0.05;
+      neck = 0.30 + u * 0.18;
+      const g = 0.3 + u * 0.7;
+      n.eyeL.material.opacity = g;
+      n.eyeR.material.opacity = g;
+      n.eyeL.material.transparent = true;
+      n.eyeR.material.transparent = true;
+      n.eyeL.scale.setScalar(1 + u * 0.7);
+      n.eyeR.scale.setScalar(1 + u * 0.7);
+      // Hooves scraping. The wind-up has an audible, visible floor to it.
+      this.legPhase += dt * 16;
+      legSwing = Math.sin(this.legPhase) * 0.35;
+    } else {
+      n.eyeL.scale.setScalar(damp(n.eyeL.scale.x, 1, 0.001, dt));
+      n.eyeR.scale.setScalar(n.eyeL.scale.x);
+      n.eyeL.material.opacity = 1;
+      n.eyeR.material.opacity = 1;
+    }
+
+    if (this.state === 'charging') {
+      bodyZ = 0.16;
+      bodyY = -0.08;
+      neck = 0.42;
+      this.legPhase += dt * 26;
+      legSwing = Math.sin(this.legPhase) * 0.9;
+      if (Math.random() < 0.5) this.ctx.vfx.dust(this.x - this.facing * 0.5, this.y, 1);
+    } else if (this.state === 'recover') {
+      // Slumped and stalled, which is the read: it is safe to be here now.
+      const u = clamp(this.phase / C.recover, 0, 1);
+      bodyZ = 0.26 * u;
+      bodyY = -0.14 * u;
+      neck = 0.5 * u;
+    } else if (this.state === 'hurt') {
+      bodyZ = -0.24;
+    } else if (this.state === 'chase' && Math.abs(this.vx) > 0.3) {
+      this.legPhase += dt * (5 + Math.abs(this.vx));
+      legSwing = Math.sin(this.legPhase) * 0.5;
+      bodyY = Math.abs(Math.cos(this.legPhase)) * 0.04;
+    } else if (this.state !== 'telegraph') {
+      bodyY = Math.sin(this.t * 1.8) * 0.03;
+      neck = 0.08 + Math.sin(this.t * 0.7) * 0.08;
+    }
+
+    n.body.rotation.z = lerp(n.body.rotation.z, bodyZ, k);
+    n.body.position.y = lerp(n.body.position.y, 0.68 + bodyY, k);
+    n.neck.rotation.z = lerp(n.neck.rotation.z, neck, k);
+    n.tail.rotation.z = Math.sin(this.t * 2.4) * 0.18 + 0.1;
+
+    for (let i = 0; i < 4; i++) {
+      const leg = n['leg' + i];
+      const sign = i < 2 ? 1 : -1;
+      const off = (i % 2) * Math.PI;
+      leg.rotation.z = lerp(leg.rotation.z, Math.sin(this.legPhase + off) * 0.5 * sign + legSwing * sign, k);
     }
   }
 }

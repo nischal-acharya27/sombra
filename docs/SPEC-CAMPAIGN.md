@@ -279,6 +279,24 @@ exit; no encounter lock that can strand the player; every enemy type referenced
 by a gate actually exists. Milliseconds. This is the tier that catches the
 dominant new bug class, which is authoring error rather than mechanic error.
 
+**A sixth static check: `solo debut`.** User story 14 — each new archetype met
+alone, before it is combined with anything else — is a constraint on the whole
+campaign in order, not on any one descriptor, so it is checked with a set of
+archetypes carried forward across gates. It is here rather than in a comment
+because it is the constraint most likely to be broken *quietly*: adding one
+enemy to an encounter that already exists looks like content and reads as
+pacing, and nothing about the diff says a tell just moved into a crowd.
+
+**And a seventh, `telegraphs`, over the config rather than a descriptor.** Every
+enemy's wind-up against the shortest one the hunter has ever had to answer —
+the beast's pounce at 0.42 s — measured against the same 250 ms reaction
+latency the playthrough bots run at, so "the window this tell buys" means one
+thing across the suite. The Guardian's rows are its *enraged* wind-ups, which
+is where its real floor is: the sweep clears by nine milliseconds. Three new
+archetypes and four boss tunings are what this spec names as most likely to go
+wrong, and a wind-up that is a few frames too short is invisible in a diff and
+invisible in a descriptor.
+
 **Tier 2 — one full-campaign playthrough, carrying a shadow.** A single bot
 plays all ten gates end to end. Not ten isolated runs: this project has already
 been bitten by state that `reset()` does not clear, and a per-gate harness is

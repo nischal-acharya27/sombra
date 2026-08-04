@@ -285,6 +285,86 @@ export const SHADOW = {
   contactDamage: 0,
 };
 
+/**
+ * The charger — the enemy that punishes standing still.
+ *
+ * The beast comes to you and leaps; this one plants its feet at range and runs
+ * a lane. That difference is the whole archetype, and every number here exists
+ * to protect it:
+ *
+ * `charge.range` is long and `charge.minRange` is short, so the threat is a
+ * *lane* rather than a lunge — crowded in close it backs off to reopen one
+ * instead of attacking, which is what makes "keep moving" the answer rather
+ * than "stand behind it".
+ *
+ * `charge.windup` is 0.52 against the beast's 0.42, and that ordering is
+ * checked rather than remembered: `telegraphs()` in `tools/gatecheck.js` holds
+ * every tell in the game to the shortest one gate 1 taught, measured against
+ * the same 250 ms reaction latency the suite's bots play at. A charge covers
+ * 12.6 units and cannot be walked out of once it starts, so it is the one tell
+ * that must not be the tight one.
+ *
+ * `charge.recover` is the ticket. A committed charge that ends in a long,
+ * rooted recovery is what makes reading the tell *pay* — the hunter is not
+ * merely spared damage, they are handed the window they kill it in. `hp` is
+ * two full light chains (59 each), so the window has to be earned twice.
+ *
+ * `contactDamage: 0`, like everything else in the game. Nothing it *is* harms
+ * the hunter; only what it *does*.
+ */
+export const CHARGER = {
+  hp: 64,
+  hw: 0.62,
+  hh: 0.62,
+  // Slower on its feet than a beast. It is not a chaser — walking away from a
+  // charger works, and is supposed to, right up until it plants and commits.
+  speed: 3.0,
+  chaseRange: 26,
+  charge: {
+    // These four numbers are one decision, and the arithmetic is the decision.
+    //
+    // A charge covers `speed × dur` = 8.1 units, which is deliberately longer
+    // than `range`: a hunter who does not move is hit from anywhere the charger
+    // is willing to commit from, with no distance to back into. That is the
+    // "punishes standing still" half.
+    //
+    // The other half is that moving always works, with room to spare. The
+    // hunter answers the tell 0.25 s in (the suite's reaction latency), leaving
+    // 0.27 s of wind-up to spend: a dash is 4.19 units and the run out of it
+    // adds about one more. So the charge starts from at least 3.0 + 5.2 = 8.2
+    // units and closes at 18 − 9.6 = 8.4 a second, which needs 0.98 s against
+    // the 0.45 s it has. Read the tell and it cannot reach you; ignore it and
+    // nothing can save you.
+    range: 7.5,
+    // Inside this it has no room to build up, so it retreats to reopen a lane
+    // rather than attacking. 3.0 is the number the escape margin above is
+    // computed from — it is the worst case, not a comfort.
+    minRange: 3.0,
+    windup: 0.52,
+    speed: 18,
+    dur: 0.45,
+    // The punish window, and the reason reading the tell *pays* rather than
+    // merely costing nothing. A charge ends past the hunter, so the window has
+    // to cover both running back in and swinging — which is why the suite
+    // measures what it is worth rather than reading this number. It measures 59
+    // of its 64 HP: a full light chain, so two read tells kill it and nothing
+    // else does.
+    recover: 1.3,
+    // A charge into a wall costs it more, exactly as the Guardian's does: a
+    // miss that ends against terrain is the biggest punish window it offers.
+    wallRecover: 0.5,
+    damage: 15,
+    knock: 10,
+    shake: 0.24,
+  },
+  /** Idle window between charges. */
+  cooldown: [0.8, 1.5],
+  /** How far above or below the hunter can be and still be in the lane. */
+  laneHeight: 2.2,
+  exp: 34,
+  contactDamage: 0,
+};
+
 export const WISP = {
   hp: 30,
   hw: 0.38,
@@ -327,6 +407,12 @@ export const GUARDIAN = {
   contactDamage: 0,
   enrageAt: 0.5, // fraction of HP where it speeds up
   enrageSpeedMul: 1.32,
+  // Enraged, every wind-up below is shortened by this — so these are the real
+  // telegraphs of the second phase, and the numbers `telegraphs()` in
+  // `tools/gatecheck.js` measures against the reaction floor. It lived in
+  // `boss.js` as a literal until the charger's ticket needed to read it, which
+  // is exactly the drift the "every tunable in config.js" rule exists to stop.
+  enrageWindupMul: 0.78,
   attacks: {
     charge: { windup: 0.75, speed: 19, dur: 0.85, recover: 0.9, damage: 20, knock: 13, shake: 0.3 },
     slam: { windup: 0.68, rise: 0.34, fall: 0.24, recover: 1.0, damage: 24, radius: 5.6, knock: 15, shake: 0.55 },
