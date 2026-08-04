@@ -138,11 +138,13 @@ export class HUD {
 
   /**
    * A System window. `lines` renders as a stat table; `body` as a paragraph.
+   * `glitch` marks the window as the System failing to report cleanly, rather
+   * than the game failing to render — see `.sys-window.glitch` in the CSS.
    * Returns a promise that resolves when it closes, so callers can sequence.
    */
-  window({ title, big, body, lines, duration = SYS_WINDOW.encounter }) {
+  window({ title, big, body, lines, glitch = false, duration = SYS_WINDOW.encounter }) {
     const el = document.createElement('div');
-    el.className = 'sys-window';
+    el.className = glitch ? 'sys-window glitch' : 'sys-window';
 
     let html = `<h3>${title}</h3><div class="divider"></div>`;
     if (big) html += `<div class="big">${big}</div>`;

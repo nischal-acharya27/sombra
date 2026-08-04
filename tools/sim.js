@@ -1376,6 +1376,57 @@ function chargerFight(game, input) {
 }
 
 /**
+ * The crossing's story beats.
+ *
+ * `docs/PLAYTEST.md` round 3 is the failure this whole probe is arranged
+ * against: a System window competing with a live fight for the same
+ * attention, and the text losing. So this does not just watch a normal
+ * playthrough stay clean — it forces the one case a normal playthrough would
+ * never manufacture on its own, a beat asked to open with an encounter live,
+ * and checks that `Game._fireBeats` refuses it.
+ */
+function storyBeats(game, input) {
+  const rows = [];
+  const say = (what, ok, detail = '') => rows.push({ what, ok, detail });
+
+  // --- forced: a beat asked to open mid-encounter ---
+  game.start();
+  game._enterGate(1);
+  say('lands in the crossing', game.gate.id === 'gate-2', game.gate.id);
+  const openBefore = game.hud.el.windows.children.length;
+  game.activeEncounter = { id: 'probe' };
+  game._fireBeats('cleared');
+  say('a beat refuses to open while an encounter is live', game.hud.el.windows.children.length === openBefore);
+  const refused = game.storyBeats.find((b) => b.at === 'cleared');
+  say('and the refusal is logged rather than silent', refused?.liveEncounter === true && refused?.opened === false);
+
+  // --- the same beat, boundary conditions true ---
+  game.activeEncounter = null;
+  game._fireBeats('cleared');
+  say('the same beat opens once the encounter clears', game.hud.el.windows.children.length === openBefore + 1);
+
+  // --- the glitch, authored for arrival ---
+  say(
+    'the crossing has a glitch beat on arrival',
+    game.gate.beats?.some((b) => b.at === 'enter' && b.glitch === true) ?? false
+  );
+
+  // --- a real walk: both encounters, the Warden, nothing forced ---
+  game.start();
+  game._enterGate(1);
+  const entryBeat = game.storyBeats[game.storyBeats.length - 1];
+  say('the entry beat fires on a real arrival, unforced', entryBeat?.at === 'enter' && entryBeat?.opened === true);
+  const run = walkGate(game, input, { maxSeconds: 120, readTells: true });
+  say('the crossing still clears with the beats wired in', run.ok, `state ${game.state}, ${run.time}s`);
+  say('the closing beat fired once the Ferryman fell', game.storyBeats.some((b) => b.at === 'cleared' && b.opened));
+  say('nothing that fired over the whole walk did so mid-encounter', game.storyBeats.every((b) => !b.liveEncounter));
+
+  game.start();
+  game.hud.screen('clear', false);
+  return rows;
+}
+
+/**
  * The crossing's water: Lethe rather than a fall.
  *
  * Gate 1's void is answered by `bossFight` and the playthrough probes dying
@@ -1751,6 +1802,10 @@ function runAll(game, input, seed) {
   // gate transition — and the rule does not carve out an exception for the
   // probe that happens to be last today either.
   report.crossingWater = scope(13, () => crossingWater(game, input));
+  // And after even that, for the same reason once more: it walks the crossing
+  // end to end and forces a live-encounter case the game would never present
+  // to a normal run, both of which touch the shared `Game` object.
+  report.storyBeats = scope(14, () => storyBeats(game, input));
   report.ms = Math.round(performance.now() - t0);
 
   print(report);
@@ -2039,6 +2094,18 @@ function print(r) {
   lines.push('  never anything at all where there was no shadow to lose. Gate 1 is read');
   lines.push('  right after, on the same probe, so a fix that makes water forgiving');
   lines.push('  everywhere shows up here as gate 1 surviving its own void.');
+  lines.push('');
+
+  lines.push('STORY BEATS   (the crossing’s glitch, and the boundary-only rule)');
+  for (const t of r.storyBeats) {
+    lines.push(`  ${t.what.padEnd(46)} ${t.detail.padEnd(30)} ${ok(t.ok)}`);
+  }
+  lines.push('');
+  lines.push('  The forced case is the one a normal playthrough never manufactures on its');
+  lines.push('  own: a beat asked to open with an encounter live. `Game._fireBeats` refuses');
+  lines.push('  it and logs the refusal, and the row above is that refusal being read back');
+  lines.push('  rather than assumed. The walk beneath it is the control — the same beats,');
+  lines.push('  fired for real, never once catching the game with an encounter live.');
   lines.push('');
 
   lines.push('GATE TRANSITION   (gate 1’s arch into the crossing, and gate 1 again)');

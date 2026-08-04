@@ -15,7 +15,11 @@
 // `FERRYMAN` in `src/game/config.js` for what "elevated" means here and what
 // its one signature addition is.
 //
-// No story beats yet. The descriptor still goes through every tier-1 check in
+// Two story beats, both gate boundaries: on arrival, right after the System
+// names the realm — this is where it glitches for the first time, having no
+// record of the place — and again once the Ferryman is down, before the
+// hunter reaches the arch. Neither can land while an encounter is live; see
+// `Game._fireBeats`. The descriptor still goes through every tier-1 check in
 // `tools/gatecheck.js`, and the crossing's gaps are held to the same touch
 // budget gate 1's are.
 
@@ -162,10 +166,43 @@ const ENCOUNTERS = [
   },
 ];
 
+/**
+ * The crossing's story beats.
+ *
+ * `at` names the boundary each fires on — `Game._fireBeats` is the only
+ * caller, and it is only ever called from a place in `game.js` where no
+ * encounter is active. Two beats, both short enough to take in at a glance:
+ * user story 5 asks for that, and round 3 of the playtest log is what it cost
+ * to learn the alternative.
+ *
+ * The first is the glitch `docs/SPEC-CAMPAIGN.md` names for this gate — the
+ * System has no record of the crossing, and `glitch: true` is what marks the
+ * window as the System failing to report cleanly rather than the game failing
+ * to render. The second lands once the Ferryman is down, and says the same
+ * thing again a different way: whatever the System's records are missing,
+ * this gate is in the gap.
+ */
+const BEATS = [
+  {
+    at: 'enter',
+    title: 'THE SYSTEM',
+    big: 'NO RECORD FOUND',
+    body: 'It has never catalogued this realm.',
+    glitch: true,
+  },
+  {
+    at: 'cleared',
+    title: 'THE SYSTEM',
+    big: 'RECORD: INCOMPLETE',
+    body: 'It logged the crossing. It could not say why.',
+  },
+];
+
 export const GATE_2 = {
   id: 'gate-2',
   name: 'The Crossing',
   realm: REALM,
+  beats: BEATS,
 
   spawnX: 2,
   /** Below the water, below the plinths: nothing is down there to land on. */

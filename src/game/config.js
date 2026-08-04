@@ -502,6 +502,14 @@ export const SYS_WINDOW = {
   enrage: 1800,
   /** Level-up. */
   levelUp: 2100,
+  /**
+   * A story beat at a gate boundary — the System naming a realm, or noting
+   * something about it. Short on purpose: `docs/PLAYTEST.md` round 3 found a
+   * System window read as too much text for too little time once a fight was
+   * already live, and a beat that only ever opens at a boundary still has to
+   * hold to the same "read at a glance" budget to keep that promise.
+   */
+  storyBeat: 2000,
 };
 
 export const PROGRESSION = {

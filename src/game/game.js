@@ -164,6 +164,10 @@ export class Game {
     this.encounters = this.gate.encounters.map((e) => ({ ...e, started: false, cleared: false, alive: 0 }));
     this.activeEncounter = null;
     this.moteT = 0;
+    // Every story beat this run has fired or refused, in order — read by
+    // `tools/sim.js` to prove the boundary-only rule holds over real play
+    // rather than only at the one call site that happens to obey it today.
+    this.storyBeats = [];
   }
 
   // -- lifecycle ------------------------------------------------------------
@@ -198,6 +202,7 @@ export class Game {
     this.kills = 0;
     this.damageTaken = 0;
     this.runTime = 0;
+    this.storyBeats = [];
 
     this._enterGate(0);
     this._syncVitals();
@@ -280,14 +285,47 @@ export class Game {
     this.hud.objective('CLEAR THE GATE');
 
     // The System names the realm, every time, so that ten gates in the hunter
-    // still knows where in the afterlife they are standing.
+    // still knows where in the afterlife they are standing. Any `enter` beat
+    // the gate carries opens right after — `#windows` is built to stack a
+    // second window rather than queue one behind a real-time delay, which
+    // matters here: `hud.window`'s promise resolves off a wall-clock
+    // `setTimeout`, not off the fixed-step `dt` the rest of the game — and the
+    // suite steps `dt` synchronously, so a beat chained onto that promise
+    // would fire in real seconds no scripted run could fast-forward past.
     this.audio.play('systemOpen');
     this.hud.window({ title: 'THE SYSTEM', big: this.gate.name, duration: SYS_WINDOW.gateEnter });
+    this._fireBeats('enter');
 
     // A gate with no Warden has nothing to beat, so its way out is open from
     // the moment the hunter arrives. The crossing is the first of those, and
     // is one only until the Ferryman is built.
     if (!this.gate.warden) this._openTheWay();
+  }
+
+  /**
+   * Fire every story beat this gate has queued at boundary `at` — 'enter' or
+   * 'cleared' today, more as the campaign grows.
+   *
+   * The one rule this whole ticket exists to hold: a beat never opens while an
+   * encounter is live. `docs/PLAYTEST.md` round 3 is what happens otherwise —
+   * text and a fight compete, the text loses, and a rule nobody could read is a
+   * rule nobody was taught. So this is not just called from places that happen
+   * to be safe; it refuses to open anything while `activeEncounter` is set,
+   * logging the refusal rather than the window. `tools/sim.js` reads
+   * `this.storyBeats` to prove both halves: that a live encounter is refused,
+   * and that a real playthrough never asks it to.
+   */
+  _fireBeats(at) {
+    const beats = this.gate.beats;
+    if (!beats) return;
+    for (const b of beats) {
+      if (b.at !== at) continue;
+      const liveEncounter = !!this.activeEncounter;
+      this.storyBeats.push({ gate: this.gate.id, at, liveEncounter, opened: !liveEncounter });
+      if (liveEncounter) continue;
+      this.audio.play('systemOpen');
+      this.hud.window({ title: b.title, big: b.big, body: b.body, glitch: b.glitch, duration: SYS_WINDOW.storyBeat });
+    }
   }
 
   /** Loop asks this: 0 freezes the simulation for hitstop. */
@@ -785,6 +823,7 @@ export class Game {
       this.audio.setIntensity(0);
       this.cam.zoom(15);
       this._openTheWay();
+      this._fireBeats('cleared');
     } else if (e.lock) {
       this.hud.objective('CLEAR THE GATE');
       this.hud.toast('AREA CLEARED', 'gold');

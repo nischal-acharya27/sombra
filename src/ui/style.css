@@ -340,6 +340,17 @@ html, body {
    * `filter` here without measuring. See `docs/DECISIONS.md`. */
 }
 .sys-window.out { animation: sysOut 0.24s ease-in forwards; }
+/* The System reporting that it has no record of a place, rather than the
+ * game failing to render one — a stutter in the window's own opacity, not in
+ * the frame around it. Only `opacity`/`transform` move, same as `sysIn` next
+ * to it: the note above is explicit that `filter`/`backdrop-filter` on this
+ * element cost a frame-skip once already. */
+.sys-window.glitch { animation: sysIn 0.28s cubic-bezier(0.16, 1, 0.3, 1), sysGlitch 0.42s steps(1) 0.28s 2; }
+@keyframes sysGlitch {
+  0%, 100% { opacity: 1; transform: none; }
+  35% { opacity: 0.55; transform: translateX(-3px); }
+  60% { opacity: 0.85; transform: translateX(2px); }
+}
 .sys-window h3 {
   font-size: 13px;
   letter-spacing: 0.42em;

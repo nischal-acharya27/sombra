@@ -380,6 +380,32 @@ function enemyTypes(gate) {
  * nothing else in the gate at all; gates 3 and 4 will have to be authored to
  * meet it too, and this check will not be what notices if they are not.
  */
+/** The only boundaries `Game._fireBeats` knows how to fire on. */
+const BEAT_BOUNDARIES = new Set(['enter', 'cleared']);
+
+/**
+ * A story beat is authored to be read at a glance — `docs/PLAYTEST.md` round 3
+ * is what the alternative cost — and only ever fires at a boundary
+ * `Game._fireBeats` recognises. Both are properties of the descriptor, so both
+ * are cheap to hold to on every run rather than trusted to authoring care.
+ *
+ * The word budget is not derived from anything measured, unlike the jump
+ * reserve or the telegraph floor: it is a generous ceiling meant to catch a
+ * beat that grew into a paragraph, not to tune prose.
+ */
+const BEAT_WORD_LIMIT = 16;
+
+function storyBeats(gate) {
+  const bad = [];
+  for (const b of gate.beats ?? []) {
+    if (!BEAT_BOUNDARIES.has(b.at)) bad.push(`${b.at ?? '(none)'}: not a boundary _fireBeats fires on`);
+    const words = `${b.big ?? ''} ${b.body ?? ''}`.trim().split(/\s+/).filter(Boolean).length;
+    if (words > BEAT_WORD_LIMIT) bad.push(`${b.at}: ${words} words, over the ${BEAT_WORD_LIMIT}-word glance budget`);
+  }
+  const n = gate.beats?.length ?? 0;
+  return row(gate.id, 'story beats', bad.length === 0, bad.join('; ') || (n ? `${n} beat(s), all boundary-only and glance-length` : 'none'));
+}
+
 function soloDebut(gate, arcs, map, seen) {
   const bad = [];
   const debuts = [];
@@ -394,7 +420,7 @@ function soloDebut(gate, arcs, map, seen) {
   return row(gate.id, 'solo debut', bad.length === 0, bad.join('; ') || debuts.join('; ') || 'nothing new here');
 }
 
-const CHECKS = [jumpReserve, spawnPoints, reachability, encounterLocks, enemyTypes, soloDebut];
+const CHECKS = [jumpReserve, spawnPoints, reachability, encounterLocks, enemyTypes, soloDebut, storyBeats];
 
 /**
  * Every check against one descriptor.
