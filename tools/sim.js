@@ -1359,6 +1359,77 @@ function chargerFight(game, input) {
   return rows;
 }
 
+/**
+ * The crossing's water: Lethe rather than a fall.
+ *
+ * Gate 1's void is answered by `bossFight` and the playthrough probes dying
+ * into it whenever a bot mistimes a jump; this is the one row that puts a
+ * bot into gate 2's water on purpose, because nothing else in the suite ever
+ * falls there by accident. `forgivingVoid` is what the game keys the two
+ * gates' behaviour apart on, and every assertion here is about that flag
+ * doing its job rather than about the fall itself.
+ */
+function crossingWater(game, input) {
+  const rows = [];
+  const say = (what, ok, detail = '') => rows.push({ what, ok, detail });
+  const bot = new Bot(game, input);
+  const p = game.player;
+
+  /** Drop the hunter below `voidY`, mid-air, over the crossing's water. */
+  const dropIntoWater = () => {
+    p.x = 37.5; // the gap between the crossing's first two stones
+    p.y = game.gate.voidY - 1;
+    p.vx = 0;
+    p.vy = -1;
+    bot.step();
+  };
+
+  // --- carrying a shadow in ---
+  game.start();
+  game._enterGate(1);
+  say('lands in the crossing', game.gate.id === 'gate-2', game.gate.id);
+  giveShadow(game, bot);
+  say('a shadow is bound before the fall', !!game.shadow);
+
+  const hpBefore = p.hp;
+  dropIntoWater();
+  say('the hunter survives', game.state === 'playing' && p.hp === hpBefore, `hp ${p.hp}/${hpBefore}`);
+  say('and the shadow is gone', !game.shadow);
+  say(
+    'and lands back on solid ground',
+    p.x === game.gate.spawnX && p.y >= 0,
+    `x ${p.x.toFixed(2)}, y ${p.y.toFixed(2)}`
+  );
+  say('and the System reports it', game.hud.el.toasts.textContent.includes('FORGOTTEN'));
+
+  // Binding again has to behave exactly like the first bind — no leftover
+  // state from a slot that was supposedly freed.
+  const boundAgain = giveShadow(game, bot);
+  say('binding again behaves like a first bind', boundAgain && !!game.shadow);
+
+  // --- falling with no shadow bound ---
+  game.start();
+  game._enterGate(1);
+  say('no shadow bound', !game.shadow);
+  const hpBefore2 = p.hp;
+  dropIntoWater();
+  say('costs no health', p.hp === hpBefore2, `${hpBefore2} -> ${p.hp}`);
+  say('and still returns to solid ground', p.x === game.gate.spawnX);
+
+  // --- gate 1's void is unchanged ---
+  game.start();
+  say('back in gate 1', game.gate.id === 'gate-1');
+  p.x = 4;
+  p.y = game.gate.voidY - 1;
+  p.vy = -1;
+  bot.step();
+  say('gate 1 still kills', game.state === 'dead');
+
+  game.start();
+  game.hud.screen('clear', false);
+  return rows;
+}
+
 /** Φ(z), via the Abramowitz & Stegun 7.1.26 approximation to erf. */
 function normalCdf(z) {
   const x = Math.abs(z) / Math.SQRT2;
@@ -1660,6 +1731,10 @@ function runAll(game, input, seed) {
   // And after even that, because it allocates a rig per set-up and the rule
   // does not have an exemption for probes whose author is confident.
   report.charger = scope(12, () => chargerFight(game, input));
+  // And after even that: it allocates too — `giveShadow` twice over, plus a
+  // gate transition — and the rule does not carve out an exception for the
+  // probe that happens to be last today either.
+  report.crossingWater = scope(13, () => crossingWater(game, input));
   report.ms = Math.round(performance.now() - t0);
 
   print(report);
@@ -1937,6 +2012,17 @@ function print(r) {
   lines.push('');
   lines.push('  Whether the crossing is winnable is a different question and is answered');
   lines.push('  below, by the same bot that clears gate 1.');
+  lines.push('');
+
+  lines.push('THE CROSSING’S WATER   (Lethe rather than a fall)');
+  for (const t of r.crossingWater) {
+    lines.push(`  ${t.what.padEnd(38)} ${t.detail.padEnd(28)} ${ok(t.ok)}`);
+  }
+  lines.push('');
+  lines.push('  Falling in costs the bound shadow and the walk back, never health, and');
+  lines.push('  never anything at all where there was no shadow to lose. Gate 1 is read');
+  lines.push('  right after, on the same probe, so a fix that makes water forgiving');
+  lines.push('  everywhere shows up here as gate 1 surviving its own void.');
   lines.push('');
 
   lines.push('GATE TRANSITION   (gate 1’s arch into the crossing, and gate 1 again)');

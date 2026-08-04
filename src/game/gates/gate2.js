@@ -3,9 +3,9 @@
 // Gate 1's exit does not lead home. It leads down to the river, and this is the
 // river: grey-blue, walled in by mist, with black water where gate 1 has void.
 //
-// It is a walk, and — now — one fight. The Ferryman and the water's habit of
-// taking what you carry into it are each still their own ticket; see
-// `docs/SPEC-CAMPAIGN.md` § The ten gates (02).
+// It is a walk, and — now — one fight. Falling into the water forgets rather
+// than kills; see `forgivingVoid` below. The Ferryman is still its own ticket;
+// see `docs/SPEC-CAMPAIGN.md` § The ten gates (02).
 //
 // The one fight is the charger, and it is here rather than anywhere else
 // because the crossing is what teaches movement before the hells demand it. It
@@ -54,8 +54,8 @@ const REALM = {
    *
    * Below every platform top and above every platform's underside, so the
    * stones read as standing *in* it rather than floating over it. `voidY` is
-   * far beneath: falling in is still a fall, because the alternative is the
-   * crossing's own mechanic and that is not this ticket's to build.
+   * far beneath: falling in is still a fall — `Game._fallInWater` is what
+   * makes landing in it survivable, keyed off `forgivingVoid` below.
    */
   water: { y: -1.8, color: 0x04070c, sheen: 0x7fb9c9 },
 };
@@ -139,6 +139,12 @@ export const GATE_2 = {
   spawnX: 2,
   /** Below the water, below the plinths: nothing is down there to land on. */
   voidY: -22,
+  /**
+   * Lethe rather than gate 1's void: falling below `voidY` here returns the
+   * hunter to `spawnX` at no health cost and costs the bound shadow, if any.
+   * See `Game._fallInWater`.
+   */
+  forgivingVoid: true,
   /** The far bank, which is where the arch stands. No arena — no Warden yet. */
   arenaTop: 0,
   exitX: 142,
