@@ -57,6 +57,12 @@ behaviour rather than parameterised numbers. Four of the ten Wardens are
 bosses. Every boss is a Warden; most Wardens are not bosses.
 _Avoid_: Guardian (that is one specific boss's name), raid boss, final boss
 
+**Charger**:
+The enemy that punishes standing still: it plants its feet, announces the
+charge, commits to a straight line, and is helpless while it recovers. One of
+the three new archetypes, and the crossing's.
+_Avoid_: Rusher, bull, ram, tackler
+
 **Yama**:
 The judge of the dead, and one figure rather than several — the same office
 called Yama in Vedic and Buddhist tradition, Yanluo Wang in Chinese, Enma in

@@ -329,6 +329,89 @@ export function buildBeast(skin = null) {
   return root;
 }
 
+// ---------------------------------------------------------------------------
+// Charger — the enemy that punishes standing still
+// ---------------------------------------------------------------------------
+
+/**
+ * Built low, long and front-heavy, because the silhouette has to say "this
+ * travels in a straight line" before the hunter has ever seen it do so.
+ *
+ * The node names are the beast's on purpose — `body`, `neck`, `eyeL`, `eyeR`,
+ * `leg0..3`. The eye flare is the game's shared vocabulary for "this is about
+ * to commit", and an enemy whose tell is animated through differently named
+ * nodes is an enemy whose tell drifts out of agreement with the others.
+ */
+export function buildCharger() {
+  const root = new THREE.Group();
+  const n = {};
+
+  const body = new THREE.Group();
+  body.position.y = 0.68;
+  root.add(body);
+  n.body = body;
+
+  const chest = part(1.02, 0.54, 0.62, P.chargerHide, { outline: 0.03 });
+  body.add(chest);
+
+  // The slab over the shoulders. This is the part that arrives first, and it
+  // is the heaviest thing on the model for that reason.
+  const plate = part(0.40, 0.44, 0.66, P.chargerHideDark, { outline: 0.026 });
+  plate.position.set(0.34, 0.09, 0);
+  body.add(plate);
+
+  const neck = new THREE.Group();
+  neck.position.set(0.48, -0.06, 0);
+  body.add(neck);
+  n.neck = neck;
+
+  const head = part(0.40, 0.32, 0.40, P.chargerHideDark, { outline: 0.026 });
+  head.position.x = 0.19;
+  neck.add(head);
+
+  for (const side of [-1, 1]) {
+    const horn = part(0.34, 0.10, 0.10, P.bone, { outline: 0.016 });
+    horn.position.set(0.40, 0.11, side * 0.16);
+    horn.rotation.z = 0.40;
+    horn.rotation.y = side * 0.22;
+    neck.add(horn);
+
+    const eye = decal(0.09, 0.07, P.chargerEye);
+    eye.position.set(0.40, 0.02, side * 0.13);
+    eye.rotation.y = Math.PI / 2;
+    neck.add(eye);
+    n[side < 0 ? 'eyeL' : 'eyeR'] = eye;
+  }
+
+  // Four thick legs, front pair and back pair, offset laterally in Z.
+  let i = 0;
+  for (const fx of [0.32, -0.32]) {
+    for (const side of [-1, 1]) {
+      const hip = new THREE.Group();
+      hip.position.set(fx, -0.25, side * 0.22);
+      body.add(hip);
+      const upper = part(0.18, 0.28, 0.18, P.chargerHideDark, { pivot: 'top', outline: 0.018 });
+      hip.add(upper);
+      const hoof = part(0.22, 0.12, 0.20, P.bone, { pivot: 'top', outline: 0.016 });
+      hoof.position.set(0.02, -0.28, 0);
+      hip.add(hoof);
+      n['leg' + i] = hip;
+      i++;
+    }
+  }
+
+  const tail = new THREE.Group();
+  tail.position.set(-0.50, 0.10, 0);
+  body.add(tail);
+  n.tail = tail;
+  const tailSeg = part(0.26, 0.10, 0.10, P.chargerHideDark, { outline: 0.014 });
+  tailSeg.position.x = -0.13;
+  tail.add(tailSeg);
+
+  root.userData.nodes = n;
+  return root;
+}
+
 /**
  * The shard that marks a claimable body.
  *

@@ -8,9 +8,9 @@
 // and winnability* can, and both are easy to break while tuning. Every bot
 // below has caught a real bug at least once.
 
-import { PLAYER, ATTACKS, SHADOW } from '../src/game/config.js';
+import { PLAYER, ATTACKS, SHADOW, CHARGER } from '../src/game/config.js';
 import { buildShard } from '../src/render/models.js';
-import { checkGates, controls, crossing } from './gatecheck.js';
+import { checkGates, controls, crossing, telegraphs } from './gatecheck.js';
 import { checkTouch } from './touchcheck.js';
 
 const DT = 1 / 120;
@@ -430,8 +430,24 @@ function checkGaps(game, arcs) {
  * gaps, swing at anything close. If a dumb bot can finish, the level contains
  * no unpassable geometry — which is the only claim this test makes.
  */
-function playthrough(game, input, { maxSeconds = 400, readTells = false, carryShadow = false } = {}) {
+function playthrough(game, input, opts = {}) {
   game.start();
+  return walkGate(game, input, opts);
+}
+
+/**
+ * The same bot, on whatever gate the game is already in.
+ *
+ * Split out of `playthrough` when the crossing acquired a charger. The gate
+ * transition probe used to walk gate 2 with a locomotion-only bot — hold right,
+ * jump at a lip — on the grounds that there was nothing there to fight, and it
+ * said so in a comment ending "the moment the crossing has enemies on it is the
+ * moment the two want to be one bot". That moment is this ticket. Two bots
+ * would mean the crossing is verified by something that cannot read a tell,
+ * which is to say by something that cannot play the game the charger is there
+ * to teach.
+ */
+function walkGate(game, input, { maxSeconds = 400, readTells = false, carryShadow = false } = {}) {
   const bot = new Bot(game, input, REACTION);
   const p = game.player;
   let attackCd = 0;
@@ -1071,47 +1087,24 @@ function transition(game, input) {
   const to = game.gate;
   say('the arch leads to the next gate', arrived, arrived ? `${to.id} — ${to.name}` : `still in ${from.id}`);
 
-  // Walk the crossing. Not `playthrough`: that starts by resetting to gate 1,
-  // and this gate has nothing to fight, so all it needs is the locomotion —
-  // hold right, jump when the ground runs out, spend the second jump only when
-  // actually falling short. The moment the crossing has enemies on it is the
-  // moment the two want to be one bot.
+  // Walk the crossing — with the playthrough's own bot, not a locomotion-only
+  // one. The crossing has a charger on it now, sealed in behind barriers, so a
+  // bot that only knows how to hold right and jump would stand against a
+  // barrier until the stuck timer fired and report the gate as unwalkable.
+  // `walkGate` is `playthrough` without the reset to gate 1, so what is
+  // measured here is the same bot, reading the same tells, that clears gate 1.
   const entryX = +p.x.toFixed(1);
   const entryT = game.runTime;
-  bot.hold('right', true);
-  let steps = 0;
-  const limit = Math.floor(120 / DT);
-  let stuckAt = p.x;
-  let stuckFor = 0;
-  while (arrived && game.state === 'playing' && steps < limit) {
-    const ahead = p.x + 1.0;
-    const groundAhead = game.level.groundAt(ahead, p.y + 0.6);
-    if (p.grounded && (groundAhead === -Infinity || p.y - groundAhead > 2.2)) bot.press('jump');
-    if (!p.grounded && p.vy < 0 && p.jumps < p.maxJumps) {
-      const under = game.level.groundAt(p.x, p.y + 0.6);
-      const landing = nextSolidAhead(game, p.x);
-      const overVoid = under === -Infinity || p.y - under > 2.2;
-      if (overVoid && landing && p.y < landing.y1 + 0.4) bot.press('jump');
-    }
-    if (p.grounded && groundAhead > p.y + 0.6) bot.press('jump');
-    bot.step();
-    steps++;
-    if (Math.abs(p.x - stuckAt) < 0.4) stuckFor += DT;
-    else {
-      stuckAt = p.x;
-      stuckFor = 0;
-    }
-    if (stuckFor > 20) break;
-  }
-  bot.releaseAll();
+  const run = arrived ? walkGate(game, input, { maxSeconds: 120, readTells: true }) : null;
 
   const walked = arrived && game.state === 'ended';
   say(
     'and the crossing is walkable',
     walked,
     walked
-      ? `x ${entryX} → ${to.exitX} in ${(game.runTime - entryT).toFixed(1)}s`
-      : `stopped at x ${p.x.toFixed(1)} — ${game.state}`
+      ? `x ${entryX} → ${to.exitX} in ${(game.runTime - entryT).toFixed(1)}s, ` +
+          `${run.kills} killed, ${run.damageTaken} taken`
+      : `stopped at x ${p.x.toFixed(1)} — ${run?.reason ?? game.state}`
   );
 
   // Walk into it from the far side.
@@ -1221,6 +1214,148 @@ function freshness(game) {
     game.level_ === 1 && game.exp === 0 && game.kills === 0 && game.damageTaken === 0 && game.runTime === 0,
     `lv ${game.level_}, ${game.kills} kills, ${Math.round(game.damageTaken)} damage`
   );
+  return rows;
+}
+
+/**
+ * The charger, on its own, doing each of the things it was built to do.
+ *
+ * The gate descriptor checks say it is met alone and that its wind-up clears
+ * the reaction floor; those are arithmetic over data. This is the other half —
+ * the behaviour, driven through `Game.update` at the real timestep, because
+ * "telegraphs, commits, and is punishable on recovery" is a claim about frames.
+ *
+ * It is set up on gate 1's approach rather than in the crossing, and that is
+ * deliberate: the approach is thirty-six units of flat, empty ground with every
+ * encounter marked cleared, so nothing here can be blamed on level geometry or
+ * on something else being alive. Whether the crossing is winnable *is* measured
+ * — by the transition probe above, with the same bot that clears gate 1.
+ *
+ * The probe allocates: a charger is a rig, and a rig is UUIDs. It runs last for
+ * that reason, and the rule it is obeying is the one written three times above.
+ */
+function chargerFight(game, input) {
+  const rows = [];
+  const say = (what, ok, detail = '') => rows.push({ what, ok, detail });
+  const bot = new Bot(game, input, 0);
+  const p = game.player;
+  const C = CHARGER.charge;
+
+  /** One charger and one hunter, alone on the approach, nothing else running. */
+  const setUp = (px, cx) => {
+    game.start();
+    for (const e of game.encounters) {
+      e.started = true;
+      e.cleared = true;
+    }
+    game.activeEncounter = null;
+    p.x = px;
+    p.y = game.level.groundAt(px) + 0.1;
+    p.vx = 0;
+    p.vy = 0;
+    game._spawn({ type: 'charger', x: cx });
+    return game.enemies[game.enemies.length - 1];
+  };
+  /** Step until `pred`, or give up after `seconds`. */
+  const until = (pred, seconds, each) => {
+    const n = Math.floor(seconds / DT);
+    for (let i = 0; i < n; i++) {
+      if (pred()) return true;
+      each?.();
+      bot.step();
+    }
+    return pred();
+  };
+
+  // 1. It announces itself, and the announcement is a state of its own rather
+  //    than a frame of the attack.
+  let c = setUp(12, 22);
+  const trace = [];
+  until(
+    () => c.state === 'charging',
+    14,
+    () => {
+      if (trace[trace.length - 1] !== c.state) trace.push(c.state);
+    }
+  );
+  const planted = trace[trace.length - 1] === 'telegraph';
+  say('it plants before it runs', planted && c.state === 'charging', trace.join(' → ') + ' → charging');
+
+  // 2. And its body, like everything else in this game, is safe to be inside.
+  //    Round 3 of the playtest log is what this row is for: a player who merely
+  //    *believes* contact hurts plays a different game from the one on offer.
+  c.state = 'recover';
+  c.phase = 4;
+  const contactFrom = game.damageTaken;
+  until(() => false, 1.0, () => {
+    p.x = c.x;
+    p.vx = 0;
+  });
+  say(
+    'and standing inside it costs nothing',
+    game.damageTaken === contactFrom,
+    `${Math.round(game.damageTaken - contactFrom)} damage over 1.0s of overlap`
+  );
+
+  // 3. Standing still costs exactly one charge — one, because `chargeHitSet`
+  //    means a body run through is hit once and not once per frame.
+  c = setUp(12, 22);
+  until(() => c.state === 'charging', 14);
+  const stillFrom = game.damageTaken;
+  until(() => c.state === 'recover', 3);
+  const took = Math.round(game.damageTaken - stillFrom);
+  say('standing still costs the charge', took === C.damage, `${took} damage, once, for ${C.damage} on the block`);
+
+  // 4. …and its recovery is where the fight is won. Measured rather than
+  //    asserted from `recover`: the window has to cover running back in, since
+  //    a charge ends past the hunter, and a window that only exists twelve
+  //    units away is not a window.
+  const hpFrom = c.hp;
+  let atkCd = 0;
+  const punishT = game.runTime;
+  // Run the whole window rather than until it leaves `recover`: the first swing
+  // that connects staggers it, which *is* the punish, and a loop that stopped
+  // there would report the window as a quarter of a second long.
+  until(
+    () => false,
+    C.recover,
+    () => {
+      atkCd -= DT;
+      const dx = c.x - p.x;
+      bot.hold('right', dx > 1.6);
+      bot.hold('left', dx < -1.6);
+      if (Math.abs(dx) < 2.2) {
+        p.facing = dx > 0 ? 1 : -1;
+        if (atkCd <= 0) {
+          bot.press('light');
+          atkCd = 0.2;
+        }
+      }
+    }
+  );
+  bot.releaseAll();
+  const dealt = Math.round(hpFrom - c.hp);
+  const worth = ATTACKS.light1.damage + ATTACKS.light2.damage;
+  say(
+    'and its recovery is a window worth taking',
+    dealt >= worth,
+    `${dealt} damage in ${(game.runTime - punishT).toFixed(2)}s — two light swings are ${worth}`
+  );
+
+  // 5. And it leaves a remnant, because SORGI's promise cannot be selectively
+  //    true. Killed outright rather than fought down: what is under test is the
+  //    body it leaves, not how long it takes to make one.
+  const corpsesFrom = game.corpses.length;
+  c.takeHit({ damage: c.hp + 1, knock: 0, launch: 0, fromX: p.x });
+  until(() => game.corpses.length > corpsesFrom, 2.0);
+  say(
+    'and it leaves a remnant',
+    game.corpses.length > corpsesFrom && c.leavesCorpse,
+    `${game.corpses.length - corpsesFrom} claimable body`
+  );
+
+  game.start();
+  game.hud.screen('clear', false);
   return rows;
 }
 
@@ -1516,6 +1651,15 @@ function runAll(game, input, seed) {
   // with — including, twice, in the comments directly above. It prints further
   // up, where it reads next to the other static checks.
   report.touch = checkTouch();
+  // Arithmetic over the config rather than over a descriptor, handed the
+  // suite's own reaction latency so that "the window this tell buys" means the
+  // same thing here as it does in the paired test above. It draws nothing and
+  // could sit anywhere; it sits here because the rule says last and this file
+  // has now written "this one is different" three times without meaning it.
+  report.telegraphs = telegraphs(REACTION);
+  // And after even that, because it allocates a rig per set-up and the rule
+  // does not have an exemption for probes whose author is confident.
+  report.charger = scope(12, () => chargerFight(game, input));
   report.ms = Math.round(performance.now() - t0);
 
   print(report);
@@ -1589,6 +1733,20 @@ function print(r) {
   lines.push('  happened to be looking. Each control asserts only its own check went');
   lines.push('  red: a check that rejected everything would pass this block and be');
   lines.push('  caught by the real gates above it going red in the same report.');
+  lines.push('');
+
+  lines.push(`TELEGRAPHS   (every tell, against the ${Math.round(REACTION * 1000)} ms the bots react in)`);
+  for (const t of r.telegraphs) {
+    lines.push(`  ${t.check.padEnd(26)} ${t.detail.padEnd(56)} ${ok(t.ok)}`);
+  }
+  lines.push('');
+  lines.push("  The floor is the beast's pounce — the first tell gate 1 teaches, the one");
+  lines.push('  four playtest rounds were played against, and the one the paired');
+  lines.push('  signed-rank test below is evidence for. A new enemy that undercuts it is');
+  lines.push('  asking for a reaction this game has never shown to be available. The');
+  lines.push("  Guardian's rows are its *enraged* wind-ups, because those are the ones");
+  lines.push('  that have to be answered; its sweep clears the floor by nine');
+  lines.push('  milliseconds, which is worth knowing and is not a number to go shaving.');
   lines.push('');
 
   lines.push('TOUCH LAYOUT   (static checks, every screen size it claims, every run)');
@@ -1765,6 +1923,21 @@ function print(r) {
     lines.push("  latency-delayed `heavy` matures — that last one is why the attempt is");
     lines.push('  committed for a fixed window rather than re-decided every frame.');
   }
+
+  lines.push('THE CHARGER   (one of them, alone, on empty ground)');
+  for (const t of r.charger) {
+    lines.push(`  ${t.what.padEnd(44)} ${t.detail.padEnd(46)} ${ok(t.ok)}`);
+  }
+  lines.push('');
+  lines.push('  Telegraphs, commits, and is punishable on recovery — the three halves of');
+  lines.push('  one archetype, and none of them is visible in a descriptor. The recovery');
+  lines.push('  row is measured rather than read off `CHARGER.charge.recover`, because a');
+  lines.push('  charge ends *past* the hunter and a window that only exists eight units');
+  lines.push('  away is not a window: what is timed is running back in and swinging.');
+  lines.push('');
+  lines.push('  Whether the crossing is winnable is a different question and is answered');
+  lines.push('  below, by the same bot that clears gate 1.');
+  lines.push('');
 
   lines.push('GATE TRANSITION   (gate 1’s arch into the crossing, and gate 1 again)');
   for (const t of r.transition) {

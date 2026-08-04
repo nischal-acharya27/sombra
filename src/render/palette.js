@@ -50,6 +50,14 @@ export const P = {
   shadowSpine: 0x7f5cff,
   shadowEye: 0x5fd8ff,
 
+  // The charger. Slate and bone rather than the beast's violet-black: the
+  // hunter has to tell at a glance which tell they are about to be asked to
+  // read, and the two are met a gate apart with nothing else to compare
+  // against. The eyes are the tell, so they are the one warm thing on it.
+  chargerHide: 0x3a4657,
+  chargerHideDark: 0x212a38,
+  chargerEye: 0xff7a3b,
+
   bossPlate: 0x3b3550,
   bossPlateDark: 0x221e33,
   bossCore: 0xb072ff,

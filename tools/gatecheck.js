@@ -11,16 +11,21 @@
 // finds those in seconds of simulation and only on the seeds where it happens
 // to walk into them. Arithmetic finds them every time, before anything runs.
 //
-// The five checks are the ones `docs/SPEC-CAMPAIGN.md` § Testing Decisions
-// names. Every one of them is watched failing on every run — see `CONTROLS` at
-// the bottom, and the reasoning there.
+// Five of the checks are the ones `docs/SPEC-CAMPAIGN.md` § Testing Decisions
+// names; `solo debut` is the sixth, and answers user story 14. Every one of
+// them is watched failing on every run — see `CONTROLS` at the bottom, and the
+// reasoning there.
+//
+// `telegraphs()` at the bottom is the same kind of arithmetic pointed at the
+// config rather than at a descriptor: it holds every enemy's wind-up to the
+// shortest one the hunter has ever been asked to read.
 //
 // Nothing here reads the *built* gate. The suite's GAP REACHABILITY table does,
 // and the two are deliberately different questions: this file asks whether the
 // descriptor is authored correctly, that one asks whether `Level` built what
 // the descriptor said.
 
-import { PLAYER, BARRIER } from '../src/game/config.js';
+import { PLAYER, BARRIER, BEAST, CHARGER, WISP, GUARDIAN } from '../src/game/config.js';
 import { ARCHETYPES } from '../src/game/game.js';
 import { GATES } from '../src/game/gates/index.js';
 
@@ -352,17 +357,140 @@ function enemyTypes(gate) {
   );
 }
 
-const CHECKS = [jumpReserve, spawnPoints, reachability, encounterLocks, enemyTypes];
-
-/** Every check against one descriptor. */
-export function checkGate(gate, arcs) {
-  const map = routes(gate, arcs);
-  return CHECKS.map((fn) => fn(gate, arcs, map));
+/**
+ * 6. An archetype is met alone the first time it is met.
+ *
+ * `docs/SPEC-CAMPAIGN.md` user story 14: a tell learned in isolation is a tell
+ * learned, and a tell first met in a crowd is one the hunter infers wrongly and
+ * then has to unlearn. Three new archetypes arrive over gates 2, 3 and 4, so
+ * this is the constraint most likely to be broken quietly — by adding one
+ * enemy to an encounter that already existed, which looks like content and
+ * reads as pacing.
+ *
+ * Campaign-ordered rather than per-gate, which is why it is the one check that
+ * takes state: `seen` carries forward across gates, so gate 4's summoner is
+ * measured against everything gates 1–3 already taught. A descriptor checked on
+ * its own — a control fixture — gets whatever `seen` its caller hands it.
+ *
+ * **What it does not cover, stated so nobody assumes otherwise.** It compares
+ * archetypes within one encounter's spawn list. It cannot see something left
+ * alive by an *earlier* encounter — an unsealed fight the hunter ran away from,
+ * or two locks whose ranges overlap — so "alone in its encounter" is the claim,
+ * not "alone on the map". The crossing meets the stronger version by having
+ * nothing else in the gate at all; gates 3 and 4 will have to be authored to
+ * meet it too, and this check will not be what notices if they are not.
+ */
+function soloDebut(gate, arcs, map, seen) {
+  const bad = [];
+  const debuts = [];
+  for (const enc of gate.encounters ?? []) {
+    const kinds = [...new Set((enc.spawns ?? []).map((s) => bodyOf(gate, s).archetype))];
+    const fresh = kinds.filter((k) => !seen.has(k));
+    for (const k of kinds) seen.add(k);
+    if (!fresh.length) continue;
+    debuts.push(`${fresh.join(', ')} in ${enc.id}`);
+    if (kinds.length > 1) bad.push(`${enc.id}: ${fresh.join(', ')} debuts alongside ${kinds.join(' + ')}`);
+  }
+  return row(gate.id, 'solo debut', bad.length === 0, bad.join('; ') || debuts.join('; ') || 'nothing new here');
 }
 
-/** Every check against every gate the campaign contains. */
+const CHECKS = [jumpReserve, spawnPoints, reachability, encounterLocks, enemyTypes, soloDebut];
+
+/**
+ * Every check against one descriptor.
+ *
+ * `seen` is the set of archetypes the hunter has already been introduced to,
+ * and `soloDebut` adds to it. Callers wanting a descriptor judged on its own
+ * hand it a set that already contains everything — see `nothingNew` below.
+ */
+export function checkGate(gate, arcs, seen = new Set()) {
+  const map = routes(gate, arcs);
+  return CHECKS.map((fn) => fn(gate, arcs, map, seen));
+}
+
+/** Every check against every gate the campaign contains, in campaign order. */
 export function checkGates(arcs) {
-  return GATES.flatMap((gate) => checkGate(gate, arcs));
+  const seen = new Set();
+  return GATES.flatMap((gate) => checkGate(gate, arcs, seen));
+}
+
+// -- telegraphs -------------------------------------------------------------
+
+/**
+ * Every tell in the game, and the shortest one the hunter has ever had to
+ * answer.
+ *
+ * The floor is the beast's pounce, and it is *derived* rather than chosen: it
+ * is the first tell gate 1 teaches, it is the one four playtest rounds were
+ * played against, and the suite's paired signed-rank test is the evidence that
+ * it buys what it is supposed to. A new enemy whose wind-up undercuts it is
+ * asking the hunter for a reaction the game has never shown to be available.
+ *
+ * The Guardian's rows are its *enraged* wind-ups, because those are the ones
+ * that actually have to be answered — measuring the first-phase numbers would
+ * report a comfort the second phase does not have. Its sweep at 0.429 s is the
+ * tightest thing in the game and clears the floor by 9 ms, which is worth
+ * knowing and is not a number to go shaving.
+ */
+const TELLS = [
+  { archetype: 'beast', tell: 'pounce', windup: BEAST.pounce.windup },
+  { archetype: 'charger', tell: 'charge', windup: CHARGER.charge.windup },
+  { archetype: 'wisp', tell: 'bolt', windup: WISP.shoot.windup },
+  ...Object.entries(GUARDIAN.attacks).map(([name, a]) => ({
+    archetype: 'guardian',
+    tell: `${name}, enraged`,
+    windup: a.windup * GUARDIAN.enrageWindupMul,
+  })),
+];
+
+const TELL_FLOOR = BEAST.pounce.windup;
+
+/**
+ * The telegraph check.
+ *
+ * `reaction` is passed in rather than imported, for the same reason `arcs` is:
+ * it belongs to the suite, which is where reaction latency is defined and
+ * justified, and importing it here would put a second copy of the number in the
+ * repo. It is also what makes this "measured the same way" — the margin
+ * reported is against the same 250 ms both playthrough bots play at.
+ */
+export function telegraphs(reaction) {
+  const out = [];
+  const judge = (t) => ({
+    check: `${t.archetype} · ${t.tell}`,
+    ok: t.windup >= TELL_FLOOR - 1e-9,
+    detail:
+      `${t.windup.toFixed(3)}s wind-up, ` +
+      `${(t.windup - reaction).toFixed(3)}s left after ${reaction.toFixed(2)}s of reaction`,
+  });
+  for (const t of TELLS) out.push(judge(t));
+
+  out.push({
+    check: 'the floor outlasts the reaction',
+    ok: TELL_FLOOR > reaction,
+    detail: `floor ${TELL_FLOOR.toFixed(3)}s against ${reaction.toFixed(2)}s — the beast's pounce sets it`,
+  });
+
+  // A list nobody maintains is a list that silently stops covering things, so
+  // the check that the table is complete is part of the check.
+  const missing = Object.keys(ARCHETYPES).filter((a) => !TELLS.some((t) => t.archetype === a));
+  out.push({
+    check: 'every archetype has a tell',
+    ok: missing.length === 0,
+    detail: missing.length
+      ? `nothing listed for ${missing.join(', ')}`
+      : `${TELLS.length} tells across ${Object.keys(ARCHETYPES).length} archetypes`,
+  });
+
+  // And the control: a wind-up under the floor has to come out red, or this
+  // whole block is a list of numbers nobody is actually gating on.
+  const short = judge({ archetype: 'control', tell: 'short', windup: TELL_FLOOR - 0.05 });
+  out.push({
+    check: 'a tell under the floor',
+    ok: !short.ok,
+    detail: short.ok ? 'NOT CAUGHT' : `${short.detail} — caught`,
+  });
+  return out;
 }
 
 // -- controls ---------------------------------------------------------------
@@ -421,6 +549,14 @@ const LAYERED = {
     { x0: 4, x1: 6, top: 3 },
   ],
 };
+
+/**
+ * A hunter who has already met everything, which is what a control fixture
+ * wants: it is one gate judged on its own, not a campaign, so nothing in it
+ * should read as a debut. The one control that *is* about debuts asks for an
+ * empty set instead.
+ */
+const nothingNew = () => new Set(Object.keys(ARCHETYPES));
 
 /** A copy of CONTROL with one thing wrong. */
 function broken(mutate) {
@@ -497,7 +633,21 @@ const CONTROLS = [
   {
     check: 'enemy types',
     why: 'an archetype nothing builds',
-    gate: broken((g, e, s) => (s[0].type = 'charger')),
+    // A plural rather than a plausible future archetype. This control used to
+    // name `charger`, which was a name nothing built right up until the
+    // crossing's ticket built one — at which point a negative control would
+    // have quietly gone green and taken the check's evidence with it.
+    gate: broken((g, e, s) => (s[0].type = 'beasts')),
+  },
+  {
+    check: 'solo debut',
+    why: 'a new archetype met in a crowd',
+    // Nothing is mutated: the control gate's one encounter already mixes a
+    // beast and a wisp, and judged against an empty `seen` — a hunter who has
+    // met neither — that is precisely the fault. Which is also why every other
+    // control here is judged against `nothingNew()`.
+    gate: broken(() => {}),
+    seen: () => new Set(),
   },
   {
     check: 'enemy types',
@@ -516,7 +666,7 @@ const CONTROLS = [
 export function controls(arcs) {
   const out = [];
   const green = (name, why, gate) => {
-    const rows = checkGate(gate, arcs);
+    const rows = checkGate(gate, arcs, nothingNew());
     out.push({
       check: name,
       why,
@@ -528,7 +678,7 @@ export function controls(arcs) {
   green('a stacked ledge', 'geometry that is not one chain', LAYERED);
 
   for (const c of CONTROLS) {
-    const rows = checkGate(c.gate, arcs);
+    const rows = checkGate(c.gate, arcs, c.seen ? c.seen() : nothingNew());
     const target = rows.find((r) => r.check === c.check);
     // A control naming a check that does not exist is a red row rather than an
     // exception: throwing here would take the whole report down with it.

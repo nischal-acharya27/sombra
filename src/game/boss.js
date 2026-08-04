@@ -253,7 +253,7 @@ export class Guardian extends Actor {
   }
 
   _windupTime() {
-    return this.cfg.attacks[this.attackName].windup * (this.enraged ? 0.78 : 1);
+    return this.cfg.attacks[this.attackName].windup * (this.enraged ? this.cfg.enrageWindupMul : 1);
   }
 
   _chooseAttack(dist) {

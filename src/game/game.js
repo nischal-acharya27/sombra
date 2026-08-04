@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { Level } from './level.js';
 import { Player } from './player.js';
-import { Beast, Wisp, Bolt } from './enemies.js';
+import { Beast, Charger, Wisp, Bolt } from './enemies.js';
 import { Shadow, Corpse } from './shadow.js';
 import { Guardian } from './boss.js';
 import { GameCamera } from './camera.js';
@@ -30,10 +30,10 @@ function attackDamage(e) {
 
 /**
  * The archetypes a gate may name in a spawn, and the one its Warden may name.
- * A gate says `beast` or `wisp` directly and `warden` for its own — which
+ * A gate names a grunt archetype directly and says `warden` for its own — which
  * archetype that is, and with what numbers, is the Warden block's to say.
  */
-export const ARCHETYPES = { beast: Beast, wisp: Wisp, guardian: Guardian };
+export const ARCHETYPES = { beast: Beast, charger: Charger, wisp: Wisp, guardian: Guardian };
 
 export class Game {
   /** @param gates the campaign, in order — see `src/game/gates/`. */

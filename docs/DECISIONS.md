@@ -999,6 +999,52 @@ real button on it, so a gate is completable and repeatable without one. If the
 phone playtest wants pause mid-run, that is a decision to take on its own
 evidence rather than smuggle in here.
 
+## The charger, and why its numbers are arithmetic rather than feel
+
+The first of the three new archetypes. It exists to punish standing still, so
+that the crossing teaches movement before the hells demand it.
+
+**The whole design is four numbers and one subtraction.** A charge covers
+`speed × dur` = 8.1 units, and it will only commit from inside `range` = 7.5.
+That ordering is the "punishes standing still" half: a hunter who does not move
+is hit from anywhere the charger is willing to start, with no distance to back
+into and no clause to argue about. The other half is that answering it always
+works with room to spare — the tell is read 0.25 s in, leaving 0.27 s of
+wind-up, which buys a 4.19-unit dash plus about a unit of run. The charge then
+starts from at least 3.0 + 5.2 = 8.2 units and closes at 18 − 9.6 = 8.4 a
+second, needing 0.98 s against the 0.45 s it has.
+
+None of that was arrived at by feel, and the reason matters: the first version
+had `dur` at 0.7 s and no minimum range, which made the charge unanswerable by
+moving away and left the enemy recovering twelve units from the hunter — a
+"punish window" nobody could reach. The spec's own warning is that three new
+telegraphs validated by one playtester is where this project is most likely to
+go wrong. Numbers that can be derived should be derived, so that the phone
+playtest is spent on the things that cannot be.
+
+**The recovery is the ticket, and it is measured rather than declared.** A
+charge ends *past* the hunter, so `recover` has to cover running back in as well
+as swinging; reading 1.3 s off the config would be reporting a window that only
+exists where nobody is standing. The suite times the run-in and the swings and
+reports what the window is actually worth: 59 of its 64 HP, which is a full
+light chain. Two read tells kill it and nothing else does.
+
+**It is introduced alone, and that is enforced rather than intended.** Nothing
+else spawns in the crossing at all, the encounter is sealed so the lesson cannot
+be walked past, and the `solo debut` check holds gates 3 and 4 to the same thing
+when the armoured enemy and the summoner arrive. A tell first met in a crowd is
+a tell the player infers wrongly and then has to unlearn.
+
+**Two rules held without argument.** No contact damage — the suite stands the
+hunter inside a charger for a second and asserts zero, because round 3 of the
+playtest log records what happens when a player merely *believes* a body hurts.
+And it leaves a remnant, because SORGI's promise cannot be selectively true.
+
+**One number moved that was not the charger's.** `GUARDIAN.enrageWindupMul` was
+a `0.78` literal in `boss.js` until the telegraph check needed to read it. The
+"every tunable in `config.js`" rule exists precisely so that a number nobody can
+find is not silently exempt from the checks.
+
 ## Art direction
 
 The palette **darkens progressively left to right** — pastel at the entrance,
