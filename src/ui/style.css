@@ -502,3 +502,114 @@ kbd {
 .stats div { display: flex; justify-content: space-between; gap: 40px; }
 .stats span { color: #8fb4cc; }
 .stats b { color: #fff; }
+
+/* ---------- Touch controls ---------- */
+
+/* Sizes and positions are not here. Every number lives in the layout
+   descriptor in src/ui/touch.js, which writes `--b` and the per-target offsets
+   as inline styles — because tools/touchcheck.js has to be able to read the
+   layout and answer whether all seven verbs are reachable at four screen
+   sizes, and it cannot read a stylesheet. What is left here is appearance.
+
+   Below `.screen`'s z-index, so the title, pause, death and clear overlays sit
+   over the controls rather than under them. */
+#touch {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  /* The container catches nothing: only the targets do, so the clear space
+     between them is not a wall in front of the fight. */
+  pointer-events: none;
+  touch-action: none;
+  /* Absolutely positioned children resolve against the padding box, so this is
+     what keeps a button out from under a notch or a home indicator. */
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.touch-target {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  /* Resting translucency is deliberate and load-bearing: the play plane runs
+     behind the bottom of the frame, and a control you cannot see through is a
+     control that hides the enemy walking under it. */
+  background: rgba(10, 20, 38, 0.3);
+  border: 1px solid rgba(120, 170, 210, 0.32);
+  box-shadow: 0 0 16px rgba(6, 12, 26, 0.5), inset 0 0 18px rgba(10, 30, 60, 0.4);
+  transition: background 0.08s, border-color 0.08s, box-shadow 0.08s, transform 0.08s;
+}
+
+.touch-btn {
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #cfe6f5;
+}
+.touch-btn b {
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-shadow: 0 1px 3px #000;
+  pointer-events: none;
+}
+
+/* Colour carries the grouping a thumb learns by position: the two swings cyan,
+   the bolt blue like the mana bar, SORGI violet like the shard it claims. */
+.touch-btn.tone-plain { border-color: rgba(150, 178, 200, 0.36); color: #c2d4e2; }
+.touch-btn.tone-cyan { border-color: rgba(95, 216, 255, 0.42); }
+.touch-btn.tone-blue { border-color: rgba(63, 127, 232, 0.46); color: #bcd8ff; }
+.touch-btn.tone-violet { border-color: rgba(157, 92, 255, 0.5); color: #dcc9ff; }
+
+.touch-btn.on {
+  background: rgba(36, 88, 142, 0.72);
+  border-color: var(--cyan);
+  box-shadow: 0 0 26px rgba(95, 216, 255, 0.5), inset 0 0 22px rgba(95, 216, 255, 0.22);
+  transform: scale(0.93);
+}
+.touch-btn.tone-violet.on {
+  background: rgba(78, 42, 132, 0.78);
+  border-color: var(--violet);
+  box-shadow: 0 0 26px rgba(157, 92, 255, 0.55), inset 0 0 22px rgba(157, 92, 255, 0.25);
+}
+
+/* One target, not two. A thumb slides across it and the direction follows; a
+   pair of separate buttons would need a gap between them that eats the input
+   halfway through a turn. */
+.touch-steer {
+  border-radius: calc(var(--b) * 0.3);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  overflow: hidden;
+}
+.touch-steer span {
+  text-align: center;
+  font-size: calc(var(--b) * 0.42);
+  line-height: 1;
+  color: #9fc4dd;
+  opacity: 0.42;
+  transition: opacity 0.08s, color 0.08s, text-shadow 0.08s;
+}
+.touch-steer.l .l,
+.touch-steer.r .r {
+  opacity: 1;
+  color: var(--cyan);
+  text-shadow: 0 0 16px var(--cyan);
+}
+
+/* The keyboard legend on the title screen is a list of keys the device does
+   not have. The buttons are labelled; nothing replaces it. */
+body.touch .controls-hint { display: none; }
+
+/* The two pieces of HUD that live along the bottom of the frame move up above
+   the controls, keeping the order they had.
+
+   Not cosmetic. The objective line is centred and the boss bar is 58vw wide, so
+   on a phone both run under the button cluster — the boss's health, which is
+   the one number the fight is read from, behind a thumb. `--b` is the touch
+   layout's own unit, written onto the document by src/ui/touch.js, so this
+   tracks the controls at every screen size instead of guessing at a gap. */
+body.touch .objective { bottom: calc(var(--b) * 3.3); }
+body.touch .boss-bar { bottom: calc(var(--b) * 3.95); }

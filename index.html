@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- `viewport-fit=cover` so the game reaches under a notch and `#touch` pads
+     itself back out with the safe-area insets; `user-scalable=no` because a
+     double-tap on the slash button is a double tap, not a zoom. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>SOMBRA</title>
 <link rel="stylesheet" href="src/ui/style.css">
 <script type="importmap">
@@ -42,6 +45,11 @@
       <div class="boss-track"><i></i></div>
     </div>
   </div>
+
+  <!-- On-screen controls. Empty here and built from the layout descriptor in
+       src/ui/touch.js, which is also what tools/touchcheck.js reads — markup
+       can only be checked by looking at it. -->
+  <div id="touch" class="hidden"></div>
 
   <div id="windows"></div>
   <div id="toasts"></div>

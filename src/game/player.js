@@ -194,13 +194,24 @@ export class Player extends Actor {
     // when nothing is near" would fix that and gut the design, because standing
     // still mid-fight being a gamble is the entire cost of the mechanic.
     //
+    // A thumb cannot hold `down`, though, so touch sends `sorgi` — one target,
+    // which is the touch budget's first constraint. Two ways in, one behaviour:
+    // the keyboard keeps its chord and neither route knows the other exists.
+    //
     // `pressed()` is the last term, as everywhere in this file: establish there
-    // is a body to claim, then consume.
-    if (canCancel && this.grounded && input.down('down')) {
-      const corpse = this.ctx.nearestCorpse?.(this.x, this.y);
-      if (corpse && input.pressed('heavy')) {
-        this._startExtract(corpse);
-        return;
+    // is a body to claim, then consume. `peek` decides *which* press to look
+    // for without consuming either, so the frames where neither route is asking
+    // skip the branch entirely — which is what keeps a keyboard run
+    // bit-identical and keeps `nearestCorpse` off the frames nobody is trying
+    // to claim a remnant on.
+    if (canCancel && this.grounded) {
+      const claim = input.down('down') ? 'heavy' : input.peek('sorgi') ? 'sorgi' : null;
+      if (claim) {
+        const corpse = this.ctx.nearestCorpse?.(this.x, this.y);
+        if (corpse && input.pressed(claim)) {
+          this._startExtract(corpse);
+          return;
+        }
       }
     }
 

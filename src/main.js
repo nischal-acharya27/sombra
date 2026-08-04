@@ -5,6 +5,7 @@ import { Loop } from './engine/loop.js';
 import { Input } from './engine/input.js';
 import { Audio } from './engine/audio.js';
 import { HUD } from './ui/hud.js';
+import { TouchControls } from './ui/touch.js';
 import { Game } from './game/game.js';
 import { GATES } from './game/gates/index.js';
 
@@ -21,6 +22,14 @@ const audio = new Audio();
 const input = new Input();
 const game = new Game(world, hud, audio, input, GATES);
 
+// On-screen controls, on a device with a thumb — or on any device with
+// `?touch`, which is how the layout gets looked at without hunting for a phone.
+// Not in `?sim`: the suite drives `Input` directly and never starts the loop,
+// so the controls would be DOM nobody can press sitting under the report.
+const touch =
+  !location.search.includes('sim') && TouchControls.wanted() ? new TouchControls(input) : null;
+if (touch) document.body.classList.add('touch');
+
 let paused = false;
 let titleT = 0;
 
@@ -30,6 +39,10 @@ const loop = new Loop(
     game.update(dt);
   },
   (dt) => {
+    // Only while there is a hunter to drive. `cleared` counts — the Warden is
+    // down and the walk to the arch is still walking. Hiding them releases
+    // whatever was held, so a direction cannot survive into the next run.
+    touch?.setVisible(!paused && (game.state === 'playing' || game.state === 'cleared'));
     if (game.state === 'idle') {
       titleCamera(dt);
       game.vfx.update(dt);
@@ -139,4 +152,4 @@ if (location.search.includes('sim')) {
 // the filter itself was removed instead. See the note in src/ui/style.css.
 
 // Handy for poking at a running game from the console.
-window.__game = { game, world, loop, audio, input, hud };
+window.__game = { game, world, loop, audio, input, hud, touch };

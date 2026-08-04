@@ -259,10 +259,16 @@ its endpoints move into the gate descriptor, so each realm darkens or brightens
 across its own length. Gate 8 brightening back toward gate 1's pastel is the
 payoff and it costs nothing structurally.
 
-**Touch is not built in this spec, but every gate is authored against the
-budget:** no required chord, jump margins at or above 25% reserve, never a
-direction plus two buttons at once. Constraint 2 is enforced by the suite rather
-than by memory — see below.
+**Every gate is authored against the touch budget:** no required chord, jump
+margins at or above 25% reserve, never a direction plus two buttons at once.
+Constraint 2 is enforced by the suite rather than by memory — see below.
+
+The controls themselves now exist (`src/ui/touch.js`), and building them moved
+constraint 2 rather than merely satisfying it: the arc the 25% is measured
+against is a jump whose button is never released, which a thumb does not
+produce. The jump control holds the press for the length of the rise so that the
+measured arc and the played arc are the same one. `DECISIONS.md` § The touch
+scheme carries the numbers.
 
 ## Testing Decisions
 
@@ -312,9 +318,14 @@ kiting leaves the Guardian around 590 of 900.
 
 ## Out of Scope
 
-- **Touch controls themselves.** Specified as a budget here, built separately.
-  Gate 2 is to be played on a real phone before gate 3 is authored, and that
-  playtest is the only thing that can validate the budget.
+- ~~**Touch controls themselves.**~~ **Built 2026-08-04**, because this entry and
+  § Further Notes could not both hold: the checkpoint that gates 3–10 is playing
+  the crossing *on a phone*, and there was nothing to play it with. Seven
+  controls for seven verbs, authored against the budget, with the layout as a
+  descriptor the suite checks. Building them found that constraint 2 was being
+  asserted against a jump whose button is never released — see `DECISIONS.md`
+  § The touch scheme. The playtest is still the only thing that can validate
+  the budget, and it is still owed.
 - **The Android build.** Capacitor or TWA wrapping, Play Console setup, ad SDK
   integration. None of it changes the game's code and all of it is downstream of
   the game existing.
