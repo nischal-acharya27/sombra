@@ -394,7 +394,6 @@ export class Charger extends Enemy {
     this.finishSetup();
     this.phase = 0;
     this.cooldown = rand(cfg.cooldown[0], cfg.cooldown[1]);
-    this.homeX = x;
     this.legPhase = rand(0, 6);
     /** One victim per charge — the convention `Game._resolveCombat` reads. */
     this.chargeHitSet = new Set();

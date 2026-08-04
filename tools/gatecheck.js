@@ -371,6 +371,14 @@ function enemyTypes(gate) {
  * takes state: `seen` carries forward across gates, so gate 4's summoner is
  * measured against everything gates 1–3 already taught. A descriptor checked on
  * its own — a control fixture — gets whatever `seen` its caller hands it.
+ *
+ * **What it does not cover, stated so nobody assumes otherwise.** It compares
+ * archetypes within one encounter's spawn list. It cannot see something left
+ * alive by an *earlier* encounter — an unsealed fight the hunter ran away from,
+ * or two locks whose ranges overlap — so "alone in its encounter" is the claim,
+ * not "alone on the map". The crossing meets the stronger version by having
+ * nothing else in the gate at all; gates 3 and 4 will have to be authored to
+ * meet it too, and this check will not be what notices if they are not.
  */
 function soloDebut(gate, arcs, map, seen) {
   const bad = [];

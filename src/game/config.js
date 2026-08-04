@@ -292,22 +292,22 @@ export const SHADOW = {
  * a lane. That difference is the whole archetype, and every number here exists
  * to protect it:
  *
- * `charge.range` is long and `charge.minRange` is short, so the threat is a
- * *lane* rather than a lunge — crowded in close it backs off to reopen one
- * instead of attacking, which is what makes "keep moving" the answer rather
- * than "stand behind it".
+ * The threat is a *lane* rather than a lunge: it commits from a distance, and
+ * crowded closer than `charge.minRange` it backs off to reopen one instead of
+ * attacking. That is what makes "keep moving" the answer rather than "stand
+ * behind it".
  *
  * `charge.windup` is 0.52 against the beast's 0.42, and that ordering is
  * checked rather than remembered: `telegraphs()` in `tools/gatecheck.js` holds
  * every tell in the game to the shortest one gate 1 taught, measured against
- * the same 250 ms reaction latency the suite's bots play at. A charge covers
- * 12.6 units and cannot be walked out of once it starts, so it is the one tell
- * that must not be the tight one.
+ * the same 250 ms reaction latency the suite's bots play at. A charge cannot be
+ * walked out of once it starts, so it is the one tell that must not be the
+ * tight one.
  *
  * `charge.recover` is the ticket. A committed charge that ends in a long,
  * rooted recovery is what makes reading the tell *pay* — the hunter is not
- * merely spared damage, they are handed the window they kill it in. `hp` is
- * two full light chains (59 each), so the window has to be earned twice.
+ * merely spared damage, they are handed the window they kill it in. The suite
+ * measures the window at 59 of its 64 HP, so two of them kill it.
  *
  * `contactDamage: 0`, like everything else in the game. Nothing it *is* harms
  * the hunter; only what it *does*.

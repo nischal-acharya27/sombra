@@ -1630,10 +1630,6 @@ function runAll(game, input, seed) {
   // with. They print further up, where they read best.
   report.gates = checkGates(report.arcs);
   report.controls = controls(report.arcs);
-  // Same kind of arithmetic, pointed at the config rather than at a descriptor,
-  // and handed the suite's own reaction latency so that "the window this tell
-  // buys" means the same thing here as it does in the paired test above.
-  report.telegraphs = telegraphs(REACTION);
 
   // Genuinely last, with nothing after it at all.
   //
@@ -1655,6 +1651,12 @@ function runAll(game, input, seed) {
   // with — including, twice, in the comments directly above. It prints further
   // up, where it reads next to the other static checks.
   report.touch = checkTouch();
+  // Arithmetic over the config rather than over a descriptor, handed the
+  // suite's own reaction latency so that "the window this tell buys" means the
+  // same thing here as it does in the paired test above. It draws nothing and
+  // could sit anywhere; it sits here because the rule says last and this file
+  // has now written "this one is different" three times without meaning it.
+  report.telegraphs = telegraphs(REACTION);
   // And after even that, because it allocates a rig per set-up and the rule
   // does not have an exemption for probes whose author is confident.
   report.charger = scope(12, () => chargerFight(game, input));
