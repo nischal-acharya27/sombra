@@ -395,3 +395,36 @@ where to look. It rules out a regression obvious enough to notice; it does not
 establish that the gate feels identical, and nobody should quote it as though it
 did.
 
+---
+
+# Spot-check — build `757a6aa`, 2026-08-05
+
+Not a round; a data point for #13, "Play the crossing on a phone — the
+checkpoint." One clear on keyboard confirmed, one attempt on a real handset
+reported difficult specifically at the Ferryman.
+
+> The boss is very difficult to beat on the phone as it is because of the
+> controls. It works on the laptop.
+
+**[balance]** The Ferryman's numbers and the crossing's layout are unchanged
+since #10 and are verified clearable by `tools/sim.js` — but the suite drives
+`Input` directly, at a fixed 250 ms reaction latency, never through
+`src/ui/touch.js`. It cannot see what a thumb actually experiences punishing
+the charge's recovery window, and this is the first report that the gap is
+real rather than theoretical.
+
+**Not yet diagnosed**, deliberately — this entry only records that the gap
+exists. Candidates for the next pass, none confirmed: the punish window
+during the Ferryman's `recover` state may be too tight to hit with a thumb
+moving between the movement pad and an attack button, where a keyboard hand
+already rests on both; or the double-charge's signature move may need more
+margin on touch than the single-charge tell gate 1's suite measures against.
+
+**What this is not.** Confirmation that the Ferryman itself is overtuned —
+the same fight clears on keyboard. It is evidence that constraint 3 of the
+touch budget ("never a direction plus two buttons at once") — the one
+constraint `docs/SPEC-CAMPAIGN.md` says only a phone playtest can check — is
+where this project's first real touch-vs-keyboard gap has shown up, right on
+schedule, in the fight the checkpoint exists to protect against shipping
+unplayed.
+
