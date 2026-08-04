@@ -4,7 +4,7 @@
 // Leveling pastiche that should look like a UI and not like the world, and
 // text stays crisp at any resolution without a single texture.
 
-import { STYLE } from '../game/config.js';
+import { STYLE, SYS_WINDOW } from '../game/config.js';
 import { clamp } from '../engine/mathx.js';
 
 const $ = (id) => document.getElementById(id);
@@ -140,7 +140,7 @@ export class HUD {
    * A System window. `lines` renders as a stat table; `body` as a paragraph.
    * Returns a promise that resolves when it closes, so callers can sequence.
    */
-  window({ title, big, body, lines, duration = 2600 }) {
+  window({ title, big, body, lines, duration = SYS_WINDOW.encounter }) {
     const el = document.createElement('div');
     el.className = 'sys-window';
 

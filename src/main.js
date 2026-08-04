@@ -20,15 +20,21 @@ const world = new World(document.getElementById('view'), GATES[0].realm);
 const hud = new HUD();
 const audio = new Audio();
 const input = new Input();
-const game = new Game(world, hud, audio, input, GATES);
 
 // On-screen controls, on a device with a thumb — or on any device with
 // `?touch`, which is how the layout gets looked at without hunting for a phone.
 // Not in `?sim`: the suite drives `Input` directly and never starts the loop,
 // so the controls would be DOM nobody can press sitting under the report.
+//
+// Built before `Game` so `Game` can read `!!touch` once, at construction, as
+// the source of truth for which device's instructions to teach — rather than
+// guessing from screen width, which is what the touch layout itself refuses
+// to do.
 const touch =
   !location.search.includes('sim') && TouchControls.wanted() ? new TouchControls(input) : null;
 if (touch) document.body.classList.add('touch');
+
+const game = new Game(world, hud, audio, input, GATES, touch);
 
 let paused = false;
 let titleT = 0;

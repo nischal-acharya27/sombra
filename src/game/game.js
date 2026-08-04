@@ -14,7 +14,7 @@ import { GameCamera } from './camera.js';
 import { VFX } from '../render/vfx.js';
 import { buildShard } from '../render/models.js';
 import { P } from '../render/palette.js';
-import { MAGIC, STYLE, PROGRESSION, PLAYER, WISP, SHADOW, GATE_ARCH } from './config.js';
+import { MAGIC, STYLE, PROGRESSION, PLAYER, WISP, SHADOW, GATE_ARCH, SYS_WINDOW } from './config.js';
 import { boxHit } from './actor.js';
 import { clamp, rand } from '../engine/mathx.js';
 
@@ -36,12 +36,17 @@ function attackDamage(e) {
 export const ARCHETYPES = { beast: Beast, charger: Charger, wisp: Wisp, guardian: Guardian };
 
 export class Game {
-  /** @param gates the campaign, in order — see `src/game/gates/`. */
-  constructor(world, hud, audio, input, gates) {
+  /**
+   * @param gates the campaign, in order — see `src/game/gates/`.
+   * @param touch the `TouchControls` instance, or null on a keyboard — the
+   *   source of truth for which device's instructions to teach.
+   */
+  constructor(world, hud, audio, input, gates, touch = null) {
     this.world = world;
     this.hud = hud;
     this.audio = audio;
     this.input = input;
+    this.touch = touch;
     this.gates = gates;
     this.gateIndex = 0;
     this.gate = gates[0];
@@ -277,7 +282,7 @@ export class Game {
     // The System names the realm, every time, so that ten gates in the hunter
     // still knows where in the afterlife they are standing.
     this.audio.play('systemOpen');
-    this.hud.window({ title: 'THE SYSTEM', big: this.gate.name, duration: 1800 });
+    this.hud.window({ title: 'THE SYSTEM', big: this.gate.name, duration: SYS_WINDOW.gateEnter });
 
     // A gate with no Warden has nothing to beat, so its way out is open from
     // the moment the hunter arrives. The crossing is the first of those, and
@@ -733,7 +738,7 @@ export class Game {
         title: e.intro.title,
         big: e.intro.body,
         body: e.intro.note,
-        duration: e.boss ? 2400 : e.intro.note ? 2600 : 1700,
+        duration: e.boss ? SYS_WINDOW.bossIntro : e.intro.note ? SYS_WINDOW.encounterNote : SYS_WINDOW.encounter,
       });
     }
     if (e.boss) {
@@ -819,11 +824,21 @@ export class Game {
     // shard is still the tell that matters; this is the line that tells the
     // player there is a tell to read.
     this.audio.play('systemOpen');
+    // The command the line names is the one the device in the player's hands
+    // actually offers: `this.touch` is set once, at boot, from whether
+    // `TouchControls` exists — see `main.js` — so this reads that rather than
+    // guessing from screen width. The button's own label comes from the touch
+    // layer's descriptor rather than being spelled out a second time here, so
+    // a future relabelling of the control cannot leave this line stale.
+    const sorgiLabel = this.touch?.layout.buttons.find((b) => b.verb === 'sorgi')?.label ?? 'SORGI';
+    const claim = this.touch
+      ? `Stand over the remnant and press ${sorgiLabel}.`
+      : 'Stand over the remnant, hold S and press K. The command is SORGI.';
     this.hud.window({
       title: 'THE SYSTEM',
-      big: 'A BODY REMAINS',
-      body: 'Stand over it, hold S and press K. The command is SORGI.',
-      duration: 3400,
+      big: 'A REMNANT REMAINS',
+      body: claim,
+      duration: SYS_WINDOW.remnantTeach,
     });
   }
 
@@ -881,7 +896,7 @@ export class Game {
   }
 
   onEnrage() {
-    this.hud.window({ title: 'WARNING', big: 'THE CORE IGNITES', body: 'The Gate Guardian has entered its second phase.', duration: 1800 });
+    this.hud.window({ title: 'WARNING', big: 'THE CORE IGNITES', body: 'The Gate Guardian has entered its second phase.', duration: SYS_WINDOW.enrage });
   }
 
   // -- progression ----------------------------------------------------------
@@ -919,7 +934,7 @@ export class Game {
         ['MAX MP', `${this.player.maxMp}`, true],
         ['STATUS', 'RESTORED', true],
       ],
-      duration: 2100,
+      duration: SYS_WINDOW.levelUp,
     });
   }
 

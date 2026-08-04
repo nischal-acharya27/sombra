@@ -448,6 +448,28 @@ export const STYLE = {
   mpRegenByRank: [1, 1.12, 1.26, 1.4, 1.55, 1.7],
 };
 
+/**
+ * How long each System window stays up, in ms. `HUD.window` takes it as a
+ * parameter rather than defaulting it, so every call site names one of these
+ * instead of a literal.
+ */
+export const SYS_WINDOW = {
+  /** The gate's name, on entry. */
+  gateEnter: 1800,
+  /** An encounter's intro with no teaching note. */
+  encounter: 1700,
+  /** An encounter's intro that carries a teaching note — a little longer to read. */
+  encounterNote: 2600,
+  /** A boss's intro. */
+  bossIntro: 2400,
+  /** The first-remnant teaching line: the longest window in the game. */
+  remnantTeach: 3400,
+  /** The Guardian's enrage warning. */
+  enrage: 1800,
+  /** Level-up. */
+  levelUp: 2100,
+};
+
 export const PROGRESSION = {
   /**
    * EXP for the next level. Linear, and deliberately so.

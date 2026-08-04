@@ -293,16 +293,34 @@ html, body {
   position: absolute;
   inset: 0;
   display: grid;
-  place-items: center;
+  justify-items: center;
+  /* `start` rather than `center`: it packs whatever rows exist — ordinarily
+   * one, occasionally two if a second window opens before the first closes —
+   * at the top instead of spreading them across the full height. Grid's rows
+   * size to their content by default, unlike a flex row's cross-axis, so
+   * nothing here stretches a window to fill the container. */
+  align-content: start;
+  /* Anchored near the top rather than dead centre. The camera frames the
+   * hunter around the vertical middle of the screen — see the note on
+   * `.rank-callout` — and a window sitting there covers the fight it is
+   * reporting on, which is what a phone playtest measured directly: centred,
+   * the panel's lower edge crossed the hunter's chest with enemies still
+   * live. Up here it clears that band at every width the layout supports. */
+  padding-top: 8vh;
   pointer-events: none;
 }
 
 .sys-window {
-  min-width: 330px;
-  max-width: 440px;
-  /* Slightly more opaque than `--panel`, because there is no blur behind it any
-   * more. See below. */
-  background: rgba(10, 20, 38, 0.93);
+  /* Scales with the viewport — the idiom `.bars` and `.boss-bar` already use —
+   * rather than being pinned in pixels. `78vw` does not bind until the
+   * viewport drops under ~423px (min) / ~564px (max), so nothing changes at
+   * desktop widths; at 360px wide it caps the panel at 78% of the screen,
+   * against the 94% the fixed 330px `min-width` alone measured there. */
+  min-width: min(330px, 78vw);
+  max-width: min(440px, 78vw);
+  /* Lower than it was — 0.93 down to 0.85 — so the fight reads through it
+   * now that there is no blur behind it — see below. */
+  background: rgba(10, 20, 38, 0.85);
   border: 1px solid var(--panel-edge);
   box-shadow: 0 0 40px rgba(50, 160, 220, 0.28), inset 0 0 30px rgba(40, 120, 190, 0.14);
   padding: 20px 26px 22px;
