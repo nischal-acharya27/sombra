@@ -190,7 +190,7 @@ export const MAGIC = {
 };
 
 export const BEAST = {
-  hp: 46,
+  hp: 35, // TEMP phone playtest — revert: git checkout -- src/game/config.js
   hw: 0.52,
   hh: 0.5,
   speed: 4.4,
@@ -313,7 +313,7 @@ export const SHADOW = {
  * the hunter; only what it *does*.
  */
 export const CHARGER = {
-  hp: 64,
+  hp: 35, // TEMP phone playtest — revert: git checkout -- src/game/config.js
   hw: 0.62,
   hh: 0.62,
   // Slower on its feet than a beast. It is not a chaser — walking away from a
@@ -378,7 +378,7 @@ export const CHARGER = {
  */
 export const FERRYMAN = {
   ...CHARGER,
-  hp: 210,
+  hp: 65, // TEMP phone playtest — revert: git checkout -- src/game/config.js
   hw: 0.7,
   hh: 0.7,
   speed: 3.2,
@@ -431,7 +431,7 @@ export const WISP = {
 };
 
 export const GUARDIAN = {
-  hp: 900,
+  hp: 75, // TEMP phone playtest — revert: git checkout -- src/game/config.js
   hw: 1.5,
   hh: 1.9,
   speed: 3.6,
