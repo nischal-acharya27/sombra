@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { Level } from './level.js';
 import { Player } from './player.js';
 import { Beast, Charger, Wisp, Bolt } from './enemies.js';
-import { Shadow, Corpse } from './shadow.js';
+import { Corpse } from './shadow.js';
 import { Guardian } from './boss.js';
 import { GameCamera } from './camera.js';
 import { VFX } from '../render/vfx.js';
@@ -19,12 +19,20 @@ import { boxHit } from './actor.js';
 import { clamp, rand } from '../engine/mathx.js';
 
 /**
- * What an enemy's live attack is worth this frame, or null if it is worth
- * nothing. The Guardian answers for itself because its damage depends on which
- * of four attacks is out; everything else has exactly one.
+ * What an actor's live attack is worth this frame, full stop — damage and
+ * knock — or null if it is worth nothing. `fallback` builds what to answer
+ * with when the actor has no `currentAttackDamage()` of its own to ask, i.e.
+ * it has exactly one attack rather than the Guardian's four — a function
+ * rather than a value, so a fallback that only makes sense for one archetype
+ * (`e.cfg.pounce`) is never evaluated for another that answers for itself.
  */
+function attackInfo(e, fallback) {
+  return e.currentAttackDamage ? e.currentAttackDamage() : fallback();
+}
+
+/** The damage half of `attackInfo`, for the two call sites that only need it. */
 function attackDamage(e) {
-  const info = e.currentAttackDamage ? e.currentAttackDamage() : { damage: e.cfg.pounce.damage };
+  const info = attackInfo(e, () => ({ damage: e.cfg.pounce.damage }));
   return info ? info.damage : null;
 }
 
@@ -484,17 +492,23 @@ export class Game {
       }
     }
 
-    // The shadow's pounce vs enemies, and enemy attacks vs the shadow.
+    // The shadow's attack vs enemies, and enemy attacks vs the shadow.
     //
     // Both directions obey the rule that governs everything else in this game:
     // nothing damages anything by touching it, only by committing to an attack.
     // The ally is not immune and it is not a wall — it walks into leaps, sweeps
     // and slams by doing its job, and nothing has to aim at it for that to
     // happen. Enemies keep targeting the hunter.
+    //
+    // What that box is worth reads the same way an enemy's does — the beast
+    // shape has one attack, so the pounce numbers are the fallback; the
+    // charger shape answers for itself through `currentAttackDamage()`, the
+    // same seam `attackDamage()` below reads for the hostile version.
     const sh = this.shadow;
     if (sh && !sh.dead) {
       const sb = sh.attackBox?.();
       if (sb) {
+        const info = attackInfo(sh, () => ({ damage: SHADOW.pounce.damage, knock: SHADOW.knock }));
         for (const e of this.enemies) {
           if (e.dead || sh.hitSet.has(e)) continue;
           if (!boxHit(sb, e.hurtBox())) continue;
@@ -502,8 +516,8 @@ export class Game {
           this._damageEnemy(
             e,
             {
-              damage: SHADOW.pounce.damage,
-              knock: SHADOW.knock,
+              damage: info.damage,
+              knock: info.knock,
               launch: 0,
               move: 'shadow',
               color: P.violet,
@@ -867,7 +881,7 @@ export class Game {
     // The oldest body gives up its shard if they are all spoken for. Bodies do
     // not pile up, and the pool never has to grow mid-run.
     if (!this.shardPool.length) this._removeCorpse(0);
-    const corpse = new Corpse(e.x, e.y, e.root, this.shardPool.pop());
+    const corpse = new Corpse(e.x, e.y, e.root, this.shardPool.pop(), e.constructor);
     this.corpses.push(corpse);
     this.entityRoot.add(corpse.shard);
     if (this._taughtCorpse) return;
@@ -931,7 +945,11 @@ export class Game {
     // the whole mechanic self-sustaining.
     if (this.shadow) this.entityRoot.remove(this.shadow.root);
 
-    const s = new Shadow(this.level, this.ctx, corpse.x, corpse.y);
+    // Wears its source's rig and runs its source's state machine — a Charger's
+    // remnant raises a Charger-shaped ally, not a reskinned beast. See
+    // `shadowClass` in game/shadow.js.
+    const ShadowClass = corpse.sourceClass.shadowClass;
+    const s = new ShadowClass(this.level, this.ctx, corpse.x, corpse.y);
     this.shadow = s;
     this.entityRoot.add(s.root);
 

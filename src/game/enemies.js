@@ -387,9 +387,9 @@ export class Beast extends Enemy {
 export class Charger extends Enemy {
   static stats = CHARGER;
 
-  constructor(level, ctx, x, y, cfg = CHARGER) {
+  constructor(level, ctx, x, y, cfg = CHARGER, skin = null) {
     super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
-    this.root = buildCharger();
+    this.root = buildCharger(skin);
     this.n = this.root.userData.nodes;
     this.finishSetup();
     this.phase = 0;
@@ -400,6 +400,15 @@ export class Charger extends Enemy {
     this.leavesCorpse = true;
     /** Charges left in the current commitment. See `charge.chain`. */
     this.chargesLeft = 0;
+  }
+
+  /**
+   * Whether it may commit to a charge at all. Always, for a hostile charger.
+   * Mirrors `Beast._canCommit` — the shadow overrides it so an ally trailing
+   * the hunter never plants a lane at them.
+   */
+  _canCommit() {
+    return true;
   }
 
   update(dt, player) {
@@ -436,7 +445,14 @@ export class Charger extends Enemy {
         this.state = 'chase';
         this.faceToward(player.x);
 
-        if (this.cooldown <= 0 && this.grounded && inLane && dist > C.minRange && dist < C.range) {
+        if (
+          this._canCommit() &&
+          this.cooldown <= 0 &&
+          this.grounded &&
+          inLane &&
+          dist > C.minRange &&
+          dist < C.range
+        ) {
           this.state = 'telegraph';
           this.phase = C.windup;
           this.vx = 0;

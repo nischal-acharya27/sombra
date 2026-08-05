@@ -1053,6 +1053,71 @@ over the fog, sky and grass colours. It keeps the stylised-open-world look the
 project was briefed on while arriving somewhere that suits the ending, and
 gives level 1 a dramatic arc it currently lacks.
 
+## The shadow wears its source's kit, not just a beast rig
+
+Filed from issue #21 (phone playtest): a shadow raised from a Charger's
+remnant looked and moved like a Beast, because `Shadow` hardcoded
+`extends Beast` back when only beasts left remnants. `Charger.leavesCorpse`
+was later set to `true` deliberately — "SORGI's promise cannot be selectively
+true" — but nothing taught the shadow itself to keep that promise. Grilled
+2026-08-05, resolved before the fix was built rather than after, because the
+fork ("wears the rig" vs "runs the kit") changes what the ally *is*, not just
+what it looks like.
+
+**The shadow runs its source archetype's real state machine, not a
+reskinned pounce.** A shadow raised from a Charger charges — telegraph,
+commit, recover — the same triangle the hostile Charger teaches, rather than
+adopting the beast's chase-and-pounce with a different texture. The
+alternative (rig-only, behaviour stays pounce for every source) was rejected:
+it is cheaper but makes "the shadow wears the beast's rig" true forever
+regardless of what died, which is the same complaint from a different enemy.
+
+**One `Shadow`-role class per corpse-leaving archetype, sharing ally glue
+through a mixin rather than a base class.** `BeastShadow extends
+shadowOf(Beast)`, `ChargerShadow extends shadowOf(Charger)`. `shadowOf(Base)`
+is a factory, generated once per archetype at module load — not per
+instance, so raising a shadow still allocates nothing beyond the rig, per the
+project's standing rule. Each concrete class is a near-empty declaration;
+the shared ally invariants (never hostile toward the hunter, one victim per
+commit, no corpse of its own, re-forms beside the hunter when left behind)
+live once, in the mixin, not copied per archetype. An internal switch inside
+one `Shadow` class was considered and rejected: it would re-implement each
+archetype's tell timing a second time instead of reusing `Beast`/`Charger`'s
+own code, which is exactly the kind of drift the suite's seeded-seed
+philosophy exists to catch late rather than prevent early.
+
+**`Charger` gains a `_canCommit()` seam, mirroring `Beast`'s.** `Beast`
+already gates its pounce commit behind `_canCommit()`, overridden by the
+ally to require a live enemy target. `Charger`'s telegraph commit was
+inlined in its chase state with no such seam. Adding the hook (default
+`true`, so hostile chargers are unaffected) is what lets `ChargerShadow`
+reuse `Charger.update()` verbatim instead of forking the whole state
+machine.
+
+**A shadow's charge does not chain, even if its source could.** A hostile
+Warden chaining charges at the hunter is a threat the player reads and
+answers; the same chaining aimed at an enemy by an unsupervised ally reads as
+the shadow committing itself repeatedly in a corridor with nothing gating it
+sanely. Capped at one commit. Whether a Warden's remnant should ever produce
+a chaining shadow is not decided here and does not need to be until a Warden
+actually leaves one.
+
+**Corpses remember what they were, and shadow selection reads that
+directly.** `Corpse` gains the dying enemy's own class; `extract()` looks up
+the matching shadow class from a table the enemy declares against itself
+(`static shadowClass` alongside `leavesCorpse = true`) rather than a
+lookup table maintained elsewhere — so a future archetype that starts
+leaving remnants declares its own shadow behaviour in its own file, the same
+place it already declares that it leaves a remnant at all.
+
+**Scope held at two.** Only `Beast` and `Charger` leave remnants today; wisps
+and the Guardian still leave nothing, unchanged by this. `SHADOW.charge`
+(the ally's own damage/knock numbers) is a new, separately-tuned config
+block, the same relationship `SHADOW.pounce` already has to `BEAST.pounce` —
+not a number derived up front the way the hostile Charger's numbers were,
+because a support ally's damage carries far lower stakes than an attack the
+player has to answer with a dash.
+
 ## Deferred, deliberately
 
 - ~~**Persistence / meta-progression.**~~ **Reversed 2026-08-03.** Replay value

@@ -10,7 +10,7 @@
 // design exists so the player always knows what happened to them, and four
 // allies in a corridor arena destroy that.
 
-import { Beast } from './enemies.js';
+import { Beast, Charger } from './enemies.js';
 import { SHADOW } from './config.js';
 import { P } from '../render/palette.js';
 import { clamp } from '../engine/mathx.js';
@@ -18,7 +18,7 @@ import { clamp } from '../engine/mathx.js';
 /** How far the shard floats above the body it marks. */
 const SHARD_HEIGHT = 0.95;
 
-/** The ally wears the beast's rig in the System's colours. See palette.js. */
+/** The ally wears its source's rig in the System's colours. See palette.js. */
 const SKIN = {
   body: P.shadowBody,
   dark: P.shadowBodyDark,
@@ -51,14 +51,17 @@ export class Corpse {
    *
    * @param {THREE.Group} body the dead beast's rig
    * @param {THREE.Group} shard borrowed from the game's pool, returned on expiry
+   * @param {Function} sourceClass the dying enemy's own class — `extract()`
+   *   reads `sourceClass.shadowClass` off it to raise the matching ally.
    */
-  constructor(x, y, body, shard) {
+  constructor(x, y, body, shard, sourceClass) {
     this.x = x;
     this.y = y;
     this.windowT = SHADOW.corpseWindow;
     this.t = 0;
     this.body = body;
     this.shard = shard;
+    this.sourceClass = sourceClass;
     shard.position.set(x, y + SHARD_HEIGHT, 0);
     shard.rotation.set(0, 0, 0);
     shard.scale.setScalar(1);
@@ -87,78 +90,112 @@ export class Corpse {
 }
 
 /**
- * The raised shadow: one melee ally that follows and fights.
+ * The raised shadow: one melee ally that follows and fights, wearing its
+ * source archetype's own rig and running its own state machine.
  *
- * It is the beast's own state machine pointed at a different target, which is
- * the single decision that makes this mechanic small. `Beast.update` already
- * took its target as a parameter rather than reaching for the player, so an
- * ally is that same chase-and-pounce loop handed the nearest enemy instead —
- * and when there is no enemy, handed the hunter, with the pounce gated off.
+ * A shadow is its source's own update loop pointed at a different target,
+ * which is the single decision that makes this mechanic small. `Beast.update`
+ * and `Charger.update` already took their target as a parameter rather than
+ * reaching for the player, so an ally is that same state machine handed the
+ * nearest enemy instead — and when there is no enemy, handed the hunter, with
+ * its commit gated off by `_canCommit`.
  *
- * It obeys every rule the enemies obey. No passive contact damage: it hurts
- * things by committing to a leap, never by standing near them. It has health
- * and it dies for good. It is not in the enemy list, so the hunter's swings
- * pass through it and it can never hold an encounter open.
+ * `shadowOf(Base)` is the glue every ally shares regardless of what it wears:
+ * never hostile toward the hunter, no corpse of its own, and it re-forms
+ * beside the hunter when left behind. It obeys every rule the enemies obey —
+ * no passive contact damage, it hurts things only by committing to its own
+ * attack — and it is not in the enemy list, so the hunter's swings pass
+ * through it and it can never hold an encounter open.
+ *
+ * Generated once per archetype, at module load, by the two concrete classes
+ * below — not per instance, so raising a shadow still allocates nothing
+ * beyond its rig.
  */
-export class Shadow extends Beast {
-  constructor(level, ctx, x, y) {
-    super(level, ctx, x, y, SHADOW, SKIN);
-    this.hostile = false;
-    /** Victims of the current leap, cleared between pounces. */
-    this.hitSet = new Set();
-    this.hurtCd = 0;
-    /**
-     * A dead shadow leaves nothing. Raising one from your own shadow's body
-     * would make the corpse window irrelevant and the mechanic self-sustaining,
-     * which is the opposite of a cost.
-     */
-    this.leavesCorpse = false;
-  }
+function shadowOf(Base) {
+  // `speed` is the one field pulled from the source archetype rather than
+  // `SHADOW`: keeping up with the hunter is `recallAt`'s job, and an ally
+  // that outruns or lags the thing it was raised from stops reading as the
+  // same creature, which is the only reason the recolour reads as one at
+  // all. Computed once here, not per instance, and not by mutating the
+  // shared `SHADOW` config that every archetype's ally reads.
+  const cfg = { ...SHADOW, speed: Base.stats.speed };
 
-  /** No pouncing the hunter it is following. */
-  _canCommit() {
-    return this.hostile;
-  }
-
-  update(dt, player, enemies) {
-    this.hurtCd -= dt;
-    if (this.state !== 'dying') this._recall(player);
-
-    // Nearest living enemy, or the hunter to follow.
-    let target = null;
-    let best = Infinity;
-    for (const e of enemies) {
-      if (e.dead) continue;
-      const d = Math.abs(e.x - this.x);
-      if (d < best && d < this.cfg.chaseRange) {
-        best = d;
-        target = e;
-      }
+  return class extends Base {
+    constructor(level, ctx, x, y) {
+      super(level, ctx, x, y, cfg, SKIN);
+      this.hostile = false;
+      /** Victims of the current commit, cleared between them. */
+      this.hitSet = new Set();
+      this.hurtCd = 0;
+      /**
+       * A dead shadow leaves nothing. Raising one from your own shadow's body
+       * would make the corpse window irrelevant and the mechanic
+       * self-sustaining, which is the opposite of a cost.
+       */
+      this.leavesCorpse = false;
     }
-    this.hostile = !!target;
-    super.update(dt, target || player);
-  }
 
-  /**
-   * Re-form beside the hunter when left behind or dropped out of the world.
-   *
-   * This is one rule standing in for a pathfinder. The ally would otherwise be
-   * lost to every pit in the level, every encounter barrier that closes behind
-   * the hunter, and every ledge its one-unit ledge check refuses to walk off —
-   * and a slice meant to answer "does an ally make this combat better" would
-   * instead spend its evidence on navigation. A shadow appearing out of nowhere
-   * beside its master costs the fiction nothing, which is the rare case where
-   * the cheap answer is also the right one.
-   */
-  _recall(player) {
-    const behind = Math.abs(this.x - player.x) > SHADOW.recallAt;
-    const below = this.y < player.y - SHADOW.recallBelow;
-    if (!behind && !below) return;
-    this.x = player.x - player.facing * SHADOW.recallBehind;
-    this.y = player.y + SHADOW.recallAbove;
-    this.vx = 0;
-    this.vy = 0;
-    this.state = 'chase';
-    this.ctx.vfx?.shadowBurst(this.x, this.y + 0.4, 12, P.violet);
-  }
+    /** No committing at the hunter it is following. */
+    _canCommit() {
+      return this.hostile;
+    }
+
+    update(dt, player, enemies) {
+      this.hurtCd -= dt;
+      if (this.state !== 'dying') this._recall(player);
+
+      // Nearest living enemy, or the hunter to follow.
+      let target = null;
+      let best = Infinity;
+      for (const e of enemies) {
+        if (e.dead) continue;
+        const d = Math.abs(e.x - this.x);
+        if (d < best && d < this.cfg.chaseRange) {
+          best = d;
+          target = e;
+        }
+      }
+      this.hostile = !!target;
+      super.update(dt, target || player);
+    }
+
+    /**
+     * Re-form beside the hunter when left behind or dropped out of the world.
+     *
+     * This is one rule standing in for a pathfinder. The ally would otherwise
+     * be lost to every pit in the level, every encounter barrier that closes
+     * behind the hunter, and every ledge its one-unit ledge check refuses to
+     * walk off — and a slice meant to answer "does an ally make this combat
+     * better" would instead spend its evidence on navigation. A shadow
+     * appearing out of nowhere beside its master costs the fiction nothing,
+     * which is the rare case where the cheap answer is also the right one.
+     */
+    _recall(player) {
+      const behind = Math.abs(this.x - player.x) > SHADOW.recallAt;
+      const below = this.y < player.y - SHADOW.recallBelow;
+      if (!behind && !below) return;
+      this.x = player.x - player.facing * SHADOW.recallBehind;
+      this.y = player.y + SHADOW.recallAbove;
+      this.vx = 0;
+      this.vy = 0;
+      this.state = 'chase';
+      this.ctx.vfx?.shadowBurst(this.x, this.y + 0.4, 12, P.violet);
+    }
+  };
 }
+
+/** A shadow raised from a Beast's remnant: chase-and-pounce, its own tell. */
+export class BeastShadow extends shadowOf(Beast) {}
+
+/** A shadow raised from a Charger's remnant: plant, telegraph, run a lane. */
+export class ChargerShadow extends shadowOf(Charger) {}
+
+// `extract()` reads this off the dying enemy's own class (see `Corpse`
+// above), rather than through a lookup table kept elsewhere — the same place
+// each archetype already declares `leavesCorpse = true` is where a future
+// archetype would add its own shadow class. It is assigned here, not in
+// enemies.js, because `enemies.js` cannot import from this module: this
+// module already imports `Beast` and `Charger` from it to build these two
+// classes, and a two-way import between them would make load order matter.
+Beast.shadowClass = BeastShadow;
+Charger.shadowClass = ChargerShadow;

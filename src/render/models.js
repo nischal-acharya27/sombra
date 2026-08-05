@@ -341,8 +341,13 @@ export function buildBeast(skin = null) {
  * `leg0..3`. The eye flare is the game's shared vocabulary for "this is about
  * to commit", and an enemy whose tell is animated through differently named
  * nodes is an enemy whose tell drifts out of agreement with the others.
+ *
+ * `skin` follows `buildBeast`'s lead, for the same reason: a shadow raised
+ * from a Charger's remnant wears this rig in the System's colours rather than
+ * the hostile charger's slate and bone. See `SKIN` in game/shadow.js.
  */
-export function buildCharger() {
+export function buildCharger(skin = null) {
+  const c = skin || { body: P.chargerHide, dark: P.chargerHideDark, eye: P.chargerEye };
   const root = new THREE.Group();
   const n = {};
 
@@ -351,12 +356,12 @@ export function buildCharger() {
   root.add(body);
   n.body = body;
 
-  const chest = part(1.02, 0.54, 0.62, P.chargerHide, { outline: 0.03 });
+  const chest = part(1.02, 0.54, 0.62, c.body, { outline: 0.03 });
   body.add(chest);
 
   // The slab over the shoulders. This is the part that arrives first, and it
   // is the heaviest thing on the model for that reason.
-  const plate = part(0.40, 0.44, 0.66, P.chargerHideDark, { outline: 0.026 });
+  const plate = part(0.40, 0.44, 0.66, c.dark, { outline: 0.026 });
   plate.position.set(0.34, 0.09, 0);
   body.add(plate);
 
@@ -365,7 +370,7 @@ export function buildCharger() {
   body.add(neck);
   n.neck = neck;
 
-  const head = part(0.40, 0.32, 0.40, P.chargerHideDark, { outline: 0.026 });
+  const head = part(0.40, 0.32, 0.40, c.dark, { outline: 0.026 });
   head.position.x = 0.19;
   neck.add(head);
 
@@ -376,7 +381,7 @@ export function buildCharger() {
     horn.rotation.y = side * 0.22;
     neck.add(horn);
 
-    const eye = decal(0.09, 0.07, P.chargerEye);
+    const eye = decal(0.09, 0.07, c.eye);
     eye.position.set(0.40, 0.02, side * 0.13);
     eye.rotation.y = Math.PI / 2;
     neck.add(eye);
@@ -390,7 +395,7 @@ export function buildCharger() {
       const hip = new THREE.Group();
       hip.position.set(fx, -0.25, side * 0.22);
       body.add(hip);
-      const upper = part(0.18, 0.28, 0.18, P.chargerHideDark, { pivot: 'top', outline: 0.018 });
+      const upper = part(0.18, 0.28, 0.18, c.dark, { pivot: 'top', outline: 0.018 });
       hip.add(upper);
       const hoof = part(0.22, 0.12, 0.20, P.bone, { pivot: 'top', outline: 0.016 });
       hoof.position.set(0.02, -0.28, 0);
@@ -404,7 +409,7 @@ export function buildCharger() {
   tail.position.set(-0.50, 0.10, 0);
   body.add(tail);
   n.tail = tail;
-  const tailSeg = part(0.26, 0.10, 0.10, P.chargerHideDark, { outline: 0.014 });
+  const tailSeg = part(0.26, 0.10, 0.10, c.dark, { outline: 0.014 });
   tailSeg.position.x = -0.13;
   tail.add(tailSeg);
 
