@@ -1184,3 +1184,22 @@ player has to answer with a dash.
   frame timing at all; they should have been the first measurement rather than
   the fifth. And the one thing that did get fixed blind — the warm-up — cost two
   rounds by making a wrong theory look addressed.
+
+## Villain/boss HP stays at one-shot-kill until Android
+
+Settled 2026-08-06, after the crossing's phone-playtest checkpoint (#13) ran
+clean with `hp: 5` on every villain/boss entry in `config.js`. That value was
+introduced as a TEMP hack for testing on a phone browser over `tools/serve.py`
+on the local network — full HP made phone playtesting impractical.
+
+**Do not revert it.** The original plan was to `git checkout -- src/game/config.js`
+once the checkpoint passed. That's wrong: the constraint that motivated the
+hack — testing combat balance on a phone — doesn't go away when the checkpoint
+closes, it recurs on every phone session until there's a proper Android build
+to test against instead of a browser tab. Reverting now would just mean
+re-applying the same hack for the next phone round.
+
+**The value is real until the Android port exists.** When SOMBRA is ported to
+an Android app, full HP tuning becomes testable on-device again without this
+workaround, and this decision should be revisited then — restore real HP
+values as part of that port, not before.

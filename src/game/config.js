@@ -190,7 +190,7 @@ export const MAGIC = {
 };
 
 export const BEAST = {
-  hp: 5, // TEMP phone playtest — revert: git checkout -- src/game/config.js
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 0.52,
   hh: 0.5,
   speed: 4.4,
@@ -236,7 +236,7 @@ export const BEAST = {
  * the hunter; only what it *does*.
  */
 export const CHARGER = {
-  hp: 5, // TEMP phone playtest — revert: git checkout -- src/game/config.js
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 0.62,
   hh: 0.62,
   // Slower on its feet than a beast. It is not a chaser — walking away from a
@@ -391,7 +391,7 @@ export const SHADOW = {
  */
 export const FERRYMAN = {
   ...CHARGER,
-  hp: 5, // TEMP phone playtest — revert: git checkout -- src/game/config.js
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 0.7,
   hh: 0.7,
   speed: 3.2,
@@ -413,7 +413,7 @@ export const FERRYMAN = {
 };
 
 export const WISP = {
-  hp: 5, // TEMP phone playtest — revert: git checkout -- src/game/config.js
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 0.38,
   hh: 0.38,
   speed: 3.0,
@@ -444,7 +444,7 @@ export const WISP = {
 };
 
 export const GUARDIAN = {
-  hp: 5, // TEMP phone playtest — revert: git checkout -- src/game/config.js
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 1.5,
   hh: 1.9,
   speed: 3.6,
