@@ -1207,7 +1207,8 @@ values as part of that port, not before.
 ## The System window pauses the fight it explains
 
 Settled 2026-08-06, via `/grill-with-docs` on issue #18 ("The System covers
-the fight it is explaining"). Specified, not yet built.
+the fight it is explaining"). Built and verified across the five recorded
+seeds.
 
 **The bug, confirmed live at 375×812.** `Game._startEncounter` queues an
 encounter's spawns and opens its System window in the same call. The window
@@ -1263,8 +1264,25 @@ decrement `freeze` by `DT` and skip `update()` while frozen, mirroring what
 
 **What suite movement counts as expected, not a regression.** By rough count
 of the intro windows `_startEncounter` can currently open across the two
-built gates, a full clean run picks up roughly 11.7s (2600 + 1700 + 2400 for
-gate 1, 2600 + 2400 for gate 2). The actual figure is to be measured across
-all five recorded seeds once this is built, and that measured number — not
-the 11.7s estimate — is what a future `FULL PLAYTHROUGH` change should be
-checked against.
+built gates, a full clean run was expected to pick up roughly 11.7s (2600 +
+1700 + 2400 for gate 1, 2600 + 2400 for gate 2). The actual figure, measured
+per-seed against the pre-fix build:
+
+| seed | reads tells avg | ignores tells avg |
+|---|---|---|
+| 20260728 | 31.9s → 33.2s (+1.3s) | 34.1s → 34.9s (+0.8s) |
+| 1 | 33.3s → 33.1s (−0.2s) | 33.5s → 34.7s (+1.2s) |
+| 99991 | 34.2s → 33.3s (−0.9s) | 33.5s → 35.2s (+1.7s) |
+| 20260802 | 34.7s → 33.4s (−1.3s) | 33.7s → 33.9s (+0.2s) |
+| 7777777 | 33.3s → 32.1s (−1.2s) | 34.1s → 34.6s (+0.5s) |
+
+Mean movement is +0.9s for the naive bot and −0.5s for the reading one —
+nowhere near 11.7s, and not even uniformly positive. Both are explained by
+what `FULL PLAYTHROUGH` actually exercises: it plays gate 1 alone, not both
+gates, and `avg` is a mean over only the runs that clear. A fixed pause
+inserted earlier in every run shifts every later `Math.random()` draw on the
+seeded stream, which nudges *which* of the 24 seeds clear versus die as a
+side effect having nothing to do with the pause's own duration — that
+composition shift is what swamps the raw pause time in this particular
+metric. **This measured range — not the 11.7s estimate — is what a future
+`FULL PLAYTHROUGH` change should be checked against.**

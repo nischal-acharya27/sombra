@@ -341,6 +341,16 @@ export class Game {
     return this.freeze > 0 ? 0 : 1;
   }
 
+  /**
+   * `render()` calls this every real frame, hitstop or not. `tools/sim.js`
+   * calls it too, from `Bot.step()` — the suite never calls `render()`, so
+   * without this `freeze` would never decay and `?sim` would stay blind to
+   * anything built on it, System windows included.
+   */
+  decayFreeze(dt) {
+    this.freeze = Math.max(0, this.freeze - dt);
+  }
+
   // -- fixed-step simulation ------------------------------------------------
 
   update(dt) {
@@ -433,7 +443,7 @@ export class Game {
   // -- per-frame (real time, runs during hitstop) ---------------------------
 
   render(dt) {
-    this.freeze = Math.max(0, this.freeze - dt);
+    this.decayFreeze(dt);
 
     const focus = this.boss && !this.boss.dead ? this.boss : null;
     this.cam.update(dt, this.player, focus);

@@ -150,7 +150,7 @@ class Bot {
     // System-window pause invisible to `?sim` — see docs/DECISIONS.md, "The
     // System window pauses the fight it explains".
     if (this.g.timeScale() > 0) this.g.update(DT);
-    this.g.freeze = Math.max(0, this.g.freeze - DT);
+    this.g.decayFreeze(DT);
     this.input.endFrame(DT);
   }
 }
