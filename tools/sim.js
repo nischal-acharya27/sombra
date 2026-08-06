@@ -9,6 +9,7 @@
 // below has caught a real bug at least once.
 
 import { PLAYER, ATTACKS, SHADOW, CHARGER } from '../src/game/config.js';
+import { ChargerShadow } from '../src/game/shadow.js';
 import { buildShard } from '../src/render/models.js';
 import { checkGates, controls, crossing, telegraphs } from './gatecheck.js';
 import { checkTouch } from './touchcheck.js';
@@ -1376,6 +1377,87 @@ function chargerFight(game, input) {
 }
 
 /**
+ * A shadow raised from a Charger's remnant: it must wear the Charger's own
+ * rig and run its charge — telegraph, commit, recover — rather than a
+ * reskinned pounce, and the charge must deal the shadow's own tuned damage
+ * (`SHADOW.charge.damage`), not the beast-ally's pounce number and not the
+ * hostile Charger's own charge damage. Filed as issue #21; see
+ * `docs/DECISIONS.md` § "The shadow wears its source's kit, not just a beast
+ * rig" for the design this checks.
+ *
+ * Placed last in `runAll`, after every other probe that touches the shared
+ * `Game` object — the same reason `extraction` sits where it does: raising a
+ * shadow builds a rig and spends `Math.random` draws on three.js UUIDs, so a
+ * row placed ahead of this one would have its randomness disturbed by this
+ * probe merely existing.
+ */
+function chargerShadow(game, input) {
+  const bot = new Bot(game, input);
+  const p = game.player;
+  const rows = [];
+  const check = (name, ok, detail = '') => rows.push({ name, ok, detail });
+  const until = (pred, seconds) => {
+    const n = Math.floor(seconds / DT);
+    for (let i = 0; i < n; i++) {
+      if (pred()) return true;
+      bot.step();
+    }
+    return pred();
+  };
+
+  game.start();
+  for (const e of game.encounters) {
+    e.started = true;
+    e.cleared = true;
+  }
+  game.activeEncounter = null;
+
+  // Kill a charger next to the hunter and claim it, the same shape
+  // `extraction` uses for a beast.
+  game._spawn({ type: 'charger', x: p.x + 1.3, encounter: 'test' });
+  const c = game.enemies[game.enemies.length - 1];
+  c.spawnT = 0;
+  c.root.scale.setScalar(1);
+  c.takeHit({ damage: c.hp + 1, knock: 0, launch: 0, fromX: c.x });
+  until(() => game.corpses.length > 0, 2.0);
+
+  bot.hold('down', true);
+  bot.press('heavy');
+  until(() => !!game.shadow, 2.0);
+  bot.hold('down', false);
+
+  const s = game.shadow;
+  check(
+    'a Charger remnant raises the charging ally',
+    s instanceof ChargerShadow,
+    s ? s.constructor.name : 'nothing raised'
+  );
+
+  // Something to fight — the nearest-enemy target is what turns `_canCommit`
+  // on at all; a shadow with nothing to fight never plants a lane at the
+  // hunter it is following.
+  game._spawn({ type: 'beast', x: p.x + 10, encounter: 'test' });
+  const victim = game.enemies[game.enemies.length - 1];
+  victim.spawnT = 0;
+  victim.root.scale.setScalar(1);
+  victim.hp = 999;
+
+  const hpFrom = victim.hp;
+  const landed = until(() => victim.hp < hpFrom, 14);
+  const dealt = Math.round(hpFrom - victim.hp);
+  check(
+    'and its charge deals its own damage',
+    landed && dealt === SHADOW.charge.damage,
+    `${dealt} dealt, ${SHADOW.charge.damage} configured — not the beast-ally's ` +
+      `${SHADOW.pounce.damage} or the hostile charger's ${CHARGER.charge.damage}`
+  );
+
+  game.start();
+  game.hud.screen('clear', false);
+  return rows;
+}
+
+/**
  * The crossing's story beats.
  *
  * `docs/PLAYTEST.md` round 3 is the failure this whole probe is arranged
@@ -1806,6 +1888,10 @@ function runAll(game, input, seed) {
   // end to end and forces a live-encounter case the game would never present
   // to a normal run, both of which touch the shared `Game` object.
   report.storyBeats = scope(14, () => storyBeats(game, input));
+  // And after even that: it allocates too — a corpse, a shard, and the shadow
+  // rig `extract()` builds off it — and the rule does not carve out an
+  // exception for the probe that closes the file today either.
+  report.chargerShadow = scope(15, () => chargerShadow(game, input));
   report.ms = Math.round(performance.now() - t0);
 
   print(report);
@@ -2083,6 +2169,17 @@ function print(r) {
   lines.push('');
   lines.push('  Whether the crossing is winnable is a different question and is answered');
   lines.push('  below, by the same bot that clears gate 1.');
+  lines.push('');
+
+  lines.push("THE CHARGER'S SHADOW   (SORGI on its remnant, issue #21)");
+  for (const t of r.chargerShadow) {
+    lines.push(`  ${t.name.padEnd(34)} ${t.detail.padEnd(70)} ${ok(t.ok)}`);
+  }
+  lines.push('');
+  lines.push('  A shadow raised from a Charger wears the Charger\'s own rig and runs its');
+  lines.push('  own charge, not a reskinned pounce — and the charge is worth its own');
+  lines.push('  tuned number, never the beast-ally\'s pounce damage and never the hostile');
+  lines.push("  Charger's own. See docs/DECISIONS.md's entry on this issue.");
   lines.push('');
 
   lines.push('THE CROSSING’S WATER   (Lethe rather than a fall)');

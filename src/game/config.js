@@ -322,13 +322,12 @@ export const SHADOW = {
   extractReachY: 2.0,
 
   hp: 58,
-  hw: BEAST.hw,
-  hh: BEAST.hh,
-  // No `speed` here: `shadowOf` in game/shadow.js reads it off the source
-  // archetype's own stats instead, so a beast-raised ally keeps a beast's pace
-  // and a charger-raised one keeps a charger's — an ally that outruns or lags
-  // the thing it was raised from stops reading as the same creature, which is
-  // the only reason the recolour works.
+  // No `hw`/`hh`/`speed` here: `shadowOf` in game/shadow.js reads them off the
+  // source archetype's own stats instead, so a beast-raised ally keeps a
+  // beast's pace and hitbox and a charger-raised one keeps a charger's — a
+  // shadow that wears its source's rig but fights with another archetype's
+  // hitbox would still be the bug this file exists to fix, just moved from
+  // behaviour into collision geometry.
   // Its own, because these are what an *ally* needs rather than what the enemy
   // needs: how far it looks for something to fight, and how close it crowds the
   // hunter it is following.

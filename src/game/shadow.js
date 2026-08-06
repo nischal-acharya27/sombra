@@ -38,18 +38,19 @@ const SKIN = {
  */
 export class Corpse {
   /**
-   * Allocates nothing. The body is the dead beast's own rig, left exactly where
-   * and how it fell, and the shard is borrowed from a pool the game built at
-   * construction time. That is a hard requirement rather than an optimisation:
-   * three.js draws four `Math.random()` values per object for its UUID, and the
-   * suite runs the game against a seeded `Math.random`, so anything built
-   * during a run reaches into the gameplay stream and re-rolls it.
+   * Allocates nothing. The body is the dying enemy's own rig, left exactly
+   * where and how it fell, and the shard is borrowed from a pool the game
+   * built at construction time. That is a hard requirement rather than an
+   * optimisation: three.js draws four `Math.random()` values per object for
+   * its UUID, and the suite runs the game against a seeded `Math.random`, so
+   * anything built during a run reaches into the gameplay stream and re-rolls
+   * it.
    *
    * The two are kept as siblings rather than parented together because the
    * death animation squashes the body to a fifth of its height, and a shard
    * parented to it would inherit the squash.
    *
-   * @param {THREE.Group} body the dead beast's rig
+   * @param {THREE.Group} body the dying enemy's own rig
    * @param {THREE.Group} shard borrowed from the game's pool, returned on expiry
    * @param {Function} sourceClass the dying enemy's own class — `extract()`
    *   reads `sourceClass.shadowClass` off it to raise the matching ally.
@@ -112,13 +113,13 @@ export class Corpse {
  * beyond its rig.
  */
 function shadowOf(Base) {
-  // `speed` is the one field pulled from the source archetype rather than
+  // `speed`, `hw` and `hh` are pulled from the source archetype rather than
   // `SHADOW`: keeping up with the hunter is `recallAt`'s job, and an ally
-  // that outruns or lags the thing it was raised from stops reading as the
-  // same creature, which is the only reason the recolour reads as one at
-  // all. Computed once here, not per instance, and not by mutating the
-  // shared `SHADOW` config that every archetype's ally reads.
-  const cfg = { ...SHADOW, speed: Base.stats.speed };
+  // that outruns, lags, or fights with a different archetype's hitbox stops
+  // reading as the same creature, which is the only reason the recolour
+  // reads as one at all. Computed once here, not per instance, and not by
+  // mutating the shared `SHADOW` config that every archetype's ally reads.
+  const cfg = { ...SHADOW, speed: Base.stats.speed, hw: Base.stats.hw, hh: Base.stats.hh };
 
   return class extends Base {
     constructor(level, ctx, x, y) {
