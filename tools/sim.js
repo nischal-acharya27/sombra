@@ -144,7 +144,13 @@ class Bot {
         this.queued.splice(i, 1);
       }
     }
-    this.g.update(DT);
+    // Mirrors `Loop`: the fixed-step accumulator only advances while
+    // `timeScale()` is nonzero, and `freeze` only decays in `render()`, which
+    // the suite never calls. Driving `update` unconditionally would make a
+    // System-window pause invisible to `?sim` — see docs/DECISIONS.md, "The
+    // System window pauses the fight it explains".
+    if (this.g.timeScale() > 0) this.g.update(DT);
+    this.g.freeze = Math.max(0, this.g.freeze - DT);
     this.input.endFrame(DT);
   }
 }

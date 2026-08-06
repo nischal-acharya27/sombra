@@ -1203,3 +1203,68 @@ re-applying the same hack for the next phone round.
 an Android app, full HP tuning becomes testable on-device again without this
 workaround, and this decision should be revisited then — restore real HP
 values as part of that port, not before.
+
+## The System window pauses the fight it explains
+
+Settled 2026-08-06, via `/grill-with-docs` on issue #18 ("The System covers
+the fight it is explaining"). Specified, not yet built.
+
+**The bug, confirmed live at 375×812.** `Game._startEncounter` queues an
+encounter's spawns and opens its System window in the same call. The window
+is purely timer-driven — no dismiss, it closes only on its own `setTimeout` —
+and its 2600ms life outlasts the delay on gate 1's first two beasts, so the
+panel is still on screen, occluding the hunter, while enemies queued
+underneath it are already fighting. The round 3 fix recorded in `gate1.js`'s
+`first-blood` comment shortened the window's *text*; it never touched the
+*geometry* or the *timing*, which is why the phone playtest saw the same bug
+again in a different shape.
+
+**Decision: pause, not hold, not teach-before-trigger.** Teach-before-trigger
+was rejected outright — round 3 already established that the window's text
+should arrive *with* the visible threat, not before it exists, and moving it
+earlier would reverse a decision that was already tested and fixed once.
+Between hold and pause, pause won: it reuses the existing hit-stop primitive
+(`game.freeze` / `Game.timeScale()`) instead of inventing a second, parallel
+hold mechanism, and it keeps text and threat simultaneous — a frozen tableau,
+not an absence.
+
+**Mechanism.** Extend `game.freeze` to cover the window's duration wherever
+`_startEncounter` opens one via `e.intro` — `Math.max(this.freeze, duration)`,
+the same pattern hitstop already uses (game.js:625, 663). Applies uniformly to
+all three durations `_startEncounter` can select (`encounter`,
+`encounterNote`, `bossIntro`) — no special-casing by whether the window
+carries a `note`.
+
+**The player is frozen too, not just the spawns.** `freeze`/`timeScale` halts
+the whole fixed-step simulation, so this is a stronger pause than "hold" as
+the issue originally framed it — the hunter can't move or act until the
+window clears either. That is intended: because nothing can harm the hunter
+by touching them, a fully frozen sim costs a reading player nothing and gives
+a non-reading player nothing to gain by waiting. The mechanism removes the
+issue's "what stops a player who isn't reading" question rather than
+answering it.
+
+**Boss windows get no special-casing, and that resolves a second sub-bug for
+free.** Neither gate's Warden spawn has a 0-delay (0.9s and 0.6s
+respectively), so under a uniform pause neither Warden spawns, or starts its
+2.4s entering animation, until its `bossIntro` window has closed. "The window
+opens with the Warden already committed" — the issue's other boss-specific
+complaint — stops being true without any boss-specific code.
+
+**The suite could not see this, and that gap gets closed too.** `Bot.step()`
+(`tools/sim.js:136-149`) drives `Game.update()` directly, every step,
+unconditionally — it never goes through `Loop`'s `timeScale()`-gated
+accumulator and never calls `render()`, which is where `freeze` decays. A
+pause built purely on `game.freeze` would be invisible to `?sim`: `FULL
+PLAYTHROUGH` would not move, and a broken pause — wrong duration, or none at
+all — would still read 120/120 green. `Bot.step()` is being taught to
+decrement `freeze` by `DT` and skip `update()` while frozen, mirroring what
+`Loop` and `render()` do in the real game.
+
+**What suite movement counts as expected, not a regression.** By rough count
+of the intro windows `_startEncounter` can currently open across the two
+built gates, a full clean run picks up roughly 11.7s (2600 + 1700 + 2400 for
+gate 1, 2600 + 2400 for gate 2). The actual figure is to be measured across
+all five recorded seeds once this is built, and that measured number — not
+the 11.7s estimate — is what a future `FULL PLAYTHROUGH` change should be
+checked against.

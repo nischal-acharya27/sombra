@@ -798,14 +798,20 @@ export class Game {
     }
     if (e.intro) {
       this.audio.play('systemOpen');
+      const duration = e.boss ? SYS_WINDOW.bossIntro : e.intro.note ? SYS_WINDOW.encounterNote : SYS_WINDOW.encounter;
       // A teaching line rides inside the intro rather than following it, and
       // buys a little extra time on screen when there is one to read.
       this.hud.window({
         title: e.intro.title,
         big: e.intro.body,
         body: e.intro.note,
-        duration: e.boss ? SYS_WINDOW.bossIntro : e.intro.note ? SYS_WINDOW.encounterNote : SYS_WINDOW.encounter,
+        duration,
       });
+      // The window is timer-driven and outlasts the delay on the spawns it
+      // announces, so the fight starts underneath it unless the sim itself
+      // pauses for the window's life — see docs/DECISIONS.md, "The System
+      // window pauses the fight it explains".
+      this.freeze = Math.max(this.freeze, duration / 1000);
     }
     if (e.boss) {
       this.hud.objective('');
