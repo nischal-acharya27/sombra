@@ -36,6 +36,32 @@ if (touch) document.body.classList.add('touch');
 
 const game = new Game(world, hud, audio, input, GATES, touch);
 
+// Every gate's group is in the scene by now, whether visible or not — `Game`
+// just built them all. Three.js otherwise compiles a material's shader
+// program lazily, on the object's first render, so an invisible gate's toon
+// materials, grass wind variant and water sheen would all compile on the one
+// frame the hunter steps through its arch. `compile()` walks the scene by
+// `traverse`, not `traverseVisible`, so it reaches them now instead — at boot,
+// before anything has drawn from the seeded stream. See issue #15.
+//
+// `compile()` alone isn't the whole cost: it only builds each material's own
+// program. The shadow map keeps a second program per shadow-casting object —
+// three.js builds that one lazily too, the first time the object actually
+// casts a shadow, which for an invisible gate is also the transition frame.
+// `compile()` has no equivalent for it, so the only way to pay it early is to
+// render every gate for real, once, before the run starts and before the
+// visibility flags are put back the way `Game` left them.
+const shaderWarmupMs = (() => {
+  const t0 = performance.now();
+  world.renderer.compile(world.scene, world.camera);
+  const wasVisible = game.levels.map((l) => l.group.visible);
+  for (const l of game.levels) l.setVisible(true);
+  world.render();
+  game.levels.forEach((l, i) => l.setVisible(wasVisible[i]));
+  return performance.now() - t0;
+})();
+console.log(`[boot] shader warm-up: ${shaderWarmupMs.toFixed(1)}ms`);
+
 let paused = false;
 let titleT = 0;
 
