@@ -1339,3 +1339,45 @@ buttons at once") is untouched and still stands.
 held direction is expected, and the exact stick geometry (round vs. a
 three-way control, given the game has no vertical movement). Both are
 mechanical follow-ons of the decision above, not open design questions.
+
+## Save scope: what "hunter rank persists" means, and what does not ship yet
+
+Settled 2026-08-07, implementing SPEC-CAMPAIGN step 5. § Progression: rank
+carries, the moveset never grows and § Text is centralised now, translated
+later both named the intent; this is the scope the implementation actually
+landed, decided directly rather than assumed.
+
+**"Rank carried between gates" (user story 18) means resuming an
+in-progress run, not just a historical best.** Level and exp already survived
+gate-to-gate within one page load before this — `Game.reset()` only reset
+them at a full restart. What was missing, and what this adds, is the same
+guarantee surviving a closed browser: the save records the furthest gate
+reached and the level/exp the hunter had on arriving there, and a fresh
+`start()` resumes from it rather than gate 1. Nobody clears a ten-gate
+campaign in one phone session, so this is the point of persisting at all —
+see § Campaign, audience and platform.
+
+**No gate-select or replay screen ships with this step.** Story 20 ("replay a
+cleared gate") is a real consequence of the data this step stores
+(`clearedGates`, `bestStyle`), but building a picker for two gates is
+premature UI for data nobody can act on yet. The storage layer is in place;
+the screen is deferred to whenever gates 3–10 exist and there is enough to
+navigate. Silent auto-resume at the furthest gate is what ships instead.
+
+**Settings is a reserved, empty key and nothing else.** `docs/SPEC-CAMPAIGN.md`
+names it once, in the `localStorage` line, with no elaboration anywhere else
+in the spec — no volume control, no toggle, no options menu exists in the
+game today to promote. `save.settings = {}` keeps the save's shape forward
+compatible without inventing a feature the spec never asked for.
+
+**A gate is identified by its own `id` (e.g. `'gate-2'`), not by array
+position.** `game.js` already keys `storyBeats` this way; array position
+would silently break the moment a gate is inserted ahead of another one,
+which building gates 3–10 is going to do.
+
+**Retry-after-death was a live bug this step happened to fix.** Before this,
+dying mid-gate-2 and pressing retry sent the hunter back to gate 1 — `reset()`
+always called `_enterGate(0)`. Reading the resume point from the save instead
+fixes this for free: a same-session retry and a post-reload resume are the
+same code path, and neither had ever advanced the save past the gate the
+hunter was still fighting.

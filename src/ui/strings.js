@@ -1,0 +1,112 @@
+// Every player-visible string, in one place. `docs/SPEC-CAMPAIGN.md`: "a flat
+// keyed object... so that translating the game later is a mechanical job
+// rather than an archaeology project." English only — no locale switching UI,
+// no fallback chain, no pluralisation machinery; none of that is needed to
+// keep the option open, only the one-module seam is.
+//
+// What does NOT live here: `config.js`'s `ATTACKS.*.name` fields (e.g.
+// "Shadow Slash") are never rendered anywhere in `src/` today — dead data,
+// not player-visible, so moving them would be inventing display code for a
+// string nobody sees. State-machine values ('idle', 'chase', 'dead', ...),
+// audio/sfx keys, and CSS class names are not copy either; they stay where
+// they are.
+//
+// Two functions live in this otherwise-flat object rather than two more flat
+// strings: the SORGI remnant-claim line and the title screen's gate tag both
+// interpolate something only known at the call site (a touch button's label,
+// the resumed gate's name).
+
+export const STRINGS = {
+  // -- objective banner -------------------------------------------------------
+  OBJ_CLEAR_GATE: 'CLEAR THE GATE',
+  OBJ_CROSS_CHASM: 'CROSS THE CHASM',
+  OBJ_DEFEAT_ALL: 'DEFEAT ALL ENEMIES',
+  OBJ_STEP_THROUGH: 'STEP THROUGH THE GATE',
+  OBJ_LEAVE_GATE: 'LEAVE THE GATE',
+
+  // -- toasts -------------------------------------------------------------
+  TOAST_SHADOW_LOST: 'SHADOW LOST',
+  TOAST_AREA_CLEARED: 'AREA CLEARED',
+  TOAST_SORGI: 'SORGI',
+  TOAST_FORGOTTEN: 'FORGOTTEN',
+  TOAST_NOT_ENOUGH_MANA: 'NOT ENOUGH MANA',
+  TOAST_CHARGE: 'CHARGE',
+  TOAST_SLAM: 'SLAM',
+  TOAST_SWEEP: 'SWEEP',
+  TOAST_VOLLEY: 'VOLLEY',
+
+  // -- the System's windows -------------------------------------------------
+  SYS_TITLE: 'THE SYSTEM',
+  WARN_TITLE: 'WARNING',
+  ENRAGE_BIG: 'THE CORE IGNITES',
+  ENRAGE_BODY: 'The Gate Guardian has entered its second phase.',
+  REMNANT_BIG: 'A REMNANT REMAINS',
+  /** The touch phrasing names the control that is actually on screen. */
+  REMNANT_CLAIM_TOUCH: (heavyLabel) =>
+    `Stand over the remnant, hold down on the stick and press ${heavyLabel}.`,
+  REMNANT_CLAIM_KEY: 'Stand over the remnant, hold S and press K. The command is SORGI.',
+  LEVEL_UP_TITLE: 'LEVEL UP',
+  STAT_MAX_HP: 'MAX HP',
+  STAT_MAX_MP: 'MAX MP',
+  STAT_STATUS: 'STATUS',
+  STAT_RESTORED: 'RESTORED',
+  SYS_BOSS_DEFAULT_NAME: 'GATE GUARDIAN',
+
+  // -- run end ----------------------------------------------------------------
+  RUNEND_TIME: 'TIME',
+  RUNEND_KILLS: 'KILLS',
+  RUNEND_LEVEL: 'LEVEL REACHED',
+  RUNEND_DAMAGE: 'DAMAGE TAKEN',
+  RUNEND_RANK: 'RANK',
+  EXP_GAIN: (exp) => `+${exp} EXP`,
+
+  // -- style ranks, index-matched to config.js STYLE.ranks -------------------
+  RANK_0_LETTER: 'D',
+  RANK_0_WORD: 'DORMANT',
+  RANK_1_LETTER: 'C',
+  RANK_1_WORD: 'CLEAN',
+  RANK_2_LETTER: 'B',
+  RANK_2_WORD: 'BRUTAL',
+  RANK_3_LETTER: 'A',
+  RANK_3_WORD: 'ASCENDANT',
+  RANK_4_LETTER: 'S',
+  RANK_4_WORD: 'SOVEREIGN',
+  RANK_5_LETTER: 'SS',
+  RANK_5_WORD: 'SOMBRA',
+
+  // -- touch button labels ----------------------------------------------------
+  TOUCH_SLASH: 'SLASH',
+  TOUCH_JUMP: 'JUMP',
+  TOUCH_RISE: 'RISE',
+  TOUCH_STEP: 'STEP',
+  TOUCH_MAGIC: 'DÉCRET',
+
+  // -- gate 1: Hollow of the Kneeling Stone ------------------------------------
+  GATE1_NAME: 'Hollow of the Kneeling Stone',
+  GATE1_WARDEN_TITLE: 'GATE GUARDIAN',
+  GATE1_FIRSTBLOOD_TITLE: 'THREAT DETECTED',
+  GATE1_FIRSTBLOOD_BODY: 'Shadow Beast × 3',
+  GATE1_FIRSTBLOOD_NOTE: 'Their bodies cannot harm you — only the <b>pounce</b>, and it announces itself.',
+  GATE1_BRIDGE_TITLE: 'AMBUSH',
+  GATE1_BRIDGE_BODY: 'Shadow Beast × 4  ·  Wisp × 2',
+  GATE1_GUARDIAN_TITLE: 'GATE BOSS',
+
+  // -- gate 2: The Crossing -----------------------------------------------
+  GATE2_NAME: 'The Crossing',
+  GATE2_WARDEN_TITLE: 'THE FERRYMAN',
+  GATE2_CHARGER_TITLE: 'THREAT DETECTED',
+  GATE2_CHARGER_BODY: 'Charger × 1',
+  GATE2_CHARGER_NOTE: 'Its body cannot harm you — only the <b>charge</b>, and it plants its feet first.',
+  GATE2_FERRYMAN_TITLE: 'GATE WARDEN',
+  GATE2_FERRYMAN_NOTE: 'The same tell — it just does not stop at the far bank. It charges twice.',
+  GATE2_BEAT_ENTER_TITLE: 'THE SYSTEM',
+  GATE2_BEAT_ENTER_BIG: 'NO RECORD FOUND',
+  GATE2_BEAT_ENTER_BODY: 'It has never catalogued this realm.',
+  GATE2_BEAT_CLEARED_TITLE: 'THE SYSTEM',
+  GATE2_BEAT_CLEARED_BIG: 'RECORD: INCOMPLETE',
+  GATE2_BEAT_CLEARED_BODY: 'It logged the crossing. It could not say why.',
+
+  // -- title screen -------------------------------------------------------
+  /** `n` is 1-based; `name` is the resumed gate's own name. */
+  TITLE_TAG: (n, name) => `GATE ${n} — ${name}`,
+};

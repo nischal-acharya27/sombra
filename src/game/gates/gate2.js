@@ -24,6 +24,7 @@
 // budget gate 1's are.
 
 import { FERRYMAN } from '../config.js';
+import { STRINGS } from '../../ui/strings.js';
 
 /**
  * The far bank — the Ferryman's arena. Flat and open, same as the causeway the
@@ -115,7 +116,7 @@ const SEGMENTS = [
  */
 const WARDEN = {
   archetype: 'charger',
-  title: 'THE FERRYMAN',
+  title: STRINGS.GATE2_WARDEN_TITLE,
   stats: FERRYMAN,
 };
 
@@ -143,9 +144,9 @@ const ENCOUNTERS = [
     trigger: 64,
     lock: [61, 86],
     intro: {
-      title: 'THREAT DETECTED',
-      body: 'Charger × 1',
-      note: 'Its body cannot harm you — only the <b>charge</b>, and it plants its feet first.',
+      title: STRINGS.GATE2_CHARGER_TITLE,
+      body: STRINGS.GATE2_CHARGER_BODY,
+      note: STRINGS.GATE2_CHARGER_NOTE,
     },
     // Far enough down the causeway to be seen planting before it is in range,
     // and clear of both barriers by a wide margin.
@@ -156,9 +157,9 @@ const ENCOUNTERS = [
     trigger: 118,
     lock: [113, 149],
     intro: {
-      title: 'GATE WARDEN',
+      title: STRINGS.GATE2_FERRYMAN_TITLE,
       body: WARDEN.title,
-      note: 'The same tell — it just does not stop at the far bank. It charges twice.',
+      note: STRINGS.GATE2_FERRYMAN_NOTE,
     },
     // `warden` rather than an archetype name: which enemy that is belongs to
     // the gate's Warden block, so the encounter does not have to say it twice.
@@ -185,22 +186,22 @@ const ENCOUNTERS = [
 const BEATS = [
   {
     at: 'enter',
-    title: 'THE SYSTEM',
-    big: 'NO RECORD FOUND',
-    body: 'It has never catalogued this realm.',
+    title: STRINGS.GATE2_BEAT_ENTER_TITLE,
+    big: STRINGS.GATE2_BEAT_ENTER_BIG,
+    body: STRINGS.GATE2_BEAT_ENTER_BODY,
     glitch: true,
   },
   {
     at: 'cleared',
-    title: 'THE SYSTEM',
-    big: 'RECORD: INCOMPLETE',
-    body: 'It logged the crossing. It could not say why.',
+    title: STRINGS.GATE2_BEAT_CLEARED_TITLE,
+    big: STRINGS.GATE2_BEAT_CLEARED_BIG,
+    body: STRINGS.GATE2_BEAT_CLEARED_BODY,
   },
 ];
 
 export const GATE_2 = {
   id: 'gate-2',
-  name: 'The Crossing',
+  name: STRINGS.GATE2_NAME,
   realm: REALM,
   beats: BEATS,
 

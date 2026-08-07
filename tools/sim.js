@@ -13,6 +13,8 @@ import { ChargerShadow } from '../src/game/shadow.js';
 import { buildShard } from '../src/render/models.js';
 import { checkGates, controls, crossing, telegraphs } from './gatecheck.js';
 import { checkTouch } from './touchcheck.js';
+import { checkPersist } from './persistcheck.js';
+import { blankSave } from '../src/game/save.js';
 
 const DT = 1 / 120;
 /** Seeds per playthrough sweep. Eight runs cost about a second. */
@@ -109,6 +111,24 @@ const TELL_WINS_MIN = 17;
  */
 const TELL_ALPHA = 0.05;
 
+/**
+ * `game.start()`, with the save wiped first.
+ *
+ * Every probe below wants the same thing from `start()` that it always gave:
+ * a blank hunter at gate 1, deterministic regardless of what ran before it in
+ * this same `runAll`. That stopped being true for free once `reset()` began
+ * resuming from `game.save` — real progress a probe earlier in this same run
+ * (`transition`, chiefly, which actually walks gate 1 into the crossing)
+ * leaves behind, and a real player resuming it is exactly the feature. It is
+ * only ever `persistcheck.js` — pure, fixture-based, no `Game` involved —
+ * that is allowed to care what `resumePoint` does with a non-blank save; every
+ * other probe calls this instead of `game.start()` so that guarantee holds.
+ */
+function hardStart(game) {
+  game.save = blankSave();
+  game.start();
+}
+
 class Bot {
   /** `latency` delays presses only — see REACTION. Probes leave it at 0. */
   constructor(game, input, latency = 0) {
@@ -161,7 +181,7 @@ function measureArcs(game, input) {
   const p = game.player;
   // Game.update is a no-op unless a run is live, so every measurement here
   // would silently read zero without this.
-  game.start();
+  hardStart(game);
 
   const run = (holdRun, useDouble) => {
     p.reset(4, 0);
@@ -217,7 +237,7 @@ function measureArcs(game, input) {
 function measureAirAttack(game, input) {
   const bot = new Bot(game, input);
   const p = game.player;
-  game.start();
+  hardStart(game);
 
   // Own seed scope. Enemy jitter and spawn scatter draw on Math.random, and the
   // suite runs one sequential stream — a probe added here would otherwise shift
@@ -324,7 +344,7 @@ function measureJuggle(game, input) {
 
   return withSeed(0x105510, () => {
     const attempt = (swingDelay) => {
-      game.start();
+      hardStart(game);
       p.reset(20, game.level.groundAt(20) + 0.1);
       p.grounded = true;
       p.state = 'idle';
@@ -438,7 +458,7 @@ function checkGaps(game, arcs) {
  * no unpassable geometry — which is the only claim this test makes.
  */
 function playthrough(game, input, opts = {}) {
-  game.start();
+  hardStart(game);
   return walkGate(game, input, opts);
 }
 
@@ -734,7 +754,7 @@ function giveShadow(game, bot) {
 }
 
 function bossFight(game, input, strategy, { maxSeconds = 240, carryShadow = false, latency = REACTION } = {}) {
-  game.start();
+  hardStart(game);
   const bot = new Bot(game, input, latency);
   const p = game.player;
 
@@ -876,7 +896,7 @@ function moveList(game, input) {
   const results = [];
 
   for (const key of ['light1', 'light2', 'light3', 'launcher', 'air1', 'air2']) {
-    game.start();
+    hardStart(game);
     // Spawn a target by hand at a known distance, inside every move's reach.
     game._spawn({ type: 'beast', x: p.x + 1.6, encounter: 'test' });
     const e = game.enemies[game.enemies.length - 1];
@@ -937,7 +957,7 @@ function extraction(game, input) {
   };
 
   // --- the corpse and its window ---
-  game.start();
+  hardStart(game);
   const corpse = layCorpse();
   check('a beast leaves a corpse', !!corpse);
   const before = corpse ? corpse.windowT : 0;
@@ -949,7 +969,7 @@ function extraction(game, input) {
   check('the corpse expires unclaimed', game.corpses.length === 0);
 
   // --- the channel ---
-  game.start();
+  hardStart(game);
   layCorpse();
   sorgi();
   const raised = game.shadow;
@@ -959,7 +979,7 @@ function extraction(game, input) {
 
   // The cost is standing still. If the hunter can walk out of the channel it
   // is not a cost, and the mechanic is free.
-  game.start();
+  hardStart(game);
   layCorpse();
   const x0 = p.x;
   bot.hold('down', true);
@@ -973,7 +993,7 @@ function extraction(game, input) {
   check('the channel roots the hunter', drift < 0.5, `drifted ${drift.toFixed(2)}`);
 
   // --- a hit breaks it ---
-  game.start();
+  hardStart(game);
   layCorpse();
   bot.hold('down', true);
   bot.press('heavy');
@@ -989,7 +1009,7 @@ function extraction(game, input) {
   check('and the corpse outlives it', game.corpses.length === 1);
 
   // --- one at a time ---
-  game.start();
+  hardStart(game);
   layCorpse();
   sorgi();
   const first = game.shadow;
@@ -998,7 +1018,7 @@ function extraction(game, input) {
   check('extracting again replaces', !!first && !!game.shadow && game.shadow !== first);
 
   // --- EXP yes, style no ---
-  game.start();
+  hardStart(game);
   layCorpse();
   sorgi();
   game.style = 0;
@@ -1066,7 +1086,7 @@ function transition(game, input) {
 
   /** Gate 1, beaten, with the hunter put down `back` units short of the arch. */
   const atTheArch = (back) => {
-    game.start();
+    hardStart(game);
     for (const e of game.encounters) {
       e.started = true;
       e.cleared = true;
@@ -1181,7 +1201,7 @@ function transition(game, input) {
   // And gate 1 is still gate 1 afterwards. A campaign that corrupts the gate it
   // came from is the failure this whole design is arranged against, and it is
   // invisible from inside a single run.
-  game.start();
+  hardStart(game);
   game.hud.screen('clear', false);
   for (const r of freshness(game)) rows.push(r);
   return rows;
@@ -1266,7 +1286,7 @@ function chargerFight(game, input) {
 
   /** One charger and one hunter, alone on the approach, nothing else running. */
   const setUp = (px, cx) => {
-    game.start();
+    hardStart(game);
     for (const e of game.encounters) {
       e.started = true;
       e.cleared = true;
@@ -1377,7 +1397,7 @@ function chargerFight(game, input) {
     `${game.corpses.length - corpsesFrom} claimable body`
   );
 
-  game.start();
+  hardStart(game);
   game.hud.screen('clear', false);
   return rows;
 }
@@ -1411,7 +1431,7 @@ function chargerShadow(game, input) {
     return pred();
   };
 
-  game.start();
+  hardStart(game);
   for (const e of game.encounters) {
     e.started = true;
     e.cleared = true;
@@ -1458,7 +1478,7 @@ function chargerShadow(game, input) {
       `${SHADOW.pounce.damage} or the hostile charger's ${CHARGER.charge.damage}`
   );
 
-  game.start();
+  hardStart(game);
   game.hud.screen('clear', false);
   return rows;
 }
@@ -1478,7 +1498,7 @@ function storyBeats(game, input) {
   const say = (what, ok, detail = '') => rows.push({ what, ok, detail });
 
   // --- forced: a beat asked to open mid-encounter ---
-  game.start();
+  hardStart(game);
   game._enterGate(1);
   say('lands in the crossing', game.gate.id === 'gate-2', game.gate.id);
   const openBefore = game.hud.el.windows.children.length;
@@ -1500,7 +1520,7 @@ function storyBeats(game, input) {
   );
 
   // --- a real walk: both encounters, the Warden, nothing forced ---
-  game.start();
+  hardStart(game);
   game._enterGate(1);
   const entryBeat = game.storyBeats[game.storyBeats.length - 1];
   say('the entry beat fires on a real arrival, unforced', entryBeat?.at === 'enter' && entryBeat?.opened === true);
@@ -1509,7 +1529,7 @@ function storyBeats(game, input) {
   say('the closing beat fired once the Ferryman fell', game.storyBeats.some((b) => b.at === 'cleared' && b.opened));
   say('nothing that fired over the whole walk did so mid-encounter', game.storyBeats.every((b) => !b.liveEncounter));
 
-  game.start();
+  hardStart(game);
   game.hud.screen('clear', false);
   return rows;
 }
@@ -1540,7 +1560,7 @@ function crossingWater(game, input) {
   };
 
   // --- carrying a shadow in ---
-  game.start();
+  hardStart(game);
   game._enterGate(1);
   say('lands in the crossing', game.gate.id === 'gate-2', game.gate.id);
   giveShadow(game, bot);
@@ -1563,7 +1583,7 @@ function crossingWater(game, input) {
   say('binding again behaves like a first bind', boundAgain && !!game.shadow);
 
   // --- falling with no shadow bound ---
-  game.start();
+  hardStart(game);
   game._enterGate(1);
   say('no shadow bound', !game.shadow);
   const hpBefore2 = p.hp;
@@ -1572,7 +1592,7 @@ function crossingWater(game, input) {
   say('and still returns to solid ground', p.x === game.gate.spawnX);
 
   // --- gate 1's void is unchanged ---
-  game.start();
+  hardStart(game);
   say('back in gate 1', game.gate.id === 'gate-1');
   p.x = 4;
   p.y = game.gate.voidY - 1;
@@ -1580,7 +1600,7 @@ function crossingWater(game, input) {
   bot.step();
   say('gate 1 still kills', game.state === 'dead');
 
-  game.start();
+  hardStart(game);
   game.hud.screen('clear', false);
   return rows;
 }
@@ -1898,6 +1918,10 @@ function runAll(game, input, seed) {
   // rig `extract()` builds off it — and the rule does not carve out an
   // exception for the probe that closes the file today either.
   report.chargerShadow = scope(15, () => chargerShadow(game, input));
+  // And after even that, last of all: arithmetic over plain fixture objects,
+  // same kind of check as the touch layout above, drawing nothing — it could
+  // sit anywhere, and it sits here because the rule says last.
+  report.persist = checkPersist();
   report.ms = Math.round(performance.now() - t0);
 
   print(report);
@@ -2235,6 +2259,19 @@ function print(r) {
   lines.push('  the whole campaign rather than the gate being replayed — an arch left');
   lines.push('  lit in the crossing is state a fresh run does not have, and nothing');
   lines.push('  inside gate 1 would ever notice it.');
+  lines.push('');
+
+  lines.push('PERSISTENCE   (save.js — pure functions, fixture gates, no localStorage)');
+  for (const t of r.persist.rows) {
+    lines.push(`  ${t.check.padEnd(52)} ${t.detail.padEnd(46)} ${ok(t.ok)}`);
+  }
+  lines.push('');
+  lines.push('  `?sim` never reads or writes real `localStorage` — see the note in');
+  lines.push('  `main.js` — so this checks the save logic against fixture gates and');
+  lines.push('  fixture saves instead of touching a browser profile this run cannot');
+  lines.push('  control. The stale-gate-id row is the negative control: a save naming a');
+  lines.push('  gate this build no longer has is a real fault a player\'s device can');
+  lines.push('  produce, not a hypothetical one.');
   lines.push('');
 
   lines.push('', `seed ${r.seed}   ·   suite ran in ${r.ms} ms`);

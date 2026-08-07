@@ -4,6 +4,7 @@ import { Actor } from './actor.js';
 import { buildHunter } from '../render/models.js';
 import { PHYS, PLAYER, ATTACKS, MAGIC, SHADOW } from './config.js';
 import { clamp, damp, lerp, approach } from '../engine/mathx.js';
+import { STRINGS } from '../ui/strings.js';
 
 const seg = (u, a, b) => clamp((u - a) / (b - a), 0, 1);
 const easeOut = (t) => 1 - Math.pow(1 - t, 3);
@@ -180,7 +181,7 @@ export class Player extends Actor {
       // and the denial sound machine-guns for as long as the buffer lives.
       input.pressed('magic');
       this.ctx.audio?.play('deny');
-      this.ctx.toast?.('NOT ENOUGH MANA', 'warn');
+      this.ctx.toast?.(STRINGS.TOAST_NOT_ENOUGH_MANA, 'warn');
     }
 
     // SORGI, and it has to be tested before the launcher below or the launcher

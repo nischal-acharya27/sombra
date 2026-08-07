@@ -14,6 +14,7 @@
 // See docs/SPEC-CAMPAIGN.md § Further Notes.
 
 import { GUARDIAN } from '../config.js';
+import { STRINGS } from '../../ui/strings.js';
 
 /** The arena floor. The Warden spawns on it and the exit arch stands on it. */
 const ARENA_TOP = 3;
@@ -105,7 +106,7 @@ const SEGMENTS = [
  */
 const WARDEN = {
   archetype: 'guardian',
-  title: 'GATE GUARDIAN',
+  title: STRINGS.GATE1_WARDEN_TITLE,
   stats: GUARDIAN,
 };
 
@@ -133,9 +134,9 @@ const ENCOUNTERS = [
     //
     // One line, on screen from 0 s, short enough to take in at a glance.
     intro: {
-      title: 'THREAT DETECTED',
-      body: 'Shadow Beast × 3',
-      note: 'Their bodies cannot harm you — only the <b>pounce</b>, and it announces itself.',
+      title: STRINGS.GATE1_FIRSTBLOOD_TITLE,
+      body: STRINGS.GATE1_FIRSTBLOOD_BODY,
+      note: STRINGS.GATE1_FIRSTBLOOD_NOTE,
     },
     spawns: [
       { type: 'beast', x: 52, delay: 0 },
@@ -163,7 +164,7 @@ const ENCOUNTERS = [
     id: 'the-bridge',
     trigger: 136,
     lock: [134, 161],
-    intro: { title: 'AMBUSH', body: 'Shadow Beast × 4  ·  Wisp × 2' },
+    intro: { title: STRINGS.GATE1_BRIDGE_TITLE, body: STRINGS.GATE1_BRIDGE_BODY },
     // Six enemies, but spread over seven seconds rather than dropped at once.
     // Arriving together, four beasts pounce often enough to out-damage the
     // hunter's entire health bar before the first one dies; arriving in waves,
@@ -186,7 +187,7 @@ const ENCOUNTERS = [
     trigger: 172,
     lock: [167, 203],
     boss: true,
-    intro: { title: 'GATE BOSS', body: WARDEN.title },
+    intro: { title: STRINGS.GATE1_GUARDIAN_TITLE, body: WARDEN.title },
     // `warden` rather than an archetype name: which enemy that is belongs to
     // the gate's Warden block, so the encounter does not have to say it twice.
     spawns: [{ type: 'warden', x: 190, delay: 0.9 }],
@@ -195,7 +196,7 @@ const ENCOUNTERS = [
 
 export const GATE_1 = {
   id: 'gate-1',
-  name: 'Hollow of the Kneeling Stone',
+  name: STRINGS.GATE1_NAME,
   realm: REALM,
 
   spawnX: 4,

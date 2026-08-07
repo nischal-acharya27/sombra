@@ -35,6 +35,7 @@
 
 import { PHYS } from '../game/config.js';
 import { BUFFER } from '../engine/input.js';
+import { STRINGS } from './strings.js';
 
 /**
  * How long the hunter is still rising after a jump, in seconds.
@@ -181,7 +182,7 @@ export const TOUCH_LAYOUT = {
     downDeadzone: 0.35,
   },
   buttons: [
-    { verb: 'light', action: 'light', label: 'SLASH', side: 'right', x: 0.36, y: 0.36, w: 1.62, h: 1.58, tone: 'cyan' },
+    { verb: 'light', action: 'light', label: STRINGS.TOUCH_SLASH, side: 'right', x: 0.36, y: 0.36, w: 1.62, h: 1.58, tone: 'cyan' },
     /**
      * `sustain` is the one place the touch scheme is not a transcription of
      * the keyboard, and it is here because measuring said it had to be.
@@ -208,10 +209,10 @@ export const TOUCH_LAYOUT = {
      * arc — and a gate that did would be authoring against an input half the
      * players do not have.
      */
-    { verb: 'jump', action: 'jump', label: 'JUMP', side: 'right', x: 2.04, y: 0.50, w: 1.44, h: 1.56, tone: 'plain', sustain: TAP_WORTH },
-    { verb: 'heavy', action: 'heavy', label: 'RISE', side: 'right', x: 0.54, y: 2.04, w: 1.50, h: 1.50, tone: 'cyan' },
-    { verb: 'dash', action: 'dash', label: 'STEP', side: 'right', x: 2.16, y: 2.34, w: 1.44, h: 1.44, tone: 'plain' },
-    { verb: 'magic', action: 'magic', label: 'DÉCRET', side: 'right', x: 3.60, y: 0.96, w: 1.38, h: 1.44, tone: 'blue' },
+    { verb: 'jump', action: 'jump', label: STRINGS.TOUCH_JUMP, side: 'right', x: 2.04, y: 0.50, w: 1.44, h: 1.56, tone: 'plain', sustain: TAP_WORTH },
+    { verb: 'heavy', action: 'heavy', label: STRINGS.TOUCH_RISE, side: 'right', x: 0.54, y: 2.04, w: 1.50, h: 1.50, tone: 'cyan' },
+    { verb: 'dash', action: 'dash', label: STRINGS.TOUCH_STEP, side: 'right', x: 2.16, y: 2.34, w: 1.44, h: 1.44, tone: 'plain' },
+    { verb: 'magic', action: 'magic', label: STRINGS.TOUCH_MAGIC, side: 'right', x: 3.60, y: 0.96, w: 1.38, h: 1.44, tone: 'blue' },
   ],
 };
 

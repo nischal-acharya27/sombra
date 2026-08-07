@@ -17,6 +17,8 @@ import { P } from '../render/palette.js';
 import { MAGIC, STYLE, PROGRESSION, PLAYER, WISP, SHADOW, GATE_ARCH, SYS_WINDOW } from './config.js';
 import { boxHit } from './actor.js';
 import { clamp, rand } from '../engine/mathx.js';
+import { STRINGS } from '../ui/strings.js';
+import { blankSave, resumePoint, recordGateClear, hasTaught, markTaught } from './save.js';
 
 /**
  * What an actor's live attack is worth this frame, full stop — damage and
@@ -48,14 +50,20 @@ export class Game {
    * @param gates the campaign, in order — see `src/game/gates/`.
    * @param touch the `TouchControls` instance, or null on a keyboard — the
    *   source of truth for which device's instructions to teach.
+   * @param save the loaded (or blank, under `?sim`) save object — see
+   *   `src/game/save.js`.
+   * @param persistSave writes a save object; a no-op under `?sim` so the
+   *   suite never touches real `localStorage` — see `main.js`.
    */
-  constructor(world, hud, audio, input, gates, touch = null) {
+  constructor(world, hud, audio, input, gates, touch = null, save = blankSave(), persistSave = () => {}) {
     this.world = world;
     this.hud = hud;
     this.audio = audio;
     this.input = input;
     this.touch = touch;
     this.gates = gates;
+    this.save = save;
+    this._persistSave = persistSave;
     this.gateIndex = 0;
     this.gate = gates[0];
 
@@ -123,11 +131,6 @@ export class Game {
     // the gameplay stream and re-rolls every enemy's jitter after it.
     this.shardPool = [];
     for (let i = 0; i < SHADOW.maxCorpses; i++) this.shardPool.push(buildShard());
-    // Deliberately not cleared by `reset`. The line teaches the mechanic once;
-    // re-teaching it every restart is the per-kill interruption the design was
-    // careful to avoid. Persistence is deferred project-wide, so "ever" here
-    // means "this page load", which is all it can mean.
-    this._taughtCorpse = false;
 
     // idle | playing | dead | cleared | ended
     //
@@ -205,14 +208,18 @@ export class Game {
     this.player.maxHp = PLAYER.maxHp;
     this.player.maxMp = PLAYER.maxMp;
 
-    this.level_ = 1;
-    this.exp = 0;
+    // The furthest gate this save has reached, and the level/exp the hunter
+    // had on arriving there — gate 0, level 1 for a blank save, or for a save
+    // naming a gate this build no longer has. See `resumePoint` in `save.js`.
+    const { gateIndex, level, exp } = resumePoint(this.save, this.gates);
+    this.level_ = level;
+    this.exp = exp;
     this.kills = 0;
     this.damageTaken = 0;
     this.runTime = 0;
     this.storyBeats = [];
 
-    this._enterGate(0);
+    this._enterGate(gateIndex);
     this._syncVitals();
   }
 
@@ -280,6 +287,9 @@ export class Game {
     this.style = 0;
     this.combo = 0;
     this.moveHistory.length = 0;
+    // The peak style rank reached this attempt — `save.js`'s `bestStyle`, per
+    // gate, is this value snapshotted at `_recordGateClear`.
+    this._gateStylePeak = 0;
 
     // The arch is a cut. Effects outlive the moment that made them, so without
     // this a Warden's death sparks and the damage number over its corpse drift
@@ -290,7 +300,7 @@ export class Game {
     this.hud.boss(false);
     this.hud.setCombo(0);
     this.hud.setStyle(0);
-    this.hud.objective('CLEAR THE GATE');
+    this.hud.objective(STRINGS.OBJ_CLEAR_GATE);
 
     // The System names the realm, every time, so that ten gates in the hunter
     // still knows where in the afterlife they are standing. Any `enter` beat
@@ -301,7 +311,7 @@ export class Game {
     // suite steps `dt` synchronously, so a beat chained onto that promise
     // would fire in real seconds no scripted run could fast-forward past.
     this.audio.play('systemOpen');
-    this.hud.window({ title: 'THE SYSTEM', big: this.gate.name, duration: SYS_WINDOW.gateEnter });
+    this.hud.window({ title: STRINGS.SYS_TITLE, big: this.gate.name, duration: SYS_WINDOW.gateEnter });
     this._fireBeats('enter');
 
     // A gate with no Warden has nothing to beat, so its way out is open from
@@ -402,7 +412,7 @@ export class Game {
     if (this.shadow && (this.shadow.removeMe || this.shadow.y < voidY)) {
       this.entityRoot.remove(this.shadow.root);
       this.shadow = null;
-      this.hud.toast('SHADOW LOST', 'warn');
+      this.hud.toast(STRINGS.TOAST_SHADOW_LOST, 'warn');
     }
     for (let i = this.bolts.length - 1; i >= 0; i--) {
       if (this.bolts[i].removeMe) {
@@ -755,6 +765,7 @@ export class Game {
     const repeats = recent.filter((m) => m === move).length;
     const mul = repeats === 0 ? 1 : Math.pow(STYLE.repeatPenalty, repeats);
     this.style = clamp(this.style + points * mul, 0, STYLE.max);
+    this._gateStylePeak = Math.max(this._gateStylePeak, this.styleRank());
     this.moveHistory.push(move);
     if (this.moveHistory.length > 8) this.moveHistory.shift();
     this.styleIdleT = 0;
@@ -828,7 +839,7 @@ export class Game {
       this.cam.zoom(17);
       this.audio.setIntensity(1);
     } else {
-      this.hud.objective(e.lock ? 'DEFEAT ALL ENEMIES' : 'CROSS THE CHASM');
+      this.hud.objective(e.lock ? STRINGS.OBJ_DEFEAT_ALL : STRINGS.OBJ_CROSS_CHASM);
       this.audio.setIntensity(0.75);
     }
   }
@@ -855,8 +866,8 @@ export class Game {
       this._openTheWay();
       this._fireBeats('cleared');
     } else if (e.lock) {
-      this.hud.objective('CLEAR THE GATE');
-      this.hud.toast('AREA CLEARED', 'gold');
+      this.hud.objective(STRINGS.OBJ_CLEAR_GATE);
+      this.hud.toast(STRINGS.TOAST_AREA_CLEARED, 'gold');
       this.audio.play('gateOpen');
     }
   }
@@ -900,12 +911,15 @@ export class Game {
     const corpse = new Corpse(e.x, e.y, e.root, this.shardPool.pop(), e.constructor);
     this.corpses.push(corpse);
     this.entityRoot.add(corpse.shard);
-    if (this._taughtCorpse) return;
-    this._taughtCorpse = true;
-    // Once, ever. The launcher went undiscovered for two playtest rounds and
-    // the style meter for three, both of them taught purely diegetically. The
-    // shard is still the tell that matters; this is the line that tells the
-    // player there is a tell to read.
+    if (hasTaught(this.save, 'corpse')) return;
+    // Once, ever — now across sessions too, not just this page load. The
+    // launcher went undiscovered for two playtest rounds and the style meter
+    // for three, both of them taught purely diegetically. The shard is still
+    // the tell that matters; this is the line that tells the player there is
+    // a tell to read. Written immediately rather than waiting for the next
+    // gate transition: losing this to an early tab close would show it twice.
+    this.save = markTaught(this.save, 'corpse');
+    this._persistSave(this.save);
     this.audio.play('systemOpen');
     // The command the line names is the one the device in the player's hands
     // actually offers: `this.touch` is set once, at boot, from whether
@@ -916,13 +930,11 @@ export class Game {
     // stale. SORGI itself has no button of its own any more — see
     // `DECISIONS.md` § The steer control becomes a stick — so touch's phrasing
     // names the stick the same way the keyboard line names `S`.
-    const heavyLabel = this.touch?.layout.buttons.find((b) => b.verb === 'heavy')?.label ?? 'RISE';
-    const claim = this.touch
-      ? `Stand over the remnant, hold down on the stick and press ${heavyLabel}.`
-      : 'Stand over the remnant, hold S and press K. The command is SORGI.';
+    const heavyLabel = this.touch?.layout.buttons.find((b) => b.verb === 'heavy')?.label ?? STRINGS.TOUCH_RISE;
+    const claim = this.touch ? STRINGS.REMNANT_CLAIM_TOUCH(heavyLabel) : STRINGS.REMNANT_CLAIM_KEY;
     this.hud.window({
-      title: 'THE SYSTEM',
-      big: 'A REMNANT REMAINS',
+      title: STRINGS.SYS_TITLE,
+      big: STRINGS.REMNANT_BIG,
       body: claim,
       duration: SYS_WINDOW.remnantTeach,
     });
@@ -976,17 +988,22 @@ export class Game {
     this.vfx.groundBurst(corpse.x, corpse.y, 1.2);
     this.cam.shake(0.2);
     this.audio.play('levelup');
-    this.hud.toast('SORGI', 'gold');
+    this.hud.toast(STRINGS.TOAST_SORGI, 'gold');
   }
 
   onTelegraph(name) {
     // A word for the tell, so the first fight teaches the vocabulary.
-    const label = { charge: 'CHARGE', slam: 'SLAM', sweep: 'SWEEP', volley: 'VOLLEY' }[name];
+    const label = {
+      charge: STRINGS.TOAST_CHARGE,
+      slam: STRINGS.TOAST_SLAM,
+      sweep: STRINGS.TOAST_SWEEP,
+      volley: STRINGS.TOAST_VOLLEY,
+    }[name];
     if (label) this.hud.toast(label, 'warn');
   }
 
   onEnrage() {
-    this.hud.window({ title: 'WARNING', big: 'THE CORE IGNITES', body: 'The Gate Guardian has entered its second phase.', duration: SYS_WINDOW.enrage });
+    this.hud.window({ title: STRINGS.WARN_TITLE, big: STRINGS.ENRAGE_BIG, body: STRINGS.ENRAGE_BODY, duration: SYS_WINDOW.enrage });
   }
 
   // -- progression ----------------------------------------------------------
@@ -994,7 +1011,7 @@ export class Game {
   _onKill(e) {
     this.kills++;
     this.exp += e.exp;
-    this.vfx.damageNumber(e.x, e.y + e.hh * 2 + 0.9, `+${e.exp} EXP`, { color: '#ffb347', scale: 0.85 });
+    this.vfx.damageNumber(e.x, e.y + e.hh * 2 + 0.9, STRINGS.EXP_GAIN(e.exp), { color: '#ffb347', scale: 0.85 });
     this.audio.play('exp');
 
     let need = PROGRESSION.curve(this.level_);
@@ -1017,12 +1034,12 @@ export class Game {
     this.vfx.shadowBurst(this.player.x, this.player.y + 1, 34, P.cyan);
     this.vfx.groundBurst(this.player.x, this.player.y, 1.1);
     this.hud.window({
-      title: 'LEVEL UP',
+      title: STRINGS.LEVEL_UP_TITLE,
       big: `LV ${this.level_}`,
       lines: [
-        ['MAX HP', `${this.player.maxHp}`, true],
-        ['MAX MP', `${this.player.maxMp}`, true],
-        ['STATUS', 'RESTORED', true],
+        [STRINGS.STAT_MAX_HP, `${this.player.maxHp}`, true],
+        [STRINGS.STAT_MAX_MP, `${this.player.maxMp}`, true],
+        [STRINGS.STAT_STATUS, STRINGS.STAT_RESTORED, true],
       ],
       duration: SYS_WINDOW.levelUp,
     });
@@ -1043,7 +1060,7 @@ export class Game {
     if (this.shadow) {
       this.entityRoot.remove(this.shadow.root);
       this.shadow = null;
-      this.hud.toast('FORGOTTEN', 'warn');
+      this.hud.toast(STRINGS.TOAST_FORGOTTEN, 'warn');
     }
     this.player.x = this.gate.spawnX;
     this.player.y = 0.2;
@@ -1080,14 +1097,27 @@ export class Game {
     this.exitArmed = false;
     this.level.openExit();
     this.audio.play('gateOpen');
-    this.hud.objective(this._nextGate() ? 'STEP THROUGH THE GATE' : 'LEAVE THE GATE');
+    this.hud.objective(this._nextGate() ? STRINGS.OBJ_STEP_THROUGH : STRINGS.OBJ_LEAVE_GATE);
   }
 
   /** Into the next gate, or out of the campaign. */
   _stepThrough() {
+    this._recordGateClear();
     const next = this.gateIndex + 1;
     if (next < this.gates.length) this._enterGate(next);
     else this._endRun();
+  }
+
+  /**
+   * This gate's id joins `clearedGates`, its best style rank keeps the higher
+   * of what it already held and this attempt's peak, and the resume point
+   * moves on — see `recordGateClear` in `save.js`. Called unconditionally
+   * before `_stepThrough` branches, so the last gate's clear is captured
+   * before `recordGateClear` wraps the save back to a fresh run.
+   */
+  _recordGateClear() {
+    this.save = recordGateClear(this.save, this.gate, this.gates, this._gateStylePeak, this.level_, this.exp);
+    this._persistSave(this.save);
   }
 
   /**
@@ -1108,11 +1138,11 @@ export class Game {
     const mins = Math.floor(this.runTime / 60);
     const secs = (this.runTime % 60).toFixed(1).padStart(4, '0');
     this.hud.clearStats([
-      ['TIME', `${mins}:${secs}`],
-      ['KILLS', String(this.kills)],
-      ['LEVEL REACHED', String(this.level_)],
-      ['DAMAGE TAKEN', String(Math.round(this.damageTaken))],
-      ['RANK', this._finalRank()],
+      [STRINGS.RUNEND_TIME, `${mins}:${secs}`],
+      [STRINGS.RUNEND_KILLS, String(this.kills)],
+      [STRINGS.RUNEND_LEVEL, String(this.level_)],
+      [STRINGS.RUNEND_DAMAGE, String(Math.round(this.damageTaken))],
+      [STRINGS.RUNEND_RANK, this._finalRank()],
     ]);
     this.hud.screen('clear', true);
   }

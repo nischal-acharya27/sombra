@@ -6,6 +6,8 @@
 // 3.4-unit rise in 0.33 s, which clears a 2-unit step comfortably and a
 // 4.5-unit gap at a run.
 
+import { STRINGS } from '../ui/strings.js';
+
 export const PHYS = {
   gravity: 62,
   fallGravityMul: 1.45, // heavier on the way down; a symmetric arc feels floaty
@@ -472,12 +474,12 @@ export const GUARDIAN = {
 /** Style ranks. `decay` is meter lost per second while not attacking. */
 export const STYLE = {
   ranks: [
-    { letter: 'D', word: 'DORMANT', at: 0 },
-    { letter: 'C', word: 'CLEAN', at: 55 },
-    { letter: 'B', word: 'BRUTAL', at: 130 },
-    { letter: 'A', word: 'ASCENDANT', at: 230 },
-    { letter: 'S', word: 'SOVEREIGN', at: 360 },
-    { letter: 'SS', word: 'SOMBRA', at: 520 },
+    { letter: STRINGS.RANK_0_LETTER, word: STRINGS.RANK_0_WORD, at: 0 },
+    { letter: STRINGS.RANK_1_LETTER, word: STRINGS.RANK_1_WORD, at: 55 },
+    { letter: STRINGS.RANK_2_LETTER, word: STRINGS.RANK_2_WORD, at: 130 },
+    { letter: STRINGS.RANK_3_LETTER, word: STRINGS.RANK_3_WORD, at: 230 },
+    { letter: STRINGS.RANK_4_LETTER, word: STRINGS.RANK_4_WORD, at: 360 },
+    { letter: STRINGS.RANK_5_LETTER, word: STRINGS.RANK_5_WORD, at: 520 },
   ],
   max: 640,
   decay: 26,

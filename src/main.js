@@ -8,6 +8,8 @@ import { HUD } from './ui/hud.js';
 import { TouchControls } from './ui/touch.js';
 import { Game } from './game/game.js';
 import { GATES } from './game/gates/index.js';
+import { blankSave, loadSave, writeSave, resumePoint } from './game/save.js';
+import { STRINGS } from './ui/strings.js';
 
 // `Game` is handed the whole campaign, and opens on the first of it. It builds
 // every gate up front and switches between them by visibility, because a gate
@@ -21,6 +23,13 @@ const hud = new HUD();
 const audio = new Audio();
 const input = new Input();
 
+// `?sim` never touches real `localStorage`, in either direction, regardless
+// of what a given machine's browser has saved from real play — the same
+// reason it never gets real `TouchControls` below. A save loaded at
+// construction time would otherwise leak into the suite's supposedly seeded,
+// reproducible run.
+const simMode = location.search.includes('sim');
+
 // On-screen controls, on a device with a thumb — or on any device with
 // `?touch`, which is how the layout gets looked at without hunting for a phone.
 // Not in `?sim`: the suite drives `Input` directly and never starts the loop,
@@ -30,11 +39,23 @@ const input = new Input();
 // the source of truth for which device's instructions to teach — rather than
 // guessing from screen width, which is what the touch layout itself refuses
 // to do.
-const touch =
-  !location.search.includes('sim') && TouchControls.wanted() ? new TouchControls(input) : null;
+const touch = !simMode && TouchControls.wanted() ? new TouchControls(input) : null;
 if (touch) document.body.classList.add('touch');
 
-const game = new Game(world, hud, audio, input, GATES, touch);
+const save = simMode ? blankSave() : loadSave();
+const persistSave = simMode ? () => {} : writeSave;
+
+const game = new Game(world, hud, audio, input, GATES, touch, save, persistSave);
+
+// The title screen names the gate a fresh "start" actually resumes into —
+// gate 1 for a blank save, but a returning hunter's furthest gate otherwise.
+// Static markup can only ever be right for a save that does not exist yet.
+// `game.gateIndex` is not it: `Game` only moves off gate 0 inside `reset()`,
+// which `start()` has not been clicked to call yet — this reads the same
+// pure `resumePoint` `reset()` will, rather than a `Game` field that is still
+// gate 0 at this point regardless of the save.
+const resume = resumePoint(save, GATES);
+document.querySelector('#title .tag').textContent = STRINGS.TITLE_TAG(resume.gateIndex + 1, GATES[resume.gateIndex].name);
 
 // Every gate's group is in the scene by now, whether visible or not — `Game`
 // just built them all. Three.js otherwise compiles a material's shader
@@ -155,7 +176,7 @@ addEventListener('keydown', (e) => {
 // remember to revert and a fresh page load per seed anyway. A page load per
 // seed is not incidental: the suite mutates the game object, so seeds have to
 // be run in separate loads or later ones inherit earlier ones' state.
-if (location.search.includes('sim')) {
+if (simMode) {
   document.getElementById('boot').classList.add('hidden');
   document.getElementById('title').classList.add('hidden');
   // Presence, not truthiness — `?seed=0` is a perfectly good seed, and testing

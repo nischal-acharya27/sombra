@@ -6,6 +6,7 @@
 
 import { STYLE, SYS_WINDOW } from '../game/config.js';
 import { clamp } from '../engine/mathx.js';
+import { STRINGS } from './strings.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -119,7 +120,7 @@ export class HUD {
     this.el.objective.classList.toggle('on', !!text);
   }
 
-  boss(show, frac = 1, name = 'GATE GUARDIAN') {
+  boss(show, frac = 1, name = STRINGS.SYS_BOSS_DEFAULT_NAME) {
     this.el.bossBar.classList.toggle('hidden', !show);
     this.el.bossName.textContent = name;
     this.el.bossFill.style.transform = `scaleX(${clamp(frac, 0, 1)})`;
