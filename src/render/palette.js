@@ -100,5 +100,16 @@ export const P = {
   manavAccent: 0x8a6a2e,
   hakimSick: 0x5a6a3a,
 
+  // Deva-lok — the devas, and per `docs/SPEC-CAMPAIGN.md` the palette's own
+  // payoff: light, cloud and pastel, echoing gate 1's violet rather than any
+  // of the three iron/pale/brass bosses between them. `devaGold` is
+  // Chiranjivi's crown and its core doubles as the realm's own crystal
+  // accent, the same trick every prior boss's core plays against its gate.
+  devaPlate: 0xd8cdf0,
+  devaPlateDark: 0xa89fcf,
+  devaCore: 0xfff0c2,
+  devaGold: 0xf2cf7a,
+  devaWing: 0xeee3ff,
+
   outline: 0x0a0813,
 };

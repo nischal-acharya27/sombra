@@ -726,6 +726,41 @@ export const HAKIM = {
   cooldown: [0.9, 1.7],
 };
 
+/**
+ * Chiranjivi — the Long-Lived, Deva-lok's Warden and the campaign's fourth
+ * boss per `docs/SPEC-CAMPAIGN.md`'s table (gates 3, 6, 8, 10). Bespoke
+ * numbers and its own rig (`buildChiranjivi` in `models.js`), the same
+ * relationship the Hakim has to the Goru-Mukh — gate 8 introduces no new
+ * grunt archetype either, and its Warden is boss-tier, not a fourth
+ * elevation of an existing one.
+ *
+ * Same three-part kit as the Goru-Mukh and the Hakim (charge, slam, sweep):
+ * a deva does not need to keep its distance any more than a judge or an ox-
+ * headed warden did, and the campaign's one ranged boss attack stays the
+ * Guardian's alone. Numbers step up from the Hakim's, matching the escalation
+ * `VYAGHRI` → `AMAR_YODDHA` already set for the grunt-elevation line. Its
+ * sweep enraged clears the 0.42 s reaction floor `telegraphs()` in
+ * `tools/gatecheck.js` holds every tell to by 60 ms (0.60 × 0.80 = 0.480 s),
+ * the same margin the campaign's other melee bosses hold theirs by.
+ */
+export const CHIRANJIVI = {
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hw: 1.65,
+  hh: 2.0,
+  speed: 3.6,
+  exp: 520,
+  contactDamage: 0,
+  enrageAt: 0.5,
+  enrageSpeedMul: 1.3,
+  enrageWindupMul: 0.8,
+  attacks: {
+    charge: { windup: 0.74, speed: 19, dur: 0.8, recover: 0.9, damage: 24, knock: 13, shake: 0.3 },
+    slam: { windup: 0.70, rise: 0.34, fall: 0.24, recover: 1.0, damage: 27, radius: 5.9, knock: 15, shake: 0.55 },
+    sweep: { windup: 0.60, active: 0.30, recover: 0.8, damage: 20, reach: 5.4, knock: 11, shake: 0.28 },
+  },
+  cooldown: [0.85, 1.6],
+};
+
 /** Style ranks. `decay` is meter lost per second while not attacking. */
 export const STYLE = {
   ranks: [

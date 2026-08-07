@@ -188,6 +188,21 @@ export const STRINGS = {
   GATE7_BEAT_CLEARED_BIG: 'ONE FEWER COMBATANT',
   GATE7_BEAT_CLEARED_BODY: 'The war does not end because one side changed by one.',
 
+  // -- gate 8: Deva-lok -----------------------------------------------------
+  GATE8_NAME: 'Deva-lok',
+  GATE8_WARDEN_TITLE: 'CHIRANJIVI',
+  GATE8_TERRACE_TITLE: 'THREAT DETECTED',
+  GATE8_TERRACE_BODY: 'Raakchyas × 2  ·  Bhoot-Batti × 1',
+  GATE8_GARDEN_TITLE: 'THREAT DETECTED',
+  GATE8_GARDEN_BODY: 'Kawach × 1  ·  Tantrik × 1  ·  Raakchyas × 1',
+  GATE8_CHIRANJIVI_TITLE: 'GATE BOSS',
+  GATE8_BEAT_ENTER_TITLE: 'THE SYSTEM',
+  GATE8_BEAT_ENTER_BIG: 'NOTHING HERE HAS AGED',
+  GATE8_BEAT_ENTER_BODY: 'They do not notice the light is thinner than it was.',
+  GATE8_BEAT_CLEARED_TITLE: 'THE SYSTEM',
+  GATE8_BEAT_CLEARED_BIG: 'A LIGHT GOES OUT',
+  GATE8_BEAT_CLEARED_BODY: 'Even heaven ends. This one simply stopped pretending otherwise.',
+
   // -- title screen -------------------------------------------------------
   /** `n` is 1-based; `name` is the resumed gate's own name. */
   TITLE_TAG: (n, name) => `GATE ${n} — ${name}`,

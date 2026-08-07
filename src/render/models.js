@@ -1114,3 +1114,116 @@ export function buildHakim() {
   root.userData.nodes = n;
   return root;
 }
+
+export function buildChiranjivi() {
+  const root = new THREE.Group();
+  const n = {};
+
+  const hips = new THREE.Group();
+  hips.position.y = 1.72;
+  root.add(hips);
+  n.hips = hips;
+
+  const torso = part(0.9, 1.2, 1.06, P.devaPlate, { pivot: 'bottom', outline: 0.05 });
+  hips.add(torso);
+  n.torso = torso;
+
+  // The Long-Lived's core — the same "an attack is announced before it
+  // lands" vocabulary every prior boss's core or seal taught, read off a
+  // deva's own radiance.
+  const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 1), glowMaterial({ color: P.devaCore }));
+  core.position.set(0.48, 0.76, 0);
+  torso.add(core);
+  n.core = core;
+
+  const coreGlow = decal(0.9, 0.9, P.devaCore, { opacity: 0.4 });
+  coreGlow.position.set(0.49, 0.76, 0);
+  coreGlow.rotation.y = Math.PI / 2;
+  torso.add(coreGlow);
+  n.coreGlow = coreGlow;
+
+  const head = new THREE.Group();
+  head.position.y = 1.2;
+  torso.add(head);
+
+  const skull = part(0.48, 0.44, 0.52, P.devaPlateDark, { pivot: 'bottom', outline: 0.04 });
+  head.add(skull);
+
+  // A crown of light in place of the Goru-Mukh's horns and the Hakim's
+  // headdress — a deva that is fading rather than one that rules.
+  const crown = part(0.36, 0.42, 0.34, P.devaGold, { pivot: 'bottom', outline: 0.03 });
+  crown.position.y = 0.42;
+  head.add(crown);
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const aura = decal(0.08, 0.06, P.devaCore);
+    aura.position.set(0.28, 0.08, side * 0.14);
+    aura.rotation.y = Math.PI / 2;
+    head.add(aura);
+    n['aura' + key] = aura;
+  }
+
+  // A pair of folded wings at the shoulders, in place of the Hakim's
+  // floating seal-tablets — the silhouette a deva reads as from a distance.
+  for (const side of [-1, 1]) {
+    const wing = part(0.08, 0.62, 0.5, P.devaWing, { pivot: 'bottom', outline: 0.03 });
+    wing.position.set(-0.15, 0.28, side * 0.5);
+    wing.rotation.z = side * 0.24;
+    head.add(wing);
+  }
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const shoulder = new THREE.Group();
+    shoulder.position.set(0, 1.0, side * 0.64);
+    torso.add(shoulder);
+    n['shoulder' + key] = shoulder;
+
+    const pauldron = part(0.52, 0.36, 0.44, P.devaPlate, { outline: 0.04 });
+    pauldron.position.y = 0.06;
+    shoulder.add(pauldron);
+
+    const upper = part(0.31, 0.62, 0.31, P.devaPlateDark, { pivot: 'top', outline: 0.032 });
+    upper.position.y = -0.12;
+    shoulder.add(upper);
+
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.72;
+    shoulder.add(elbow);
+    n['elbow' + key] = elbow;
+
+    const fore = part(0.37, 0.60, 0.37, P.devaPlate, { pivot: 'top', outline: 0.032 });
+    elbow.add(fore);
+
+    const fist = part(0.47, 0.42, 0.47, P.devaPlateDark, { pivot: 'top', outline: 0.036 });
+    fist.position.y = -0.60;
+    elbow.add(fist);
+  }
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const hip = new THREE.Group();
+    hip.position.set(0, 0, side * 0.33);
+    hips.add(hip);
+    n['hip' + key] = hip;
+
+    const thigh = part(0.37, 0.86, 0.41, P.devaPlateDark, { pivot: 'top', outline: 0.034 });
+    hip.add(thigh);
+
+    const knee = new THREE.Group();
+    knee.position.y = -0.86;
+    hip.add(knee);
+    n['knee' + key] = knee;
+
+    const shin = part(0.33, 0.78, 0.35, P.devaPlate, { pivot: 'top', outline: 0.032 });
+    knee.add(shin);
+
+    const foot = part(0.61, 0.20, 0.45, P.devaPlateDark, { pivot: 'top', outline: 0.03 });
+    foot.position.set(0.10, -0.78, 0);
+    knee.add(foot);
+  }
+
+  root.userData.nodes = n;
+  return root;
+}

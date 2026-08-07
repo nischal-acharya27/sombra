@@ -1958,3 +1958,58 @@ bespoke `Boss` subclass and rig, the same relationship `Hakim` has to
 the dropped-checkpoint amendment: author one gate at a time, Tier 1 clean,
 `?sim` clean across the five recorded seeds, no playtest between — the
 campaign is played end to end, on a phone, only once all ten gates exist.
+
+## Gate 8 (Deva-lok): Chiranjivi authored, a bespoke fourth boss
+
+Authored 2026-08-08, continuing straight from the handoff above — no
+playtest checkpoint owed before this one, same standing amendment.
+
+**A bespoke `Boss` subclass and rig, the same relationship `Hakim` has to the
+`Goru-Mukh`, not a grunt elevation.** Gate 8 introduces no new archetype per
+`docs/SPEC-CAMPAIGN.md`'s table and its Warden is boss-tier — the fourth of
+the four Guardian-class fights the table names at gates 3, 6, 8 and 10.
+`Chiranjivi extends Boss` in `src/game/boss.js`, reusing the Hakim's proven
+plant/flare/`charge`-`slam`-`sweep` shape (a deva does not need to keep its
+distance any more than a judge did, and the campaign's one ranged boss
+attack stays the Guardian's alone) with its own numbers, its own rig
+(`buildChiranjivi` in `models.js`, `auraL`/`auraR` in place of the Hakim's
+`sealL`/`sealR`) and its own palette (`devaPlate`/`devaCore`/`devaGold`/
+`devaWing` in `render/palette.js`) — light, cloud and pastel, per the spec's
+own "art direction's payoff," echoing gate 1's violet register rather than
+the iron, pale or brass ones between them. Its sweep enraged clears the
+0.42 s reaction floor by the same 60 ms margin the Hakim's does
+(0.60 × 0.80 = 0.480 s).
+
+**No new archetype, so density is authored the same way gates 6 and 7's
+was: recombining what earlier gates already taught.** The Terrace
+(raakchyas × 2, bhoot-batti × 1 — gate 1's own pair, met on new ground) →
+the Garden (kawach × 1, tantrik × 1, raakchyas × 1 — gates 3 and 4's tells
+sharing a fight for the first time) → Chiranjivi's chamber, the same three-
+encounter shape gate 6 used and the same segment geometry, on the grounds
+that it was already proven correct by five seeds of gate 6's own Tier 1
+rows and there is no reason to re-risk authoring error on numbers that do
+no new work here.
+
+**Verification status.** `?sim` across all five recorded seeds (headless
+Chrome, `--use-angle=swiftshader-webgl`): gate 8's Tier 1 rows all PASS
+(jump reserve 26%, matching every prior gate's own figure; 7 spawns clear;
+4/4 platforms reachable; 3 encounter locks sealed; `enemy types` resolves
+raakchyas/bhootBatti/kawach/tantrik/warden → chiranjivi; `solo debut`
+correctly reports the one new archetype, met alone, in its own encounter;
+`story beats` clean on all five seeds). Chiranjivi's three telegraphs
+(charge 0.592s, slam 0.560s, sweep 0.480s enraged) all clear the 250 ms
+reaction floor with 0.230–0.342s to spare. No suite row moved beyond the
+already-frozen deferred set (`ranged` boss, `ranged +chaya`, charger
+`recovery-window`, charger `leaves-remnant`, occasionally flaky
+`signed-rank` — all the documented HP-hack regressions, untouched by this
+gate).
+
+### Handoff: what the next session picks up
+
+Gates 9–10 are otherwise unstarted. Gate 9 (Yama's court — Yama-sabha,
+monochrome + violet, no new archetype, Warden **The Backlog** — Bakaya,
+fought as "what his absence made rather than against him," per
+`docs/SPEC-CAMPAIGN.md`) is next. Build order per the dropped-checkpoint
+amendment: author one gate at a time, Tier 1 clean, `?sim` clean across the
+five recorded seeds, no playtest between — the campaign is played end to
+end, on a phone, only once all ten gates exist.

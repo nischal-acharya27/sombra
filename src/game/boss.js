@@ -17,8 +17,8 @@
 
 import * as THREE from 'three';
 import { Actor } from './actor.js';
-import { buildGuardian, buildGoruMukh, buildHakim } from '../render/models.js';
-import { GUARDIAN, GORU_MUKH, HAKIM, PHYS } from './config.js';
+import { buildGuardian, buildGoruMukh, buildHakim, buildChiranjivi } from '../render/models.js';
+import { GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, PHYS } from './config.js';
 import { P } from '../render/palette.js';
 import { clamp, damp, lerp, rand, pick } from '../engine/mathx.js';
 
@@ -1270,6 +1270,377 @@ export class Hakim extends Boss {
     for (const s of ['L', 'R']) {
       n['seal' + s].material.opacity = 0.4 + flare * 0.6;
       n['seal' + s].material.transparent = true;
+    }
+
+    let t = {
+      torsoZ: 0, torsoY: 0, headZ: 0,
+      shLz: 0, shRz: 0, elLz: -0.2, elRz: -0.2,
+      hipLz: 0, hipRz: 0, kneeLz: 0, kneeRz: 0, hipsY: 0,
+    };
+    let snap = false;
+
+    switch (this.state) {
+      case 'entering': {
+        const u = clamp(1 - this.phase / 2.0, 0, 1);
+        t.hipsY = lerp(-1.3, 0, u);
+        t.torsoZ = lerp(0.6, 0, u);
+        t.headZ = lerp(0.8, 0, u);
+        t.hipLz = lerp(1.4, 0, u);
+        t.kneeLz = lerp(-2.0, 0, u);
+        break;
+      }
+      case 'telegraph': {
+        const total = this._windupTime();
+        const u = clamp(1 - this.phase / total, 0, 1);
+        if (this.attackName === 'charge') {
+          t.torsoZ = -0.4 * u;
+          t.headZ = 0.35 * u;
+          t.hipLz = -0.5 * u;
+          t.hipRz = 0.4 * u;
+        } else if (this.attackName === 'slam') {
+          t.hipsY = -0.7 * u;
+          t.hipLz = 0.9 * u;
+          t.hipRz = 0.9 * u;
+          t.kneeLz = -1.6 * u;
+          t.kneeRz = -1.6 * u;
+          t.shLz = -1.8 * u;
+          t.shRz = -1.8 * u;
+        } else {
+          t.shRz = -2.1 * u;
+          t.torsoY = 0.8 * u;
+          t.shLz = 0.6 * u;
+        }
+        break;
+      }
+      case 'charging': {
+        t.torsoZ = -0.5;
+        t.headZ = 0.3;
+        this.walkPhase += dt * 15;
+        t.hipLz = Math.sin(this.walkPhase) * 0.9;
+        t.hipRz = -Math.sin(this.walkPhase) * 0.9;
+        t.kneeLz = -Math.max(0, -Math.sin(this.walkPhase)) * 1.3;
+        t.kneeRz = -Math.max(0, Math.sin(this.walkPhase)) * 1.3;
+        snap = true;
+        break;
+      }
+      case 'leaping': {
+        const rising = this.vy > 0;
+        t.hipLz = rising ? -0.9 : 0.5;
+        t.hipRz = rising ? -0.9 : 0.5;
+        t.kneeLz = rising ? -1.6 : -0.3;
+        t.kneeRz = rising ? -1.6 : -0.3;
+        t.torsoZ = rising ? -0.2 : 0.3;
+        snap = true;
+        break;
+      }
+      case 'sweeping': {
+        const u = clamp(1 - this.sub / A.sweep.active, 0, 1);
+        t.shRz = lerp(-2.1, 1.7, u);
+        t.torsoY = lerp(0.8, -0.7, u);
+        t.shLz = lerp(0.6, -0.8, u);
+        snap = true;
+        break;
+      }
+      case 'recover': {
+        t.torsoZ = 0.2;
+        t.headZ = -0.15;
+        t.hipsY = -0.14;
+        t.kneeLz = -0.22;
+        t.kneeRz = -0.22;
+        break;
+      }
+      default: {
+        const moving = Math.abs(this.vx) > 0.5;
+        if (moving) {
+          this.walkPhase += dt * (3.2 + Math.abs(this.vx) * 0.6);
+          const s = Math.sin(this.walkPhase);
+          t.hipLz = s * 0.5;
+          t.hipRz = -s * 0.5;
+          t.kneeLz = -Math.max(0, -s) * 0.8;
+          t.kneeRz = -Math.max(0, s) * 0.8;
+          t.hipsY = Math.abs(Math.cos(this.walkPhase)) * 0.09 - 0.045;
+        } else {
+          const b = Math.sin(this.t * 1.2);
+          t.hipsY = b * 0.05;
+          t.torsoZ = b * 0.03;
+        }
+      }
+    }
+
+    const blend = snap ? 1 : k;
+    const ap = (node, prop, v) => {
+      node.rotation[prop] = lerp(node.rotation[prop], v, blend);
+    };
+    ap(n.torso, 'z', t.torsoZ);
+    ap(n.torso, 'y', t.torsoY);
+    ap(n.head, 'z', t.headZ);
+    ap(n.shoulderL, 'z', t.shLz);
+    ap(n.shoulderR, 'z', t.shRz);
+    ap(n.elbowL, 'z', t.elLz);
+    ap(n.elbowR, 'z', t.elRz);
+    ap(n.hipL, 'z', t.hipLz);
+    ap(n.hipR, 'z', t.hipRz);
+    ap(n.kneeL, 'z', t.kneeLz);
+    ap(n.kneeR, 'z', t.kneeRz);
+    n.hips.position.y = lerp(n.hips.position.y, 1.68 + t.hipsY, blend);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Chiranjivi — gate 8's Warden
+// ---------------------------------------------------------------------------
+
+/**
+ * The Long-Lived. Same three-part kit as the Goru-Mukh and the Hakim —
+ * plant, flare the core, then `charge`/`slam`/`sweep` — because a deva does
+ * not need to keep its distance any more than a judge or an ox-headed
+ * warden did; the campaign's one ranged boss attack stays the Guardian's
+ * alone. What changes is the object that flares (`auraL`/`auraR` in place of
+ * the Hakim's `sealL`/`sealR`) and Deva-lok's own light-and-cloud palette —
+ * the payoff `docs/SPEC-CAMPAIGN.md` names, echoing gate 1's violet rather
+ * than blurring into the iron, pale or brass bosses between them.
+ */
+export class Chiranjivi extends Boss {
+  static stats = CHIRANJIVI;
+
+  constructor(level, ctx, x, y, cfg = CHIRANJIVI) {
+    super(level, ctx, x, y, cfg, buildChiranjivi);
+    this.phase = 2.0;
+    this.walkPhase = 0;
+  }
+
+  attackBox() {
+    if (this.dead) return null;
+    const f = this.facing;
+    switch (this.state) {
+      case 'charging':
+        return { x0: this.x - 1.8, x1: this.x + 1.8, y0: this.y, y1: this.y + 3.6 };
+      case 'sweeping': {
+        const a = this.cfg.attacks.sweep;
+        if (this.sub > a.active) return null;
+        const cx = this.x + f * (a.reach * 0.5 + 0.6);
+        return { x0: cx - a.reach * 0.5, x1: cx + a.reach * 0.5, y0: this.y, y1: this.y + 3.0 };
+      }
+      default:
+        return null;
+    }
+  }
+
+  currentAttackDamage() {
+    const a = this.cfg.attacks;
+    switch (this.state) {
+      case 'charging': return { damage: a.charge.damage, knock: a.charge.knock };
+      case 'sweeping': return { damage: a.sweep.damage, knock: a.sweep.knock };
+      default: return null;
+    }
+  }
+
+  _updateAlive(dt, player) {
+    const dx = player.x - this.x;
+    const dist = Math.abs(dx);
+    const speedMul = this.enraged ? this.cfg.enrageSpeedMul : 1;
+    const A = this.cfg.attacks;
+
+    switch (this.state) {
+      case 'entering': {
+        this.phase -= dt;
+        this.vx = 0;
+        if (this.phase <= 0) this.state = 'idle';
+        break;
+      }
+
+      case 'idle': {
+        this.faceToward(player.x);
+        this.cooldown -= dt;
+        const want = dist > 5.5 ? Math.sign(dx) * this.cfg.speed * speedMul
+          : dist < 3.2 ? -Math.sign(dx) * this.cfg.speed * 0.5
+          : 0;
+        this.vx = damp(this.vx, want, 0.002, dt);
+        if (this.cooldown <= 0) this._chooseAttack(dist);
+        break;
+      }
+
+      case 'telegraph': {
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0001, dt);
+        const total = this._windupTime();
+        if (this.phase > total * 0.35) this.faceToward(player.x);
+        this.coreFlare = clamp(1 - this.phase / total, 0, 1);
+        if (this.phase <= 0) this._commit(player);
+        break;
+      }
+
+      case 'charging': {
+        this.sub -= dt;
+        this.vx = this.facing * A.charge.speed * speedMul;
+        const hit = this.moveAndCollide(dt);
+        if (this.sub <= 0 || hit.wall) {
+          this.state = 'recover';
+          this.phase = A.charge.recover;
+          this.chargeHitSet.clear();
+          if (hit.wall) {
+            this.ctx.shake?.(0.5);
+            this.ctx.vfx.groundBurst(this.x + this.facing * 1.5, this.y, 1.2);
+            this.ctx.audio?.play('slam');
+            this.phase += 0.5;
+          }
+        }
+        if (Math.random() < 0.6) this.ctx.vfx.dust(this.x - this.facing * 1.2, this.y, 2);
+        this._animate(dt);
+        this.syncRig();
+        return;
+      }
+
+      case 'leaping': {
+        this.sub -= dt;
+        this.applyGravity(dt, PHYS.gravity * 1.15);
+        const hit = this.moveAndCollide(dt);
+        if (hit.floor && this.sub < A.slam.rise) this._slamLand();
+        this._animate(dt);
+        this.syncRig();
+        return;
+      }
+
+      case 'sweeping': {
+        this.sub -= dt;
+        this.vx = damp(this.vx, this.facing * 3.5, 0.001, dt);
+        if (this.sub <= -0.05) {
+          this.state = 'recover';
+          this.phase = A.sweep.recover;
+        }
+        break;
+      }
+
+      case 'recover': {
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0004, dt);
+        if (this.phase <= 0) {
+          this.state = 'idle';
+          const [lo, hi] = this.cfg.cooldown;
+          this.cooldown = rand(lo, hi) * (this.enraged ? 0.62 : 1);
+        }
+        break;
+      }
+    }
+
+    this._physicsTail(dt);
+  }
+
+  _chooseAttack(dist) {
+    const opts = [];
+    if (dist < 7) opts.push('sweep', 'slam');
+    if (dist >= 4.5) opts.push('charge', 'charge');
+    if (this.enraged) opts.push('slam', 'charge');
+    this.attackName = pick(opts.length ? opts : ['charge']);
+    this.state = 'telegraph';
+    this.phase = this._windupTime();
+    this.ctx.audio?.play('bossTell');
+    this.ctx.onTelegraph?.(this.attackName);
+  }
+
+  _commit(player) {
+    const A = this.cfg.attacks;
+    this.coreFlare = 1;
+    this.chargeHitSet.clear();
+    switch (this.attackName) {
+      case 'charge':
+        this.state = 'charging';
+        this.sub = A.charge.dur;
+        this.ctx.audio?.play('bossCharge');
+        this.ctx.shake?.(0.18);
+        break;
+      case 'slam': {
+        this.state = 'leaping';
+        this.sub = A.slam.rise + A.slam.fall;
+        this.vy = 15;
+        const target = clamp(player.x - this.x, -11, 11);
+        this.vx = target / (A.slam.rise + A.slam.fall) * 1.05;
+        this.grounded = false;
+        this.ctx.audio?.play('bossLeap');
+        break;
+      }
+      case 'sweep':
+        this.state = 'sweeping';
+        this.sub = A.sweep.active;
+        this.ctx.audio?.play('bossSweep');
+        this.ctx.shake?.(0.14);
+        break;
+    }
+  }
+
+  _slamLand() {
+    const a = this.cfg.attacks.slam;
+    this.state = 'recover';
+    this.phase = a.recover;
+    this.vx = 0;
+    this.ctx.shockwaveFromBoss(this.x, this.y, {
+      radius: a.radius * (this.enraged ? 1.2 : 1),
+      damage: a.damage,
+      knock: a.knock,
+    });
+    this.ctx.vfx.groundBurst(this.x, this.y, 2.2);
+    this.ctx.vfx.shockRing(this.x, this.y, a.radius * (this.enraged ? 1.2 : 1), P.devaCore);
+    this.ctx.shake?.(a.shake);
+    this.ctx.audio?.play('slam');
+    this.coreFlare = 1;
+  }
+
+  _dieAnimate(u) {
+    const n = this.n;
+    n.core.scale.setScalar(clamp(u * 1.4, 0.05, 1.4));
+    n.core.material.color.setHex(u > 0.5 ? P.devaCore : P.devaPlateDark);
+    n.coreGlow.material.opacity = u * 0.4;
+
+    const fold = 1 - u;
+    n.torso.rotation.z = fold * 0.9;
+    n.head.rotation.z = fold * 0.7;
+    n.hipL.rotation.z = fold * 1.5;
+    n.hipR.rotation.z = fold * 1.2;
+    n.kneeL.rotation.z = -fold * 2.0;
+    n.kneeR.rotation.z = -fold * 1.7;
+    n.shoulderL.rotation.z = -fold * 1.2;
+    n.shoulderR.rotation.z = fold * 1.4;
+    this.root.position.y = this.y - fold * 0.9;
+
+    if (Math.random() < 0.85) {
+      this.ctx.vfx.emit({
+        x: this.x + rand(-1.7, 1.7),
+        y: this.y + rand(0.4, 3.8),
+        z: rand(-1, 1),
+        vx: rand(-2.5, 2.5),
+        vy: rand(1, 6),
+        size: rand(0.14, 0.4),
+        // Gold and pale light, not the Hakim's brass/sickly note — the
+        // fourth boss death reads as its own realm too, and the campaign's
+        // most beautiful gate gets the gentlest collapse.
+        color: Math.random() < 0.4 ? P.devaCore : P.devaGold,
+        life: rand(0.5, 1.3),
+        grav: -1.2,
+        drag: 1.2,
+      });
+    }
+  }
+
+  // -- animation --------------------------------------------------------------
+
+  _animate(dt) {
+    const n = this.n;
+    const k = 1 - Math.pow(0.0004, dt);
+    const A = this.cfg.attacks;
+
+    // The Long-Lived's core is the same "an attack is announced before it
+    // lands" vocabulary the Dwar-Rakshak, the Goru-Mukh and the Hakim all
+    // taught, read off a deva's own radiance.
+    const hpFrac = this.hp / this.maxHp;
+    const flare = this.coreFlare;
+    const baseScale = 0.7 + hpFrac * 0.3;
+    n.core.scale.setScalar(baseScale * (1 + flare * 0.85 + Math.sin(this.t * 3) * 0.05));
+    n.core.material.color.setHex(this.enraged ? P.crimson : P.devaCore);
+    n.coreGlow.material.opacity = 0.25 + flare * 0.55;
+    n.coreGlow.scale.setScalar(1 + flare * 0.9);
+    for (const s of ['L', 'R']) {
+      n['aura' + s].material.opacity = 0.4 + flare * 0.6;
+      n['aura' + s].material.transparent = true;
     }
 
     let t = {
