@@ -1272,6 +1272,30 @@ HP-hack checkpoint as #22 — the ten-gate campaign completion, or the Android
 port, whichever comes first. Until then, red `GATE GUARDIAN` and `THE
 CHARGER` rows are expected here, not regressions to chase.
 
+## Gates 3–10 begin now, with the HP-hack regressions still open
+
+Settled 2026-08-07. `SPEC-CAMPAIGN.md` § Further Notes lists the build order:
+pay the three debts, open the level-data seam, Tier 1 static checks, author
+and phone-play gate 2 as the checkpoint, persistence and the string module,
+then gates 3–10. Steps 1–5 are done — gate 2 was played on a phone (#13,
+closed), and persistence plus the string module landed in `eaf9045`. Step 6 is
+next on schedule, not early.
+
+**The open call was whether #22's and #24–26's deferred HP-hack regressions
+should block that.** They don't. The decision: build the whole ten-gate
+campaign through to playable now; treat `GUARDIAN.hp`, `CHARGER.hp`, and the
+signed-rank telegraph gate as still-open debts to settle at the HP-hack
+checkpoint, not preconditions for starting. Four of the ten gates are new
+Guardian-class bosses built the same way (§ Further Notes' own risk note), so
+building them sooner surfaces whatever else that archetype breaks sooner too,
+while the fix for all of it is already scoped to one checkpoint at the end.
+
+**What this does not change.** The HP-hack checkpoint itself — restore real
+HP, or reconcile the gates' math to it, once at the end rather than piecemeal
+— stands exactly as recorded above. A gate 3–10 boss or Charger encounter
+that reproduces the same one-shot symptom is expected, not a new regression,
+until that checkpoint is reached.
+
 ## The System window pauses the fight it explains
 
 Settled 2026-08-06, via `/grill-with-docs` on issue #18 ("The System covers
