@@ -11,23 +11,23 @@
 // of a crowd and unlearned later. The `solo debut` check in
 // `tools/gatecheck.js` holds every future archetype to the same thing.
 //
-// The far bank is the second: the Ferryman, the crossing's Warden. See
-// `FERRYMAN` in `src/game/config.js` for what "elevated" means here and what
+// The far bank is the second: the Kevat, the crossing's Warden. See
+// `KEVAT` in `src/game/config.js` for what "elevated" means here and what
 // its one signature addition is.
 //
 // Two story beats, both gate boundaries: on arrival, right after the System
 // names the realm — this is where it glitches for the first time, having no
-// record of the place — and again once the Ferryman is down, before the
+// record of the place — and again once the Kevat is down, before the
 // hunter reaches the arch. Neither can land while an encounter is live; see
 // `Game._fireBeats`. The descriptor still goes through every tier-1 check in
 // `tools/gatecheck.js`, and the crossing's gaps are held to the same touch
 // budget gate 1's are.
 
-import { FERRYMAN } from '../config.js';
+import { KEVAT } from '../config.js';
 import { STRINGS } from '../../ui/strings.js';
 
 /**
- * The far bank — the Ferryman's arena. Flat and open, same as the causeway the
+ * The far bank — the Kevat's arena. Flat and open, same as the causeway the
  * charger taught on, only longer: the chain charge needs room to run twice.
  */
 const ARENA_TOP = 0;
@@ -105,23 +105,23 @@ const SEGMENTS = [
   { x0: 92.6, x1: 98.6, top: 1.6, barren: true, depth: 5 },
   { x0: 102.2, x1: 108.2, top: 0.4, barren: true, depth: 5 },
 
-  // The far bank, and the arch out of it. Long and flat: the Ferryman's arena,
+  // The far bank, and the arch out of it. Long and flat: the Kevat's arena,
   // and the chain charge needs the room a single-pass lane does not.
   { x0: 112, x1: 150, top: ARENA_TOP, boulders: 3, pillars: 2, crystals: 2 },
 ];
 
 /**
- * The crossing's Warden: an existing archetype, elevated. See `FERRYMAN` in
+ * The crossing's Warden: an existing archetype, elevated. See `KEVAT` in
  * `src/game/config.js` for the numbers and the one added move.
  */
 const WARDEN = {
   archetype: 'charger',
   title: STRINGS.GATE2_WARDEN_TITLE,
-  stats: FERRYMAN,
+  stats: KEVAT,
 };
 
 /**
- * Two encounters, two enemies met alone: the charger, then the Ferryman.
+ * Two encounters, two enemies met alone: the charger, then the Kevat.
  *
  * The causeway is thirty units of flat, unobstructed floor, and that is the
  * point: a charger needs a lane, and an archetype introduced in a place that
@@ -153,13 +153,13 @@ const ENCOUNTERS = [
     spawns: [{ type: 'charger', x: 79, delay: 0.3 }],
   },
   {
-    id: 'the-ferryman',
+    id: 'the-kevat',
     trigger: 118,
     lock: [113, 149],
     intro: {
-      title: STRINGS.GATE2_FERRYMAN_TITLE,
+      title: STRINGS.GATE2_KEVAT_TITLE,
       body: WARDEN.title,
-      note: STRINGS.GATE2_FERRYMAN_NOTE,
+      note: STRINGS.GATE2_KEVAT_NOTE,
     },
     // `warden` rather than an archetype name: which enemy that is belongs to
     // the gate's Warden block, so the encounter does not have to say it twice.
@@ -179,7 +179,7 @@ const ENCOUNTERS = [
  * The first is the glitch `docs/SPEC-CAMPAIGN.md` names for this gate — the
  * System has no record of the crossing, and `glitch: true` is what marks the
  * window as the System failing to report cleanly rather than the game failing
- * to render. The second lands once the Ferryman is down, and says the same
+ * to render. The second lands once the Kevat is down, and says the same
  * thing again a different way: whatever the System's records are missing,
  * this gate is in the gap.
  */
@@ -210,11 +210,11 @@ export const GATE_2 = {
   voidY: -22,
   /**
    * Lethe rather than gate 1's void: falling below `voidY` here returns the
-   * hunter to `spawnX` at no health cost and costs the bound shadow, if any.
+   * hunter to `spawnX` at no health cost and costs the bound chaya, if any.
    * See `Game._fallInWater`.
    */
   forgivingVoid: true,
-  /** The far bank, which is where the arch stands, and where the Ferryman does. */
+  /** The far bank, which is where the arch stands, and where the Kevat does. */
   arenaTop: ARENA_TOP,
   exitX: 142,
   end: 150,

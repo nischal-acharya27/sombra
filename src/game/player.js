@@ -2,7 +2,7 @@
 
 import { Actor } from './actor.js';
 import { buildHunter } from '../render/models.js';
-import { PHYS, PLAYER, ATTACKS, MAGIC, SHADOW } from './config.js';
+import { PHYS, PLAYER, ATTACKS, MAGIC, CHAYA } from './config.js';
 import { clamp, damp, lerp, approach } from '../engine/mathx.js';
 import { STRINGS } from '../ui/strings.js';
 
@@ -33,7 +33,7 @@ export class Player extends Actor {
     this.magicCd = 0;
     this.hurtT = 0;
     this.slamDiving = false;
-    this.extractT = 0; // SORGI channel remaining
+    this.extractT = 0; // PUKAR channel remaining
     this.extractTarget = null;
     this.lock = 0; // rooted for this long, ignoring all input
     this.animT = 0;
@@ -184,7 +184,7 @@ export class Player extends Actor {
       this.ctx.toast?.(STRINGS.TOAST_NOT_ENOUGH_MANA, 'warn');
     }
 
-    // SORGI, and it has to be tested before the launcher below or the launcher
+    // PUKAR, and it has to be tested before the launcher below or the launcher
     // consumes the press first.
     //
     // `down` held plus `heavy` pressed, one route for every device. Bodies are
@@ -195,7 +195,7 @@ export class Player extends Actor {
     // is near" would fix that and gut the design, because standing still
     // mid-fight being a gamble is the entire cost of the mechanic.
     //
-    // Touch used to send a dedicated `sorgi` action here instead, because a
+    // Touch used to send a dedicated `pukar` action here instead, because a
     // thumb steering with one hand had nothing to hold `down` with. It now
     // does — `ui/touch.js`'s stick reads a press toward its bottom edge as
     // `down`, the same action the keyboard's `S`/`ArrowDown` sends — so both
@@ -287,7 +287,7 @@ export class Player extends Actor {
     this.ctx.shake?.(MAGIC.shake);
     // A light brake to give the cast some weight — but only on the ground, and
     // nothing like a stop. Scrubbing 70% of speed here used to brake the hunter
-    // mid-stride, and casting at a wisp while approaching a gap would silently
+    // mid-stride, and casting at a bhoot-batti while approaching a gap would silently
     // turn a comfortable jump into a fatal one.
     if (this.grounded) this.vx *= 0.75;
   }
@@ -325,12 +325,12 @@ export class Player extends Actor {
     this.ctx.audio?.play(def.sfx);
   }
 
-  // -- SORGI ----------------------------------------------------------------
+  // -- PUKAR ----------------------------------------------------------------
 
   _startExtract(corpse) {
     if (this.attack) this._endAttack();
     this.state = 'extract';
-    this.extractT = SHADOW.channel;
+    this.extractT = CHAYA.channel;
     this.extractTarget = corpse;
     this.vx = 0;
     this.facing = corpse.x > this.x ? 1 : -1;
@@ -393,7 +393,7 @@ export class Player extends Actor {
     // key through a swing and releasing it produced identical trajectories to
     // two decimal places: the input was simply not being read.
     // `measureAirAttack` in tools/sim.js fails if that ever returns to zero.
-    // The SORGI channel roots too, and it is the only cost the mechanic has.
+    // The PUKAR channel roots too, and it is the only cost the mechanic has.
     const rooted = (attacking && a.key !== 'slam' && this.grounded) || this.state === 'extract';
     const swinging = attacking && a.key !== 'slam' && !this.grounded;
 
@@ -434,7 +434,7 @@ export class Player extends Actor {
         // Asking for nothing mid-swing bleeds the lunge off at exactly the rate
         // it always has. Restoring steering was the fix; carrying *more* speed
         // than before while the player holds no direction is not — over the
-        // chasm that turns a swing at a wisp into an overshoot into the void,
+        // chasm that turns a swing at a bhoot-batti into an overshoot into the void,
         // and it cost the telegraph-reading bot half the seeds it used to clear.
         this.vx = damp(this.vx, 0, swinging ? 0.55 : 0.7, dt);
       }
@@ -595,7 +595,7 @@ export class Player extends Actor {
       // Down on one knee, off-hand out over the body. The root has to read as
       // a thing the hunter is *doing*, or 0.8 s of ignored input reads as the
       // controls having died.
-      const u = 1 - this.extractT / SHADOW.channel;
+      const u = 1 - this.extractT / CHAYA.channel;
       target.torsoZ = -0.30;
       target.headZ = 0.34;
       target.hipsY = -0.30 - u * 0.06;

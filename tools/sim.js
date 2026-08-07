@@ -8,8 +8,8 @@
 // and winnability* can, and both are easy to break while tuning. Every bot
 // below has caught a real bug at least once.
 
-import { PLAYER, ATTACKS, SHADOW, CHARGER } from '../src/game/config.js';
-import { ChargerShadow } from '../src/game/shadow.js';
+import { PLAYER, ATTACKS, CHAYA, CHARGER } from '../src/game/config.js';
+import { ChargerChaya } from '../src/game/shadow.js';
 import { buildShard } from '../src/render/models.js';
 import { checkGates, controls, crossing, telegraphs } from './gatecheck.js';
 import { checkTouch } from './touchcheck.js';
@@ -26,13 +26,13 @@ const RUNS_PER_SWEEP = 8;
  * Without this the suite cannot say anything about telegraphs, and for a while
  * it said something false. A bot with zero latency does not need a wind-up: it
  * can read the active frames and dash out, or — as the naive bot demonstrably
- * did — simply kill the beast during its wind-up. So "the bot that ignores
+ * did — simply kill the raakchyas during its wind-up. So "the bot that ignores
  * tells survives fine" was never evidence that the tells do nothing. It was
  * evidence that the instrument had no way to measure them.
  *
  * A telegraph exists to buy *human* reaction time, so the bot is given a human
  * one. 250 ms is the usual figure for a simple visual reaction, and it sits
- * deliberately inside the beast's 0.42 s pounce wind-up: a bot that starts
+ * deliberately inside the raakchyas's 0.42 s pounce wind-up: a bot that starts
  * moving when the tell appears still has 170 ms of margin, and a bot that waits
  * for the leap itself has none.
  *
@@ -352,18 +352,18 @@ function measureJuggle(game, input) {
       bot.releaseAll();
       for (let i = 0; i < 20; i++) bot.step();
 
-      game._spawn({ type: 'beast', x: p.x + 1.5, encounter: 'test' });
+      game._spawn({ type: 'raakchyas', x: p.x + 1.5, encounter: 'test' });
       const e = game.enemies[game.enemies.length - 1];
       e.spawnT = 0;
       e.root.scale.setScalar(1);
-      // Park the beast's AI, on this instance only. A live beast pounces during
+      // Park the raakchyas's AI, on this instance only. A live raakchyas pounces during
       // the launcher's own active frames and leaves the hitbox, so the first
       // version of this probe spent its time measuring the pounce and reported
       // that the launcher does not connect. `moveList` already proves it does;
       // what is under test here is the *juggle*, so the target has to hold
       // still for it.
       e.cfg = { ...e.cfg, chaseRange: 0, pounce: { ...e.cfg.pounce, range: 0 } };
-      // The beast's phone-playtest hp (5) is below the launcher's own damage
+      // The raakchyas's phone-playtest hp (5) is below the launcher's own damage
       // (21), so the very hit this probe measures was one-shotting the target
       // and sending it down `_dieAnim`'s death-pop physics instead of the
       // juggle path — a different gravity and a target gone in 0.42s. Nothing
@@ -482,7 +482,7 @@ function playthrough(game, input, opts = {}) {
  * which is to say by something that cannot play the game the charger is there
  * to teach.
  */
-function walkGate(game, input, { maxSeconds = 400, readTells = false, carryShadow = false } = {}) {
+function walkGate(game, input, { maxSeconds = 400, readTells = false, carryChaya = false } = {}) {
   const bot = new Bot(game, input, REACTION);
   const p = game.player;
   let attackCd = 0;
@@ -491,30 +491,30 @@ function walkGate(game, input, { maxSeconds = 400, readTells = false, carryShado
   let stuckAt = p.x;
   let stuckFor = 0;
   let chasing = false;
-  // SORGI bookkeeping. All inert unless `carryShadow`.
+  // PUKAR bookkeeping. All inert unless `carryChaya`.
   let extractFor = 0; // seconds left in a committed extraction attempt
   let extractPressed = false;
-  let shadowsRaised = 0;
-  let lastShadow = null;
+  let chayasRaised = 0;
+  let lastChaya = null;
   let bossSeen = false;
-  let shadowAtBoss = false;
+  let chayaAtBoss = false;
   const steps = Math.floor(maxSeconds / DT);
 
   for (let i = 0; i < steps; i++) {
     if (game.state !== 'playing') break;
 
-    // Read before anything can `continue` past it. `game.shadow` is a single
+    // Read before anything can `continue` past it. `game.chaya` is a single
     // slot that is nulled when the ally dies, so identity change is the only
     // way to count raises — a counter on the game would miss a replacement.
-    if (game.shadow !== lastShadow) {
-      if (game.shadow) shadowsRaised++;
-      lastShadow = game.shadow;
+    if (game.chaya !== lastChaya) {
+      if (game.chaya) chayasRaised++;
+      lastChaya = game.chaya;
     }
     // The arena holds no enemies and therefore no remnants, so what the hunter
     // walks in with is all there is. That is the design claim this records.
     if (!bossSeen && game.activeEncounter?.boss) {
       bossSeen = true;
-      shadowAtBoss = !!game.shadow;
+      chayaAtBoss = !!game.chaya;
     }
 
     const target = nearestEnemy(game);
@@ -523,11 +523,11 @@ function walkGate(game, input, { maxSeconds = 400, readTells = false, carryShado
     magicCd -= DT;
     dashCd -= DT;
 
-    // SORGI. The bot claims a remnant once the fight around it is over, which is
+    // PUKAR. The bot claims a remnant once the fight around it is over, which is
     // how a careful human plays it: the channel roots for 0.8 s and any hit
     // breaks it, so extracting mid-fight is a gamble — and a gamble is not what
     // this row is measuring. What it measures is whether the gate is clearable
-    // by someone carrying a shadow, which is now the normal way it is played
+    // by someone carrying a chaya, which is now the normal way it is played
     // and something the suite has never been able to say anything about.
     //
     // Range and reach come from `game.nearestCorpse`, the same call the player
@@ -538,12 +538,12 @@ function walkGate(game, input, { maxSeconds = 400, readTells = false, carryShado
     // the bot's reaction latency, so `down` has to still be held when the press
     // matures, and a bot that re-evaluated every frame would release it early
     // and never extract at all.
-    if (carryShadow) {
-      if (extractFor <= 0 && !game.shadow && p.grounded && dist > 7 && game.nearestCorpse(p.x, p.y)) {
-        extractFor = REACTION + SHADOW.channel + 0.25;
+    if (carryChaya) {
+      if (extractFor <= 0 && !game.chaya && p.grounded && dist > 7 && game.nearestCorpse(p.x, p.y)) {
+        extractFor = REACTION + CHAYA.channel + 0.25;
         extractPressed = false;
       }
-      if (extractFor > 0) extractFor = game.shadow ? 0 : extractFor - DT;
+      if (extractFor > 0) extractFor = game.chaya ? 0 : extractFor - DT;
       if (extractFor > 0) {
         bot.hold('left', false);
         bot.hold('right', false);
@@ -581,7 +581,7 @@ function walkGate(game, input, { maxSeconds = 400, readTells = false, carryShado
     }
 
     // Melee only reaches about 1.8 above the hunter's feet on a light swing.
-    // Without this check the bot happily swings at a wisp hovering overhead,
+    // Without this check the bot happily swings at a bhoot-batti hovering overhead,
     // which whiffs forever and — over a pit — swings it to death.
     const inMeleeArc = target && Math.abs(target.y - p.y) < 1.8;
 
@@ -604,7 +604,7 @@ function walkGate(game, input, { maxSeconds = 400, readTells = false, carryShado
       game.level.groundAt(target.x, p.y + 0.6) !== -Infinity
     ) {
       // Something hovering just overhead: jump into it. Without this the bot
-      // walks underneath wisps forever, which measures the bot's vocabulary
+      // walks underneath bhoot-battis forever, which measures the bot's vocabulary
       // rather than the level.
       bot.hold('right', false);
       bot.hold('left', false);
@@ -622,14 +622,14 @@ function walkGate(game, input, { maxSeconds = 400, readTells = false, carryShado
       //
       // Turning around is a last resort, deliberately.
       //
-      // Holding right unconditionally meant a beast that ended up *behind* the
+      // Holding right unconditionally meant a raakchyas that ended up *behind* the
       // bot left it shoving at a sealed barrier for 45 s with a live target
       // five units away — a deadlock in the bot's vocabulary that reads exactly
       // like unpassable level geometry, which is the one thing this suite is
       // supposed to be able to tell you about.
       //
       // But letting it chase freely is worse. Given a standing order to close
-      // on the nearest enemy the naive bot kills beasts during their wind-up,
+      // on the nearest enemy the naive bot kills raakchyas during their wind-up,
       // clears the gate taking 33 damage, and quietly destroys the claim the
       // whole suite rests on — that a bot ignoring telegraphs must lose. So it
       // only turns around once it has genuinely stopped making progress, which
@@ -638,7 +638,7 @@ function walkGate(game, input, { maxSeconds = 400, readTells = false, carryShado
       // The decision has to latch. Triggering it on `stuckFor` alone thrashed:
       // one step off the barrier reset the counter, the chase switched off, and
       // the bot walked straight back into the wall — it ground out its whole
-      // health bar that way in six of eight seeds with two wisps sitting
+      // health bar that way in six of eight seeds with two bhoot-battis sitting
       // unreachable at the far end of the bridge.
       const sealed = !!game.activeEncounter?.lock;
       if (!sealed || !target) chasing = false;
@@ -706,8 +706,8 @@ function walkGate(game, input, { maxSeconds = 400, readTells = false, carryShado
     level: game.level_,
     damageTaken: Math.round(game.damageTaken),
     hp: Math.round(p.hp),
-    shadowsRaised,
-    shadowAtBoss,
+    chayasRaised,
+    chayaAtBoss,
     reachedBoss: bossSeen,
   };
 }
@@ -741,16 +741,16 @@ function nearestEnemy(game) {
  * tuned to a single solution; all three should win, at different costs.
  */
 /**
- * Put a shadow beside the hunter without playing out the channel.
+ * Put a chaya beside the hunter without playing out the channel.
  *
  * The channel is `extraction`'s subject, not this one's. What the boss rows
  * need is an ally standing in the arena, and routing that through 0.8 s of
  * held keys would make every Guardian number depend on the extraction timing
  * as well as on the fight.
  */
-function giveShadow(game, bot) {
+function giveChaya(game, bot) {
   const p = game.player;
-  game._spawn({ type: 'beast', x: p.x + 1.3, encounter: 'test' });
+  game._spawn({ type: 'raakchyas', x: p.x + 1.3, encounter: 'test' });
   const e = game.enemies[game.enemies.length - 1];
   e.spawnT = 0;
   e.root.scale.setScalar(1);
@@ -758,20 +758,20 @@ function giveShadow(game, bot) {
   for (let i = 0; i < 90; i++) bot.step();
   const corpse = game.corpses[game.corpses.length - 1];
   if (corpse) game.extract(corpse);
-  return !!game.shadow;
+  return !!game.chaya;
 }
 
-function bossFight(game, input, strategy, { maxSeconds = 240, carryShadow = false, latency = REACTION } = {}) {
+function bossFight(game, input, strategy, { maxSeconds = 240, carryChaya = false, latency = REACTION } = {}) {
   hardStart(game);
   const bot = new Bot(game, input, latency);
   const p = game.player;
 
-  // Walk in carrying a shadow, when asked. Set up at the spawn point *before*
+  // Walk in carrying a chaya, when asked. Set up at the spawn point *before*
   // the teleport, because nothing has triggered there yet — the first encounter
   // is at x=40 — so the setup cannot disturb an encounter mid-flight. The ally
   // re-forms beside the hunter when it is left behind, which is the same rule
   // that carries it through a sealed barrier in ordinary play.
-  const carried = carryShadow ? giveShadow(game, bot) : false;
+  const carried = carryChaya ? giveChaya(game, bot) : false;
 
   // Skip to the arena rather than replaying the gate for each strategy. Mark
   // everything that is not the Warden fight as done — by the flag rather than
@@ -859,7 +859,7 @@ function bossFight(game, input, strategy, { maxSeconds = 240, carryShadow = fals
     seconds: +game.runTime.toFixed(1),
     damageTaken: Math.round(game.damageTaken),
     carried,
-    shadowAlive: !!game.shadow,
+    chayaAlive: !!game.chaya,
   };
 }
 
@@ -872,16 +872,16 @@ function bossFight(game, input, strategy, { maxSeconds = 240, carryShadow = fals
  * random cooldown window — it says what happened that time, not what the fight
  * is.
  */
-function bossSweep(game, input, scope, base, strategy, carryShadow) {
+function bossSweep(game, input, scope, base, strategy, carryChaya) {
   const runs = [];
   for (let i = 0; i < RUNS_PER_SWEEP; i++) {
-    runs.push(scope(base + i, () => bossFight(game, input, strategy, { carryShadow })));
+    runs.push(scope(base + i, () => bossFight(game, input, strategy, { carryChaya })));
   }
   const won = runs.filter((r) => r.won).length;
   const mean = (pick) => runs.reduce((a, r) => a + pick(r), 0) / runs.length;
   return {
     strategy,
-    carryShadow,
+    carryChaya,
     runs,
     won,
     of: runs.length,
@@ -889,8 +889,8 @@ function bossSweep(game, input, scope, base, strategy, carryShadow) {
     bossHpLeft: mean((r) => r.bossHpLeft),
     seconds: mean((r) => r.seconds),
     majority: won * 2 > runs.length,
-    // A `+shadow` row that silently failed to raise one would still print
-    // `+shadow` and still pass, and the conclusion drawn from these rows is
+    // A `+chaya` row that silently failed to raise one would still print
+    // `+chaya` and still pass, and the conclusion drawn from these rows is
     // precisely that carrying an ally does not change the fight. The
     // playthrough row already guards this way; these have to as well.
     carried: runs.filter((r) => r.carried).length,
@@ -906,7 +906,7 @@ function moveList(game, input) {
   for (const key of ['light1', 'light2', 'light3', 'launcher', 'air1', 'air2']) {
     hardStart(game);
     // Spawn a target by hand at a known distance, inside every move's reach.
-    game._spawn({ type: 'beast', x: p.x + 1.6, encounter: 'test' });
+    game._spawn({ type: 'raakchyas', x: p.x + 1.6, encounter: 'test' });
     const e = game.enemies[game.enemies.length - 1];
     e.spawnT = 0;
     e.root.scale.setScalar(1);
@@ -923,7 +923,7 @@ function moveList(game, input) {
 }
 
 /**
- * SORGI: the corpse, the channel, and what the shadow's kills are worth.
+ * PUKAR: the corpse, the channel, and what the chaya's kills are worth.
  *
  * Runs at zero latency, like the other focused probes — this measures the
  * mechanic, not a reaction to it. The playthrough bots are where reaction time
@@ -931,7 +931,7 @@ function moveList(game, input) {
  *
  * The three assertions that actually matter are the last three. Everything
  * before them is the mechanic working; those are the mechanic staying bounded.
- * One shadow at a time is the whole reason this is not an army, a hit through
+ * One chaya at a time is the whole reason this is not an army, a hit through
  * the channel is the entire cost of the extraction, and the EXP-yes-style-no
  * split is the only brake on the ally doing the player's job for them. All
  * three are invisible in play until they are wrong.
@@ -942,9 +942,9 @@ function extraction(game, input) {
   const rows = [];
   const check = (name, ok, detail = '') => rows.push({ name, ok, detail });
 
-  /** Kill a beast next to the hunter and let the body settle. */
+  /** Kill a raakchyas next to the hunter and let the body settle. */
   const layCorpse = (dx = 1.3) => {
-    game._spawn({ type: 'beast', x: p.x + dx, encounter: 'test' });
+    game._spawn({ type: 'raakchyas', x: p.x + dx, encounter: 'test' });
     const e = game.enemies[game.enemies.length - 1];
     e.spawnT = 0;
     e.root.scale.setScalar(1);
@@ -967,7 +967,7 @@ function extraction(game, input) {
   // --- the corpse and its window ---
   hardStart(game);
   const corpse = layCorpse();
-  check('a beast leaves a corpse', !!corpse);
+  check('a raakchyas leaves a corpse', !!corpse);
   const before = corpse ? corpse.windowT : 0;
   for (let i = 0; i < 120; i++) bot.step();
   const after = corpse ? corpse.windowT : 0;
@@ -980,10 +980,10 @@ function extraction(game, input) {
   hardStart(game);
   layCorpse();
   sorgi();
-  const raised = game.shadow;
-  check('the channel raises a shadow', !!raised);
+  const raised = game.chaya;
+  check('the channel raises a chaya', !!raised);
   check('and consumes the corpse', game.corpses.length === 0);
-  check('the shadow is not an enemy', !!raised && !game.enemies.includes(raised));
+  check('the chaya is not an enemy', !!raised && !game.enemies.includes(raised));
 
   // The cost is standing still. If the hunter can walk out of the channel it
   // is not a cost, and the mechanic is free.
@@ -1010,20 +1010,20 @@ function extraction(game, input) {
   // Nothing raised yet and the body still there: the channel is in flight. Read
   // off what the player would see rather than off `p.state`, so this row keeps
   // meaning the same thing if the state is ever renamed or split.
-  const inFlight = !game.shadow && game.corpses.length === 1;
+  const inFlight = !game.chaya && game.corpses.length === 1;
   game._damagePlayer(10, p.x + 4);
   for (let i = 0; i < 150; i++) bot.step();
-  check('a hit cancels the channel', inFlight && !game.shadow);
+  check('a hit cancels the channel', inFlight && !game.chaya);
   check('and the corpse outlives it', game.corpses.length === 1);
 
   // --- one at a time ---
   hardStart(game);
   layCorpse();
   sorgi();
-  const first = game.shadow;
+  const first = game.chaya;
   layCorpse();
   sorgi();
-  check('extracting again replaces', !!first && !!game.shadow && game.shadow !== first);
+  check('extracting again replaces', !!first && !!game.chaya && game.chaya !== first);
 
   // --- EXP yes, style no ---
   hardStart(game);
@@ -1031,7 +1031,7 @@ function extraction(game, input) {
   sorgi();
   game.style = 0;
   const expBefore = game.exp;
-  game._spawn({ type: 'beast', x: p.x + 3.0, encounter: 'test' });
+  game._spawn({ type: 'raakchyas', x: p.x + 3.0, encounter: 'test' });
   const victim = game.enemies[game.enemies.length - 1];
   victim.spawnT = 0;
   victim.root.scale.setScalar(1);
@@ -1040,7 +1040,7 @@ function extraction(game, input) {
   victim.hp = 6;
   for (let i = 0; i < 120 * 10 && !victim.dead; i++) bot.step();
   bot.releaseAll();
-  check('the shadow kills on its own', victim.dead);
+  check('the chaya kills on its own', victim.dead);
   check('its kill pays EXP', game.exp > expBefore, `+${game.exp - expBefore}`);
   check('its kill pays no style', game.style === 0, `style ${game.style.toFixed(1)}`);
 
@@ -1242,8 +1242,8 @@ function freshness(game) {
   );
   say(
     'the field is empty',
-    !game.enemies.length && !game.bolts.length && !game.corpses.length && !game.pendingSpawns.length && !game.shadow,
-    `${game.enemies.length} enemies, ${game.corpses.length} remnants, ${game.shadow ? 'a shadow' : 'no shadow'}`
+    !game.enemies.length && !game.bolts.length && !game.corpses.length && !game.pendingSpawns.length && !game.chaya,
+    `${game.enemies.length} enemies, ${game.corpses.length} remnants, ${game.chaya ? 'a chaya' : 'no chaya'}`
   );
   say(
     'no encounter has been met',
@@ -1393,7 +1393,7 @@ function chargerFight(game, input) {
     `${dealt} damage in ${(game.runTime - punishT).toFixed(2)}s — two light swings are ${worth}`
   );
 
-  // 5. And it leaves a remnant, because SORGI's promise cannot be selectively
+  // 5. And it leaves a remnant, because PUKAR's promise cannot be selectively
   //    true. Killed outright rather than fought down: what is under test is the
   //    body it leaves, not how long it takes to make one.
   const corpsesFrom = game.corpses.length;
@@ -1411,21 +1411,21 @@ function chargerFight(game, input) {
 }
 
 /**
- * A shadow raised from a Charger's remnant: it must wear the Charger's own
+ * A chaya raised from a Charger's remnant: it must wear the Charger's own
  * rig and run its charge — telegraph, commit, recover — rather than a
- * reskinned pounce, and the charge must deal the shadow's own tuned damage
- * (`SHADOW.charge.damage`), not the beast-ally's pounce number and not the
+ * reskinned pounce, and the charge must deal the chaya's own tuned damage
+ * (`CHAYA.charge.damage`), not the raakchyas-ally's pounce number and not the
  * hostile Charger's own charge damage. Filed as issue #21; see
- * `docs/DECISIONS.md` § "The shadow wears its source's kit, not just a beast
+ * `docs/DECISIONS.md` § "The chaya wears its source's kit, not just a raakchyas
  * rig" for the design this checks.
  *
  * Placed last in `runAll`, after every other probe that touches the shared
  * `Game` object — the same reason `extraction` sits where it does: raising a
- * shadow builds a rig and spends `Math.random` draws on three.js UUIDs, so a
+ * chaya builds a rig and spends `Math.random` draws on three.js UUIDs, so a
  * row placed ahead of this one would have its randomness disturbed by this
  * probe merely existing.
  */
-function chargerShadow(game, input) {
+function chargerChaya(game, input) {
   const bot = new Bot(game, input);
   const p = game.player;
   const rows = [];
@@ -1447,7 +1447,7 @@ function chargerShadow(game, input) {
   game.activeEncounter = null;
 
   // Kill a charger next to the hunter and claim it, the same shape
-  // `extraction` uses for a beast.
+  // `extraction` uses for a raakchyas.
   game._spawn({ type: 'charger', x: p.x + 1.3, encounter: 'test' });
   const c = game.enemies[game.enemies.length - 1];
   c.spawnT = 0;
@@ -1457,20 +1457,20 @@ function chargerShadow(game, input) {
 
   bot.hold('down', true);
   bot.press('heavy');
-  until(() => !!game.shadow, 2.0);
+  until(() => !!game.chaya, 2.0);
   bot.hold('down', false);
 
-  const s = game.shadow;
+  const s = game.chaya;
   check(
     'a Charger remnant raises the charging ally',
-    s instanceof ChargerShadow,
+    s instanceof ChargerChaya,
     s ? s.constructor.name : 'nothing raised'
   );
 
   // Something to fight — the nearest-enemy target is what turns `_canCommit`
-  // on at all; a shadow with nothing to fight never plants a lane at the
+  // on at all; a chaya with nothing to fight never plants a lane at the
   // hunter it is following.
-  game._spawn({ type: 'beast', x: p.x + 10, encounter: 'test' });
+  game._spawn({ type: 'raakchyas', x: p.x + 10, encounter: 'test' });
   const victim = game.enemies[game.enemies.length - 1];
   victim.spawnT = 0;
   victim.root.scale.setScalar(1);
@@ -1481,9 +1481,9 @@ function chargerShadow(game, input) {
   const dealt = Math.round(hpFrom - victim.hp);
   check(
     'and its charge deals its own damage',
-    landed && dealt === SHADOW.charge.damage,
-    `${dealt} dealt, ${SHADOW.charge.damage} configured — not the beast-ally's ` +
-      `${SHADOW.pounce.damage} or the hostile charger's ${CHARGER.charge.damage}`
+    landed && dealt === CHAYA.charge.damage,
+    `${dealt} dealt, ${CHAYA.charge.damage} configured — not the raakchyas-ally's ` +
+      `${CHAYA.pounce.damage} or the hostile charger's ${CHARGER.charge.damage}`
   );
 
   hardStart(game);
@@ -1534,7 +1534,7 @@ function storyBeats(game, input) {
   say('the entry beat fires on a real arrival, unforced', entryBeat?.at === 'enter' && entryBeat?.opened === true);
   const run = walkGate(game, input, { maxSeconds: 120, readTells: true });
   say('the crossing still clears with the beats wired in', run.ok, `state ${game.state}, ${run.time}s`);
-  say('the closing beat fired once the Ferryman fell', game.storyBeats.some((b) => b.at === 'cleared' && b.opened));
+  say('the closing beat fired once the Kevat fell', game.storyBeats.some((b) => b.at === 'cleared' && b.opened));
   say('nothing that fired over the whole walk did so mid-encounter', game.storyBeats.every((b) => !b.liveEncounter));
 
   hardStart(game);
@@ -1567,17 +1567,17 @@ function crossingWater(game, input) {
     bot.step();
   };
 
-  // --- carrying a shadow in ---
+  // --- carrying a chaya in ---
   hardStart(game);
   game._enterGate(1);
   say('lands in the crossing', game.gate.id === 'gate-2', game.gate.id);
-  giveShadow(game, bot);
-  say('a shadow is bound before the fall', !!game.shadow);
+  giveChaya(game, bot);
+  say('a chaya is bound before the fall', !!game.chaya);
 
   const hpBefore = p.hp;
   dropIntoWater();
   say('the hunter survives', game.state === 'playing' && p.hp === hpBefore, `hp ${p.hp}/${hpBefore}`);
-  say('and the shadow is gone', !game.shadow);
+  say('and the chaya is gone', !game.chaya);
   say(
     'and lands back on solid ground',
     p.x === game.gate.spawnX && p.y >= 0,
@@ -1587,13 +1587,13 @@ function crossingWater(game, input) {
 
   // Binding again has to behave exactly like the first bind — no leftover
   // state from a slot that was supposedly freed.
-  const boundAgain = giveShadow(game, bot);
-  say('binding again behaves like a first bind', boundAgain && !!game.shadow);
+  const boundAgain = giveChaya(game, bot);
+  say('binding again behaves like a first bind', boundAgain && !!game.chaya);
 
-  // --- falling with no shadow bound ---
+  // --- falling with no chaya bound ---
   hardStart(game);
   game._enterGate(1);
-  say('no shadow bound', !game.shadow);
+  say('no chaya bound', !game.chaya);
   const hpBefore2 = p.hp;
   dropIntoWater();
   say('costs no health', p.hp === hpBefore2, `${hpBefore2} -> ${p.hp}`);
@@ -1718,7 +1718,7 @@ function tellStats(paired) {
 /**
  * Deterministic RNG for the duration of the suite.
  *
- * Enemy AI jitter, wisp drift phases and spawn scatter all draw on
+ * Enemy AI jitter, bhoot-batti drift phases and spawn scatter all draw on
  * Math.random, which made two consecutive runs of the same build disagree
  * about whether the level was completable. A suite that flickers is a suite
  * nobody trusts, so it plays against a fixed seed and the seed is part of the
@@ -1773,7 +1773,7 @@ function runAll(game, input, seed) {
   // It used to run exactly one, and that one passed — which read as "the level
   // is clearable" when what it actually said was "the level is clearable on
   // seed 20260728". Sweeping eight seeds put the reading bot at four. Enemy
-  // jitter, spawn scatter and wisp drift phases are all live in a run, so a
+  // jitter, spawn scatter and bhoot-batti drift phases are all live in a run, so a
   // single sample was never evidence about the level; it was evidence about a
   // seed, and every tuning decision measured against it inherited that.
   const sweep = (n, opts) => {
@@ -1792,13 +1792,13 @@ function runAll(game, input, seed) {
       of: runs.length,
       damage,
       best: runs.find((r) => r.ok) ?? runs[0],
-      raised: runs.reduce((a, r) => a + (r.shadowsRaised ?? 0), 0),
+      raised: runs.reduce((a, r) => a + (r.chayasRaised ?? 0), 0),
       reachedBoss: runs.filter((r) => r.reachedBoss).length,
-      atBoss: runs.filter((r) => r.shadowAtBoss).length,
+      atBoss: runs.filter((r) => r.chayaAtBoss).length,
     };
   };
   // The two telegraph bots run *paired*: run i of each shares a seed scope, so
-  // both face the same spawn scatter, the same jitter and the same wisp phases,
+  // both face the same spawn scatter, the same jitter and the same bhoot-batti phases,
   // and the only difference between their two numbers is the bot. The old
   // unpaired sweeps at scopes 300+i and 400+i were not even playing the same
   // gates as each other, which put spawn variance straight into the statistic
@@ -1838,32 +1838,32 @@ function runAll(game, input, seed) {
   // And this one goes after *that*, for the same reason again.
   //
   // Eight more playthroughs is the largest block of frames in the suite, and
-  // extraction allocates: `Shadow extends Beast`, so raising one builds a rig
+  // extraction allocates: `Chaya extends Raakchyas`, so raising one builds a rig
   // and spends Math.random draws on three.js UUIDs. Placed anywhere earlier it
   // would re-roll every row below it and there would be no way to tell a real
   // regression from the reshuffle. Placed last it cannot disturb anything, and
   // the check that this is true is that every pre-existing number in the report
   // is bit-identical to the build before this row existed.
-  report.carried = sweep(9, { readTells: true, carryShadow: true });
+  report.carried = sweep(9, { readTells: true, carryChaya: true });
 
-  // The boss sweeps go after everything, and the `+shadow` half is why.
+  // The boss sweeps go after everything, and the `+chaya` half is why.
   //
-  // `giveShadow` allocates — `_spawn` builds a Beast rig and `extract` builds a
-  // Shadow — and 24 carrying fights are the largest allocation block in the
+  // `giveChaya` allocates — `_spawn` builds a Raakchyas rig and `extract` builds a
+  // Chaya — and 24 carrying fights are the largest allocation block in the
   // suite. The rule this file has broken once already and states twice is that
   // a probe which allocates cannot sit ahead of rows that must stay comparable.
   // These used to sit before `extraction` and `carried`, which was the same
-  // mistake the SORGI slice cost most of a session to.
+  // mistake the PUKAR slice cost most of a session to.
   //
   // Melee has to be a winning answer; kiting deliberately is not. Mana regen
   // caps the bolt at roughly a tenth of melee DPS, so `ranged` is a balance
   // gate — if it starts winning a majority, the bolt is overtuned and the fight
   // has stopped being a fight.
   //
-  // Each strategy runs twice: empty-handed, and walking in carrying a shadow.
+  // Each strategy runs twice: empty-handed, and walking in carrying a chaya.
   // Carrying one is the normal way the arena is reached — the row above
   // measures 6 to 7 runs in 8 arriving with an ally — so a boss verified only
-  // against a shadow-less hunter was verified against the case that mostly does
+  // against a chaya-less hunter was verified against the case that mostly does
   // not happen.
   report.boss = [
     { ...bossSweep(game, input, scope, 500, 'mash', false), mustWin: true },
@@ -1914,7 +1914,7 @@ function runAll(game, input, seed) {
   // And after even that, because it allocates a rig per set-up and the rule
   // does not have an exemption for probes whose author is confident.
   report.charger = scope(12, () => chargerFight(game, input));
-  // And after even that: it allocates too — `giveShadow` twice over, plus a
+  // And after even that: it allocates too — `giveChaya` twice over, plus a
   // gate transition — and the rule does not carve out an exception for the
   // probe that happens to be last today either.
   report.crossingWater = scope(13, () => crossingWater(game, input));
@@ -1922,10 +1922,10 @@ function runAll(game, input, seed) {
   // end to end and forces a live-encounter case the game would never present
   // to a normal run, both of which touch the shared `Game` object.
   report.storyBeats = scope(14, () => storyBeats(game, input));
-  // And after even that: it allocates too — a corpse, a shard, and the shadow
+  // And after even that: it allocates too — a corpse, a shard, and the chaya
   // rig `extract()` builds off it — and the rule does not carve out an
   // exception for the probe that closes the file today either.
-  report.chargerShadow = scope(15, () => chargerShadow(game, input));
+  report.chargerChaya = scope(15, () => chargerChaya(game, input));
   // And after even that, last of all: arithmetic over plain fixture objects,
   // same kind of check as the touch layout above, drawing nothing — it could
   // sit anywhere, and it sits here because the rule says last.
@@ -2010,7 +2010,7 @@ function print(r) {
     lines.push(`  ${t.check.padEnd(26)} ${t.detail.padEnd(56)} ${ok(t.ok)}`);
   }
   lines.push('');
-  lines.push("  The floor is the beast's pounce — the first tell gate 1 teaches, the one");
+  lines.push("  The floor is the raakchyas's pounce — the first tell gate 1 teaches, the one");
   lines.push('  four playtest rounds were played against, and the one the paired');
   lines.push('  signed-rank test below is evidence for. A new enemy that undercuts it is');
   lines.push('  asking for a reaction this game has never shown to be available. The');
@@ -2030,7 +2030,7 @@ function print(r) {
   }
   lines.push('');
   lines.push('  Constraint 1 of the touch budget — no move may require a chord — is the');
-  lines.push('  `no chord` row. Reversed for SORGI by DECISIONS.md § The steer control');
+  lines.push('  `no chord` row. Reversed for PUKAR by DECISIONS.md § The steer control');
   lines.push("  becomes a stick: held down on the stick plus RISE is the keyboard's own");
   lines.push("  `hold S + K`, sent by a thumb already resting on the stick rather than a");
   lines.push("  second target. Constraint 2 is the jump reserve, checked");
@@ -2046,11 +2046,11 @@ function print(r) {
   }
   lines.push('');
 
-  lines.push('SORGI   (extraction, the corpse window, and the shadow)');
+  lines.push('PUKAR   (extraction, the corpse window, and the chaya)');
   for (const e of r.extraction) {
     lines.push(`  ${e.name.padEnd(34)} ${e.detail.padEnd(22)} ${ok(e.ok)}`);
   }
-  lines.push('  one shadow, a channel that a hit breaks, and EXP without style are the');
+  lines.push('  one chaya, a channel that a hit breaks, and EXP without style are the');
   lines.push('  three bounds the design rests on. Each is invisible in play until wrong.');
   lines.push('');
 
@@ -2095,7 +2095,7 @@ function print(r) {
   lines.push('  time, so a test of telegraphs has to spend some — an earlier version');
   lines.push('  asserted that a naive bot must *lose*, and a bot with no reaction delay');
   lines.push('  has no use for a wind-up at all: it can answer the active frames, or');
-  lines.push('  kill the beast mid-tell, which is what it was observed doing.');
+  lines.push('  kill the raakchyas mid-tell, which is what it was observed doing.');
   lines.push('');
   lines.push('  The gate is a paired signed-rank test, not a ratio against a chosen');
   lines.push('  threshold. Run i of each bot shares a seed scope, so both face the same');
@@ -2117,7 +2117,7 @@ function print(r) {
     lines.push('');
     lines.push(`  THE GAP HAS CLOSED. p = ${t.w.p.toFixed(3)} against ${TELL_ALPHA}: the damage the reader`);
     lines.push('  saves is no longer distinguishable from noise. Either a wind-up has');
-    lines.push(`  been shortened below what ${Math.round(REACTION * 1000)} ms can answer — check BEAST.pounce.windup`);
+    lines.push(`  been shortened below what ${Math.round(REACTION * 1000)} ms can answer — check RAAKCHYAS.pounce.windup`);
     lines.push("  and the Guardian's flares — or something now kills enemies faster than");
     lines.push('  they can commit, making the fight a race rather than a read.');
     lines.push('  Do not "fix" it by making the naive bot worse, by choosing a kinder');
@@ -2126,22 +2126,22 @@ function print(r) {
   }
   lines.push('');
 
-  lines.push(`GATE GUARDIAN   (${RUNS_PER_SWEEP} seeds per strategy, empty-handed and carrying)`);
+  lines.push(`DWAR-RAKSHAK   (${RUNS_PER_SWEEP} seeds per strategy, empty-handed and carrying)`);
   for (const b of r.boss) {
     // `mustWin` reads as "a majority must win"; the kiting row inverts it —
     // that strategy is required to *fail* a majority, which is the gate the
     // design has always claimed and never been able to check.
     //
     // A carrying row additionally has to prove it carried. Without that, a
-    // silently broken `giveShadow` prints `+shadow`, passes, and supports the
+    // silently broken `giveChaya` prints `+chaya`, passes, and supports the
     // conclusion that an ally changes nothing.
-    const carriedOk = !b.carryShadow || b.carried === b.of;
+    const carriedOk = !b.carryChaya || b.carried === b.of;
     const pass = (b.mustWin ? b.majority : !b.majority) && carriedOk;
     lines.push(
-      `  ${b.strategy.padEnd(7)}${b.carryShadow ? '+shadow' : '       '}  ` +
+      `  ${b.strategy.padEnd(7)}${b.carryChaya ? '+chaya' : '       '}  ` +
         `wins ${String(b.won)}/${b.of}  hp left ${b.hp.toFixed(0).padStart(4)}  ` +
         `boss hp ${b.bossHpLeft.toFixed(0).padStart(4)}  ${b.seconds.toFixed(1).padStart(5)}s  ` +
-        `${b.carryShadow ? `raised ${b.carried}/${b.of}  ` : ''}${ok(pass)}`
+        `${b.carryChaya ? `raised ${b.carried}/${b.of}  ` : ''}${ok(pass)}`
     );
   }
   lines.push('  mash and dodge must both win a majority; ranged must not win one.');
@@ -2151,26 +2151,26 @@ function print(r) {
   lines.push('  (a single seed read 100 HP left where eight read 61–96), so the reason');
   lines.push('  had already stopped applying. It mattered: a bot that never mistimes a');
   lines.push('  dodge is exactly where an ally is worth least, which made zero latency');
-  lines.push('  the measurement least able to see a shadow trivialise the fight — and');
+  lines.push('  the measurement least able to see a chaya trivialise the fight — and');
   lines.push('  seeing that was the whole purpose of the carrying rows.');
   lines.push('');
-  lines.push('  Each strategy runs twice: empty-handed, and walking in with a shadow.');
+  lines.push('  Each strategy runs twice: empty-handed, and walking in with a chaya.');
   lines.push('  Carrying one is the normal way this arena is reached — 6 to 7 runs in 8');
-  lines.push('  arrive with an ally — so a boss verified only against a shadow-less');
+  lines.push('  arrive with an ally — so a boss verified only against a chaya-less');
   lines.push('  hunter was verified against the case that mostly does not happen. The');
   lines.push('  arena holds no other enemies and therefore no remnants, so whatever');
   lines.push('  walks in is all there is for the whole fight.');
   lines.push('');
 
-  lines.push('CARRYING A SHADOW   (the way the game is actually played)');
+  lines.push('CARRYING A CHAYA   (the way the game is actually played)');
   const c = r.carried;
   const carriedOk = c.cleared * 2 > c.of;
   // A bot that never managed to extract would clear the gate and pass this row
   // while testing nothing at all. That is the failure mode worth guarding: the
   // row has to prove it used the mechanic before its clear rate means anything.
   const usedIt = c.raised > 0;
-  lines.push(row('carries a shadow', c, ok(carriedOk)));
-  lines.push(`  shadows raised   ${c.raised} over ${c.of} runs   ${ok(usedIt)}`);
+  lines.push(row('carries a chaya', c, ok(carriedOk)));
+  lines.push(`  chayas raised   ${c.raised} over ${c.of} runs   ${ok(usedIt)}`);
   lines.push(
     `  reached the arena carrying one   ${c.atBoss}/${c.reachedBoss} of the runs that got there   baseline`
   );
@@ -2182,15 +2182,15 @@ function print(r) {
   lines.push('  human plays it — the channel roots for 0.8 s and any hit breaks it.');
   lines.push('  Extracting mid-fight is a gamble, and a gamble is not what this row');
   lines.push('  measures. It measures whether the gate is clearable while carrying a');
-  lines.push('  shadow, which the suite could not say anything about until now.');
+  lines.push('  chaya, which the suite could not say anything about until now.');
   lines.push('');
   lines.push('  The last two numbers are recorded baselines, not gates. The Guardian is');
-  lines.push('  still tuned for a shadow-less hunter, so asserting on either of them now');
+  lines.push('  still tuned for a chaya-less hunter, so asserting on either of them now');
   lines.push('  would be asserting against numbers that are about to move on purpose.');
   if (!usedIt) {
     lines.push('');
-    lines.push('  NO SHADOW WAS EVER RAISED, so the clear rate above is measuring the');
-    lines.push('  ordinary bot. Check that beasts still leave remnants, that the claim');
+    lines.push('  NO CHAYA WAS EVER RAISED, so the clear rate above is measuring the');
+    lines.push('  ordinary bot. Check that raakchyas still leave remnants, that the claim');
     lines.push('  window outlives the encounter, and that `down` is still held when the');
     lines.push("  latency-delayed `heavy` matures — that last one is why the attempt is");
     lines.push('  committed for a fixed window rather than re-decided every frame.');
@@ -2211,14 +2211,14 @@ function print(r) {
   lines.push('  below, by the same bot that clears gate 1.');
   lines.push('');
 
-  lines.push("THE CHARGER'S SHADOW   (SORGI on its remnant, issue #21)");
-  for (const t of r.chargerShadow) {
+  lines.push("THE CHARGER'S CHAYA   (PUKAR on its remnant, issue #21)");
+  for (const t of r.chargerChaya) {
     lines.push(`  ${t.name.padEnd(34)} ${t.detail.padEnd(70)} ${ok(t.ok)}`);
   }
   lines.push('');
-  lines.push('  A shadow raised from a Charger wears the Charger\'s own rig and runs its');
+  lines.push('  A chaya raised from a Charger wears the Charger\'s own rig and runs its');
   lines.push('  own charge, not a reskinned pounce — and the charge is worth its own');
-  lines.push('  tuned number, never the beast-ally\'s pounce damage and never the hostile');
+  lines.push('  tuned number, never the raakchyas-ally\'s pounce damage and never the hostile');
   lines.push("  Charger's own. See docs/DECISIONS.md's entry on this issue.");
   lines.push('');
 
@@ -2227,8 +2227,8 @@ function print(r) {
     lines.push(`  ${t.what.padEnd(38)} ${t.detail.padEnd(28)} ${ok(t.ok)}`);
   }
   lines.push('');
-  lines.push('  Falling in costs the bound shadow and the walk back, never health, and');
-  lines.push('  never anything at all where there was no shadow to lose. Gate 1 is read');
+  lines.push('  Falling in costs the bound chaya and the walk back, never health, and');
+  lines.push('  never anything at all where there was no chaya to lose. Gate 1 is read');
   lines.push('  right after, on the same probe, so a fix that makes water forgiving');
   lines.push('  everywhere shows up here as gate 1 surviving its own void.');
   lines.push('');

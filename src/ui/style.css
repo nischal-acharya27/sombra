@@ -585,7 +585,7 @@ kbd {
 }
 
 /* Colour carries the grouping a thumb learns by position: the two swings cyan,
-   the bolt blue like the mana bar, SORGI violet like the shard it claims. */
+   the bolt blue like the mana bar, PUKAR violet like the shard it claims. */
 .touch-btn.tone-plain { border-color: rgba(150, 178, 200, 0.36); color: #c2d4e2; }
 .touch-btn.tone-cyan { border-color: rgba(95, 216, 255, 0.42); }
 .touch-btn.tone-blue { border-color: rgba(63, 127, 232, 0.46); color: #bcd8ff; }
@@ -604,7 +604,7 @@ kbd {
 }
 
 /* One target, not three. A thumb rests on it: sliding gives the direction,
-   pressing toward the bottom edge gives SORGI's `down` — see DECISIONS.md
+   pressing toward the bottom edge gives PUKAR's `down` — see DECISIONS.md
    § The steer control becomes a stick. Separate targets would need gaps
    between them that eat input mid-slide, same as the two-button pad this
    replaced. Round rather than a rectangle — issue #23 — because the control
@@ -648,9 +648,9 @@ kbd {
   border-color: var(--violet);
   box-shadow: 0 0 18px rgba(157, 92, 255, 0.5);
 }
-/* Held left/down together — SORGI's chord — reads as both at once: the cyan
+/* Held left/down together — PUKAR's chord — reads as both at once: the cyan
    fill of a direction under the violet ring `down` alone would draw, so the
-   glow that means "pressed toward SORGI" isn't lost under the glow that means
+   glow that means "pressed toward PUKAR" isn't lost under the glow that means
    "steering". */
 .touch-steer.l.d .knob,
 .touch-steer.r.d .knob {

@@ -7,14 +7,14 @@
 import * as THREE from 'three';
 import { Level } from './level.js';
 import { Player } from './player.js';
-import { Beast, Charger, Wisp, Bolt } from './enemies.js';
+import { Raakchyas, Charger, BhootBatti, Bolt } from './enemies.js';
 import { Corpse } from './shadow.js';
 import { Guardian } from './boss.js';
 import { GameCamera } from './camera.js';
 import { VFX } from '../render/vfx.js';
 import { buildShard } from '../render/models.js';
 import { P } from '../render/palette.js';
-import { MAGIC, STYLE, PROGRESSION, PLAYER, WISP, SHADOW, GATE_ARCH, SYS_WINDOW } from './config.js';
+import { MAGIC, STYLE, PROGRESSION, PLAYER, BHOOT_BATTI, CHAYA, GATE_ARCH, SYS_WINDOW } from './config.js';
 import { boxHit } from './actor.js';
 import { clamp, rand } from '../engine/mathx.js';
 import { STRINGS } from '../ui/strings.js';
@@ -43,7 +43,7 @@ function attackDamage(e) {
  * A gate names a grunt archetype directly and says `warden` for its own — which
  * archetype that is, and with what numbers, is the Warden block's to say.
  */
-export const ARCHETYPES = { beast: Beast, charger: Charger, wisp: Wisp, guardian: Guardian };
+export const ARCHETYPES = { raakchyas: Raakchyas, charger: Charger, bhootBatti: BhootBatti, guardian: Guardian };
 
 export class Game {
   /**
@@ -118,19 +118,19 @@ export class Game {
     this.pendingSpawns = [];
     this.boss = null;
 
-    // SORGI. A single slot, not a list — "one summon at a time" is the design's
+    // PUKAR. A single slot, not a list — "one summon at a time" is the design's
     // central bound, and holding one reference makes it a property of the shape
     // rather than a rule every caller has to remember. Corpses get their own
     // list for the same reason in reverse: nothing that iterates `enemies` can
     // see a body, so none of those loops needed a guard added.
-    this.shadow = null;
+    this.chaya = null;
     this.corpses = [];
     // Shard rigs, all of them built here and never during a run. Three.js takes
     // four `Math.random()` draws per object for its UUID, and tools/sim.js runs
     // the game against a seeded `Math.random` — so a rig built mid-run spends
     // the gameplay stream and re-rolls every enemy's jitter after it.
     this.shardPool = [];
-    for (let i = 0; i < SHADOW.maxCorpses; i++) this.shardPool.push(buildShard());
+    for (let i = 0; i < CHAYA.maxCorpses; i++) this.shardPool.push(buildShard());
 
     // idle | playing | dead | cleared | ended
     //
@@ -194,16 +194,16 @@ export class Game {
    * Back to the top of the campaign.
    *
    * What lives here is what belongs to a *run* rather than to a gate: the
-   * hunter's level, their EXP, the clock, and the shadow they were carrying.
+   * hunter's level, their EXP, the clock, and the chaya they were carrying.
    * Everything else — the field, the encounters, the geometry — is the gate's,
    * and `_enterGate` is what puts that back.
    */
   reset() {
-    // A restart starts empty-handed. Walking a shadow between gates is the
+    // A restart starts empty-handed. Walking a chaya between gates is the
     // campaign's whole promise, so `_enterGate` deliberately keeps one; this is
     // the one place that has to let it go.
-    if (this.shadow) this.entityRoot.remove(this.shadow.root);
-    this.shadow = null;
+    if (this.chaya) this.entityRoot.remove(this.chaya.root);
+    this.chaya = null;
 
     this.player.maxHp = PLAYER.maxHp;
     this.player.maxMp = PLAYER.maxMp;
@@ -265,15 +265,15 @@ export class Game {
     this.state = 'playing';
 
     this.player.reset(this.gate.spawnX, 0.2);
-    // The shadow comes too, and it has to be *put* there rather than left to
+    // The chaya comes too, and it has to be *put* there rather than left to
     // its own recall rule: that rule fires on distance from the hunter, and a
-    // shadow standing at gate 1's arena in gate 2's coordinates is a body in
+    // chaya standing at gate 1's arena in gate 2's coordinates is a body in
     // the wrong world for however many frames it takes to notice.
-    const sh = this.shadow;
+    const sh = this.chaya;
     if (sh) {
       sh.level = this.level;
-      sh.x = this.player.x - SHADOW.recallBehind;
-      sh.y = this.player.y + SHADOW.recallAbove;
+      sh.x = this.player.x - CHAYA.recallBehind;
+      sh.y = this.player.y + CHAYA.recallAbove;
       sh.vx = 0;
       sh.vy = 0;
       sh.state = 'chase';
@@ -316,7 +316,7 @@ export class Game {
 
     // A gate with no Warden has nothing to beat, so its way out is open from
     // the moment the hunter arrives. The crossing is the first of those, and
-    // is one only until the Ferryman is built.
+    // is one only until the Kevat is built.
     if (!this.gate.warden) this._openTheWay();
   }
 
@@ -374,7 +374,7 @@ export class Game {
     this.player.update(dt, this.input);
 
     for (const e of this.enemies) e.update(dt, this.player);
-    if (this.shadow) this.shadow.update(dt, this.player, this.enemies);
+    if (this.chaya) this.chaya.update(dt, this.player, this.enemies);
     for (const b of this.bolts) b.update(dt, this.level);
     for (const c of this.corpses) c.update(dt);
 
@@ -387,10 +387,10 @@ export class Game {
     const voidY = this.gate.voidY;
 
     // Falling out of the world, forgiving-gate case, first — ahead of the
-    // generic cull below. The shadow chases the hunter closely enough that it
+    // generic cull below. The chaya chases the hunter closely enough that it
     // is often the one crossing `voidY` first, on the same frame, via its own
     // recall; running this first makes the water's loss ("FORGOTTEN") the one
-    // that lands rather than the generic ("SHADOW LOST") cull beating it there
+    // that lands rather than the generic ("CHAYA LOST") cull beating it there
     // by a few lines. No such race exists for gate 1: it has no forgiving case
     // to preempt.
     if (this.gate.forgivingVoid && this.player.y < voidY) this._fallInWater();
@@ -398,7 +398,7 @@ export class Game {
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const e = this.enemies[i];
       if (e.removeMe || e.y < voidY) {
-        // A beast that finished dying above the void leaves something to claim.
+        // A raakchyas that finished dying above the void leaves something to claim.
         // Anything that fell out of the world does not — a body suspended over
         // the chasm is either unreachable or a reason to jump after it.
         if (e.removeMe && e.dead && e.y >= voidY && e.leavesCorpse) this._leaveCorpse(e);
@@ -409,10 +409,10 @@ export class Game {
     for (let i = this.corpses.length - 1; i >= 0; i--) {
       if (this.corpses[i].expired) this._removeCorpse(i);
     }
-    if (this.shadow && (this.shadow.removeMe || this.shadow.y < voidY)) {
-      this.entityRoot.remove(this.shadow.root);
-      this.shadow = null;
-      this.hud.toast(STRINGS.TOAST_SHADOW_LOST, 'warn');
+    if (this.chaya && (this.chaya.removeMe || this.chaya.y < voidY)) {
+      this.entityRoot.remove(this.chaya.root);
+      this.chaya = null;
+      this.hud.toast(STRINGS.TOAST_CHAYA_LOST, 'warn');
     }
     for (let i = this.bolts.length - 1; i >= 0; i--) {
       if (this.bolts[i].removeMe) {
@@ -512,7 +512,7 @@ export class Game {
       }
     }
 
-    // The shadow's attack vs enemies, and enemy attacks vs the shadow.
+    // The chaya's attack vs enemies, and enemy attacks vs the chaya.
     //
     // Both directions obey the rule that governs everything else in this game:
     // nothing damages anything by touching it, only by committing to an attack.
@@ -520,15 +520,15 @@ export class Game {
     // and slams by doing its job, and nothing has to aim at it for that to
     // happen. Enemies keep targeting the hunter.
     //
-    // What that box is worth reads the same way an enemy's does — the beast
-    // shape has one attack, so the pounce numbers are the fallback; the
+    // What that box is worth reads the same way an enemy's does — the
+    // raakchyas shape has one attack, so the pounce numbers are the fallback; the
     // charger shape answers for itself through `currentAttackDamage()`, the
     // same seam `attackDamage()` below reads for the hostile version.
-    const sh = this.shadow;
+    const sh = this.chaya;
     if (sh && !sh.dead) {
       const sb = sh.attackBox?.();
       if (sb) {
-        const info = attackInfo(sh, () => ({ damage: SHADOW.pounce.damage, knock: SHADOW.knock }));
+        const info = attackInfo(sh, () => ({ damage: CHAYA.pounce.damage, knock: CHAYA.knock }));
         for (const e of this.enemies) {
           if (e.dead || sh.hitSet.has(e)) continue;
           if (!boxHit(sb, e.hurtBox())) continue;
@@ -539,7 +539,7 @@ export class Game {
               damage: info.damage,
               knock: info.knock,
               launch: 0,
-              move: 'shadow',
+              move: 'chaya',
               color: P.violet,
             },
             sh
@@ -556,7 +556,7 @@ export class Game {
           if (!ab || !boxHit(ab, sh.hurtBox())) continue;
           const dmg = attackDamage(e);
           if (dmg === null) continue;
-          this._damageShadow(dmg, e.x);
+          this._damageChaya(dmg, e.x);
           break;
         }
       }
@@ -592,7 +592,7 @@ export class Game {
             shake: 0.08,
             move: 'magic',
             style: MAGIC.style,
-            color: P.violetGlow,
+            color: P.aagoGlow,
           });
           if (b.consumeHit()) break;
         }
@@ -600,12 +600,13 @@ export class Game {
         this._damagePlayer(b.damage, b.x);
         b._expire();
       } else if (sh && !sh.dead && sh.hurtCd <= 0 && boxHit(b.box, sh.hurtBox())) {
-        // A wisp's shot is a committed, telegraphed attack, so it can kill the
-        // ally like anything else that commits. Without this the wisps are the
-        // one enemy in the game a shadow is simply immune to, which would make
-        // the bridge — four beasts and two wisps, the fight the mechanic exists
-        // to change — quietly the safest place to be carrying one.
-        this._damageShadow(b.damage, b.x);
+        // A bhoot-batti's shot is a committed, telegraphed attack, so it can
+        // kill the ally like anything else that commits. Without this the
+        // bhoot-battis are the one enemy in the game a chaya is simply immune
+        // to, which would make the bridge — four raakchyas and two
+        // bhoot-battis, the fight the mechanic exists to change — quietly the
+        // safest place to be carrying one.
+        this._damageChaya(b.damage, b.x);
         b._expire();
       }
     }
@@ -616,9 +617,9 @@ export class Game {
    *
    * The credit split is the entire brake on the ally. Its kills pay EXP, so
    * clearing an encounter with its help still levels you on the pace the game
-   * is tuned for and the shadow never reads as a punishment. Its kills pay no
+   * is tuned for and the chaya never reads as a punishment. Its kills pay no
    * style, because style is a score for what *you* did — and since style drives
-   * `mpRegenByRank`, leaning on the shadow quietly costs rank, and rank is
+   * `mpRegenByRank`, leaning on the chaya quietly costs rank, and rank is
    * mana. The brake is a cost inside the mechanic rather than a nerf bolted on,
    * and it needed no new tunable to defend.
    *
@@ -662,11 +663,11 @@ export class Game {
   }
 
   /** The ally is mortal, and stays dead. Another one costs another corpse. */
-  _damageShadow(amount, fromX) {
-    const sh = this.shadow;
+  _damageChaya(amount, fromX) {
+    const sh = this.chaya;
     if (!sh || sh.dead) return;
-    sh.hurtCd = SHADOW.hurtCooldown;
-    sh.takeHit({ damage: amount, knock: SHADOW.knock, launch: 0, fromX });
+    sh.hurtCd = CHAYA.hurtCooldown;
+    sh.takeHit({ damage: amount, knock: CHAYA.knock, launch: 0, fromX });
     this.vfx.hitSpark(sh.x, sh.y + sh.hh, Math.sign(sh.x - fromX) || 1, 0.6, P.violetGlow);
     if (sh.dead) this.vfx.shadowBurst(sh.x, sh.y + 0.5, 24, P.violetDeep);
   }
@@ -714,12 +715,12 @@ export class Game {
     if (Math.abs(p.x - x) <= d.radius && p.grounded && p.y < y + 2.5) {
       this._damagePlayer(d.damage, x);
     }
-    // The shadow is standing on the same floor and has no way to read the tell.
+    // The chaya is standing on the same floor and has no way to read the tell.
     // Sparing it here would make walking one into the arena strictly better
     // than not, which is the choice the mechanic is supposed to pose, not win.
-    const sh = this.shadow;
+    const sh = this.chaya;
     if (sh && !sh.dead && sh.hurtCd <= 0 && Math.abs(sh.x - x) <= d.radius && sh.grounded) {
-      this._damageShadow(d.damage, x);
+      this._damageChaya(d.damage, x);
     }
   }
 
@@ -730,7 +731,7 @@ export class Game {
       damage: MAGIC.damage,
       life: MAGIC.life,
       pierce: MAGIC.pierce,
-      color: P.violetGlow,
+      color: P.aagoCore,
       radius: 0.5,
     });
     this.bolts.push(b);
@@ -740,9 +741,9 @@ export class Game {
   spawnEnemyBolt(x, y, dx, dy, opts = {}) {
     const b = new Bolt(this.ctx, x, y, dx, dy, {
       team: 'enemy',
-      speed: opts.speed ?? WISP.shoot.speed,
-      damage: opts.damage ?? WISP.shoot.damage,
-      life: opts.life ?? WISP.shoot.life,
+      speed: opts.speed ?? BHOOT_BATTI.shoot.speed,
+      damage: opts.damage ?? BHOOT_BATTI.shoot.damage,
+      life: opts.life ?? BHOOT_BATTI.shoot.life,
       color: opts.color ?? P.crimson,
       radius: 0.42,
     });
@@ -901,7 +902,7 @@ export class Game {
     this.audio.play('systemOpen');
   }
 
-  // -- SORGI ----------------------------------------------------------------
+  // -- PUKAR ------------------------------------------------------------------
 
   /** Hand a finished body over to a corpse, rig and all. */
   _leaveCorpse(e) {
@@ -927,7 +928,7 @@ export class Game {
     // guessing from screen width. The heavy button's own label comes from the
     // touch layer's descriptor rather than being spelled out a second time
     // here, so a future relabelling of the control cannot leave this line
-    // stale. SORGI itself has no button of its own any more — see
+    // stale. PUKAR itself has no button of its own any more — see
     // `DECISIONS.md` § The steer control becomes a stick — so touch's phrasing
     // names the stick the same way the keyboard line names `S`.
     const heavyLabel = this.touch?.layout.buttons.find((b) => b.verb === 'heavy')?.label ?? STRINGS.TOUCH_RISE;
@@ -953,12 +954,12 @@ export class Game {
   /** The nearest claimable body, or null. Asked by the player each frame. */
   nearestCorpse(x, y) {
     let best = null;
-    let bd = SHADOW.extractRange;
+    let bd = CHAYA.extractRange;
     for (const c of this.corpses) {
       if (c.expired) continue;
       // Side-on game: horizontal distance decides, height only has to be
       // roughly level, so a body on a ledge above you is not claimable.
-      if (Math.abs(c.y - y) > SHADOW.extractReachY) continue;
+      if (Math.abs(c.y - y) > CHAYA.extractReachY) continue;
       const d = Math.abs(c.x - x);
       if (d < bd) {
         bd = d;
@@ -972,23 +973,23 @@ export class Game {
   extract(corpse) {
     this._removeCorpse(this.corpses.indexOf(corpse));
     // Replacement, not addition. The old one does not drop a body: raising a
-    // shadow from your own shadow would make the corpse window irrelevant and
+    // chaya from your own chaya would make the corpse window irrelevant and
     // the whole mechanic self-sustaining.
-    if (this.shadow) this.entityRoot.remove(this.shadow.root);
+    if (this.chaya) this.entityRoot.remove(this.chaya.root);
 
     // Wears its source's rig and runs its source's state machine — a Charger's
-    // remnant raises a Charger-shaped ally, not a reskinned beast. See
-    // `shadowClass` in game/shadow.js.
-    const ShadowClass = corpse.sourceClass.shadowClass;
-    const s = new ShadowClass(this.level, this.ctx, corpse.x, corpse.y);
-    this.shadow = s;
+    // remnant raises a Charger-shaped ally, not a reskinned raakchyas. See
+    // `chayaClass` in game/shadow.js.
+    const ChayaClass = corpse.sourceClass.chayaClass;
+    const s = new ChayaClass(this.level, this.ctx, corpse.x, corpse.y);
+    this.chaya = s;
     this.entityRoot.add(s.root);
 
     this.vfx.shadowBurst(corpse.x, corpse.y + 0.7, 34, P.violet);
     this.vfx.groundBurst(corpse.x, corpse.y, 1.2);
     this.cam.shake(0.2);
     this.audio.play('levelup');
-    this.hud.toast(STRINGS.TOAST_SORGI, 'gold');
+    this.hud.toast(STRINGS.TOAST_PUKAR, 'gold');
   }
 
   onTelegraph(name) {
@@ -1048,18 +1049,18 @@ export class Game {
   /**
    * The crossing's water, not gate 1's void. Lethe rather than a fall: the
    * hunter comes back to solid ground at no health cost, but the water takes
-   * whatever shadow they carried in — the campaign's cheapest lesson that the
+   * whatever chaya they carried in — the campaign's cheapest lesson that the
    * bond is losable, well before the ending spends it on purpose.
    *
    * Called ahead of the generic void cull in `update`, deliberately: the
-   * shadow chases closely enough that its own recall can put it under `voidY`
+   * chaya chases closely enough that its own recall can put it under `voidY`
    * on the very frame the hunter falls, and this has to be the one that
    * claims it — see the call site.
    */
   _fallInWater() {
-    if (this.shadow) {
-      this.entityRoot.remove(this.shadow.root);
-      this.shadow = null;
+    if (this.chaya) {
+      this.entityRoot.remove(this.chaya.root);
+      this.chaya = null;
       this.hud.toast(STRINGS.TOAST_FORGOTTEN, 'warn');
     }
     this.player.x = this.gate.spawnX;

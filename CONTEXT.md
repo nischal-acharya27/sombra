@@ -55,7 +55,8 @@ _Avoid_: Mini-boss, elite, sub-boss, lieutenant
 A Warden of the highest order — bespoke, multi-phase, with its own arena
 behaviour rather than parameterised numbers. Four of the ten Wardens are
 bosses. Every boss is a Warden; most Wardens are not bosses.
-_Avoid_: Guardian (that is one specific boss's name), raid boss, final boss
+_Avoid_: Guardian (the code's archetype name for gate 1's boss, not its
+title — the boss's name is Dwar-Rakshak), raid boss, final boss
 
 **Charger**:
 The enemy that punishes standing still: it plants its feet, announces the
@@ -69,23 +70,23 @@ called Yama in Vedic and Buddhist tradition, Yanluo Wang in Chinese, Enma in
 Japanese. He stopped judging.
 _Avoid_: Death, the reaper, Hades, Enma-Ō (as separate characters)
 
-## The shadow
+## The chaya
 
-**SORGI**:
+**PUKAR**:
 The command that binds a lingering soul. The word itself, spoken by the
 hunter; not the resulting ally and not the act.
-_Avoid_: Arise, extraction, summoning, necromancy
+_Avoid_: Arise, extraction, summoning, necromancy, Sorgi
 
 **Remnant**:
 What a slain enemy leaves behind — a soul that did not move on, marked by a
 violet shard and claimable for a few seconds before it fades.
 _Avoid_: Corpse, body, soul, drop, pickup
 
-**Shadow**:
+**Chaya**:
 The ally raised from a remnant. One at a time; binding another releases the
 first. Not a summon and not a pet — it is a soul being escorted toward
 rebirth, and the campaign ends by letting it go.
-_Avoid_: Summon, minion, pet, servant, undead
+_Avoid_: Summon, minion, pet, servant, undead, Shadow
 
 ## Rank and progress
 

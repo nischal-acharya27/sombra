@@ -15,9 +15,9 @@
 // Constraint 1 is reversed here for one case, by `DECISIONS.md` § The steer
 // control becomes a stick: the first phone playtest found a held direction on
 // a stick is not the chord the constraint was written against, since the
-// thumb steering is already resting on it. SORGI is that one case — hold down
+// thumb steering is already resting on it. PUKAR is that one case — hold down
 // on the stick, press RISE — so the steer descriptor below carries a third
-// action alongside its left/right pair, and there is no dedicated SORGI
+// action alongside its left/right pair, and there is no dedicated PUKAR
 // target any more. Constraint 3 is a property of what a gate *asks for*
 // rather than of what the screen offers, so nothing here can check it — the
 // layout below simply never needs two buttons pressed together, and the phone
@@ -76,11 +76,11 @@ const TAP_WORTH = (RISE + BUFFER) * 1.1;
  *
  * Each id is the input action it drives, so there is no second vocabulary here
  * to fall out of step with `engine/input.js`. `move` is the axis; most of the
- * rest are buttons. `sorgi` is neither — it is `down` held on the axis plus
+ * rest are buttons. `pukar` is neither — it is `down` held on the axis plus
  * `heavy` pressed, the same chord the keyboard sends, so `tools/touchcheck.js`
  * credits it against the steer rather than looking for a control of its own.
  */
-export const MOVESET = ['move', 'jump', 'dash', 'light', 'heavy', 'magic', 'sorgi'];
+export const MOVESET = ['move', 'jump', 'dash', 'light', 'heavy', 'magic', 'pukar'];
 
 /**
  * The size everything is measured in, in CSS pixels.
@@ -122,12 +122,12 @@ export const KNOB = { size: 44, travel: 26 }; // 26 + 44 / 2 = 48 < 50
  * at any width. The five buttons sweep up and to the left from where a right
  * thumb rests, and **the order along that sweep is how often a hand reaches for
  * the move**: SLASH biggest and nearest, then JUMP and RISE, then STEP, then
- * DÉCRET furthest. SORGI is not on this sweep — see the steer descriptor
+ * AAGO furthest. PUKAR is not on this sweep — see the steer descriptor
  * below.
  *
- * STEP outranks DÉCRET there for the reason `player.js` tests dash before
+ * STEP outranks AAGO there for the reason `player.js` tests dash before
  * everything else — it is the defensive option, and a player mashing it under
- * pressure means it. DÉCRET costs 16 MP and has a cooldown, so it is never the
+ * pressure means it. AAGO costs 16 MP and has a cooldown, so it is never the
  * move a panicking thumb wants.
  *
  * Both clusters hug the bottom corners, and that is not decoration: the camera
@@ -157,7 +157,7 @@ export const TOUCH_LAYOUT = {
    *
    * `down` is `DECISIONS.md` § The steer control becomes a stick: held here,
    * it is read by `player.js` exactly as the keyboard's `S`/`ArrowDown` is —
-   * see `engine/input.js`'s `down` binding — so SORGI needs no route of its
+   * see `engine/input.js`'s `down` binding — so PUKAR needs no route of its
    * own any more.
    *
    * `w` and `h` are equal — a second phone playtest (issue #23) asked for the
@@ -334,7 +334,7 @@ export class TouchControls {
     el.className = `touch-target touch-btn tone-${c.tone}`;
     // One size for every label that fits at it, and only the ones that do not
     // shrink — six buttons in three different type sizes reads as an accident.
-    // `DÉCRET` is the only name the layout carries that has to give.
+    // `AAGO` is the only name the layout carries that has to give.
     const fs = Math.min(0.19, 0.95 / c.label.length).toFixed(3);
     el.innerHTML = `<b style="font-size:calc(var(--b) * ${fs})">${c.label}</b>`;
     this._place(el, c);
@@ -391,7 +391,7 @@ export class TouchControls {
    *
    * `player.js` reads `down` exactly as it reads the keyboard's `S` /
    * `ArrowDown` — see `engine/input.js` — so this is the whole touch route
-   * for SORGI. Nothing here knows that; it just holds a direction the same
+   * for PUKAR. Nothing here knows that; it just holds a direction the same
    * way the keyboard does.
    */
   _setDown(on) {

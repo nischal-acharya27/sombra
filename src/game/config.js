@@ -164,21 +164,22 @@ export const ATTACKS = {
 export const JUGGLE = { time: 0.8, gravityMul: 0.40 };
 
 export const MAGIC = {
-  name: "Décret",
+  name: "Aago",
   // 16 of a 100 mana pool: six casts from full, and one back every three
   // seconds. Enough that reaching for it is never a resource crisis, far too
   // little to replace the sword — see the `ranged` probe in tools/sim.js.
   cost: 16,
   // Round 3: "it hits all the enemies on the way, and it deals a lot of damage".
   //
-  // At 33 the bolt was doing something nobody intended: `WISP.hp` is 30, so one
-  // cast killed a wisp outright, and at `pierce: 3` one cast killed all three
-  // over the chasm. That is also, on the evidence, why the wisps stopped
-  // reading as a threat — the same round asked for them to be made dangerous
-  // again, and their interval, damage and wind-up were never the reason they
-  // were easy. One dial explains both complaints, so only one dial moves.
+  // At 33 the bolt was doing something nobody intended: `BHOOT_BATTI.hp` is 30,
+  // so one cast killed a bhoot-batti outright, and at `pierce: 3` one cast
+  // killed all three over the chasm. That is also, on the evidence, why the
+  // bhoot-battis stopped reading as a threat — the same round asked for them
+  // to be made dangerous again, and their interval, damage and wind-up were
+  // never the reason they were easy. One dial explains both complaints, so
+  // only one dial moves.
   //
-  // 23 puts a wisp at two casts and leaves the beast at two (46 hp). Pierce 1
+  // 23 puts a bhoot-batti at two casts and leaves the raakchyas at two (46 hp). Pierce 1
   // makes a lined-up crowd a positioning reward rather than a free clear.
   damage: 23,
   speed: 34,
@@ -191,14 +192,14 @@ export const MAGIC = {
   shake: 0.14,
 };
 
-export const BEAST = {
+export const RAAKCHYAS = {
   hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 0.52,
   hh: 0.5,
   speed: 4.4,
-  // Wider than any sealed arena. At 15 a beast could idle in the far corner of
-  // the bridge while the hunter stood at the other end, leaving an encounter
-  // that cannot be cleared without walking back to look for it.
+  // Wider than any sealed arena. At 15 a raakchyas could idle in the far
+  // corner of the bridge while the hunter stood at the other end, leaving an
+  // encounter that cannot be cleared without walking back to look for it.
   chaseRange: 30,
   // The pounce is the entire threat. Bodies are harmless to touch, so a clean
   // kill costs nothing and crowding is a positioning problem, not chip damage.
@@ -213,16 +214,16 @@ export const BEAST = {
 /**
  * The charger — the enemy that punishes standing still.
  *
- * The beast comes to you and leaps; this one plants its feet at range and runs
- * a lane. That difference is the whole archetype, and every number here exists
- * to protect it:
+ * The raakchyas comes to you and leaps; this one plants its feet at range and
+ * runs a lane. That difference is the whole archetype, and every number here
+ * exists to protect it:
  *
  * The threat is a *lane* rather than a lunge: it commits from a distance, and
  * crowded closer than `charge.minRange` it backs off to reopen one instead of
  * attacking. That is what makes "keep moving" the answer rather than "stand
  * behind it".
  *
- * `charge.windup` is 0.52 against the beast's 0.42, and that ordering is
+ * `charge.windup` is 0.52 against the raakchyas's 0.42, and that ordering is
  * checked rather than remembered: `telegraphs()` in `tools/gatecheck.js` holds
  * every tell in the game to the shortest one gate 1 taught, measured against
  * the same 250 ms reaction latency the suite's bots play at. A charge cannot be
@@ -241,7 +242,7 @@ export const CHARGER = {
   hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 0.62,
   hh: 0.62,
-  // Slower on its feet than a beast. It is not a chaser — walking away from a
+  // Slower on its feet than a raakchyas. It is not a chaser — walking away from a
   // charger works, and is supposed to, right up until it plants and commits.
   speed: 3.0,
   chaseRange: 26,
@@ -291,26 +292,26 @@ export const CHARGER = {
 };
 
 /**
- * SORGI — the extraction, the corpse window, and what rises from it.
+ * PUKAR — the extraction, the corpse window, and what rises from it.
  *
- * The ally runs its source archetype's own state machine (see `shadowOf` in
- * game/shadow.js) — a beast's remnant raises a beast-shaped ally, a charger's
- * raises a charger-shaped one — so this one block carries both shapes' fields
- * and each concrete shadow class reads only the ones its state machine needs.
+ * The ally runs its source archetype's own state machine (see `chayaOf` in
+ * game/shadow.js) — a raakchyas's remnant raises a raakchyas-shaped ally, a
+ * charger's raises a charger-shaped one — so this one block carries both shapes' fields
+ * and each concrete chaya class reads only the ones its state machine needs.
  *
  * `channel` and `corpseWindow` are the whole cost of the mechanic. There is no
  * mana price on purpose — a mana price is bookkeeping, and you would work out
- * once whether the bolt or the shadow is the better spend and then always pick
+ * once whether the bolt or the chaya is the better spend and then always pick
  * it. Standing still for 0.8 s in a live fight is a decision you have to make
  * again every time, and it gambles against the telegraph system already in
  * place.
  */
-export const SHADOW = {
+export const CHAYA = {
   /** Seconds a body stays claimable. The shrinking shard is this number. */
   corpseWindow: 4.0,
   /**
    * How many bodies can lie about at once, and therefore how many shard rigs
-   * the game pre-builds. Comfortably above the four beasts of the bridge
+   * the game pre-builds. Comfortably above the four raakchyas of the bridge
    * ambush. The oldest body gives up its shard if this is ever reached, which
    * is also the reason the number exists: allocating a shard mid-run would
    * spend the suite's seeded randomness. See buildShard in render/models.js.
@@ -324,10 +325,10 @@ export const SHADOW = {
   extractReachY: 2.0,
 
   hp: 58,
-  // No `hw`/`hh`/`speed` here: `shadowOf` in game/shadow.js reads them off the
-  // source archetype's own stats instead, so a beast-raised ally keeps a
-  // beast's pace and hitbox and a charger-raised one keeps a charger's — a
-  // shadow that wears its source's rig but fights with another archetype's
+  // No `hw`/`hh`/`speed` here: `chayaOf` in game/shadow.js reads them off the
+  // source archetype's own stats instead, so a raakchyas-raised ally keeps a
+  // raakchyas's pace and hitbox and a charger-raised one keeps a charger's — a
+  // chaya that wears its source's rig but fights with another archetype's
   // hitbox would still be the bug this file exists to fix, just moved from
   // behaviour into collision geometry.
   // Its own, because these are what an *ally* needs rather than what the enemy
@@ -335,7 +336,7 @@ export const SHADOW = {
   // hunter it is following.
   chaseRange: 26,
   stopAt: 2.4,
-  // The beast's pounce exactly, carrying its own damage.
+  // The raakchyas's pounce exactly, carrying its own damage.
   //
   // Identical timings are the point, not laziness: the player has already
   // learned to read this wind-up, and an ally whose leap reads differently would
@@ -343,15 +344,15 @@ export const SHADOW = {
   // must not be shared — the ally exists to change a fight, not to win it while
   // the hunter watches, and a shared number would mean every future tune of the
   // enemy silently tuned the player's ally.
-  pounce: { ...BEAST.pounce, damage: 11 },
+  pounce: { ...RAAKCHYAS.pounce, damage: 11 },
   /** Knockback its pounce deals, and takes. */
   knock: 5,
 
   // The charger-raised ally's own charge. Same relationship `pounce` above
-  // has to `BEAST.pounce`: the timings are the hostile charger's own, already
+  // has to `RAAKCHYAS.pounce`: the timings are the hostile charger's own, already
   // learned, but the damage is tuned separately and low — a support ally's
   // hit carries far lower stakes than an attack the hunter has to dash
-  // through. No `chain`: a shadow's charge never chains even when its source
+  // through. No `chain`: a chaya's charge never chains even when its source
   // could, so it always resolves to one commit.
   charge: { ...CHARGER.charge, damage: 6, knock: 4 },
   /** The charger-raised ally's own lane tolerance and idle window. */
@@ -364,7 +365,7 @@ export const SHADOW = {
    * A pounce's hitbox is live for half a second, and the ally walks straight
    * into it — without this it would take that damage on every frame of the
    * leap and evaporate. Same job as the hunter's `hurtInvuln`, shorter because
-   * the shadow is not asked to escape anything.
+   * the chaya is not asked to escape anything.
    */
   hurtCooldown: 0.55,
 
@@ -381,7 +382,7 @@ export const SHADOW = {
 };
 
 /**
- * The Ferryman — the crossing's Warden.
+ * The Kevat — the crossing's Warden.
  *
  * A charger, elevated: `docs/DECISIONS.md` § Wardens and bosses is explicit
  * that this is configuration, not a new file or a new state machine. The
@@ -391,7 +392,7 @@ export const SHADOW = {
  * recovery the hunter was taught to punish. No new telegraph, because there is
  * nothing left to teach; the ferry crossing twice is the whole idea.
  */
-export const FERRYMAN = {
+export const KEVAT = {
   ...CHARGER,
   hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 0.7,
@@ -414,18 +415,19 @@ export const FERRYMAN = {
   contactDamage: 0,
 };
 
-export const WISP = {
+export const BHOOT_BATTI = {
   hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 0.38,
   hh: 0.38,
   speed: 3.0,
   hover: { amp: 0.7, freq: 1.5 },
-  // A wisp should make you *change tool*, not make you *wait*. At 2.2 units up
-  // and 7.5 out it sat outside the light attack's 1.72 ceiling and outside
-  // every melee range, so the only answer was mana — and with regen at 5.5/s
-  // that turned two wisps into a thirty-second stall where the hunter walks
-  // underneath them taking chip damage. Now it drifts inside jump and launcher
-  // range, and the bolt is the *efficient* answer rather than the only one.
+  // A bhoot-batti should make you *change tool*, not make you *wait*. At 2.2
+  // units up and 7.5 out it sat outside the light attack's 1.72 ceiling and
+  // outside every melee range, so the only answer was mana — and with regen at
+  // 5.5/s that turned two bhoot-battis into a thirty-second stall where the
+  // hunter walks underneath them taking chip damage. Now it drifts inside jump
+  // and launcher range, and the bolt is the *efficient* answer rather than the
+  // only one.
   hoverAbove: 1.6,
   leash: 9, // never strays this far horizontally from where it spawned
   descend: 4.5, // ...nor this far below it, which keeps it out of the void
@@ -435,8 +437,8 @@ export const WISP = {
   // So the interval and the damage go back, and only the wind-up stays long.
   //
   // That split is deliberate rather than a compromise. Four of seven round-1
-  // deaths were falls while fighting wisps over the chasm, and the damage was
-  // never what killed anyone — knockback arriving with no warning while
+  // deaths were falls while fighting bhoot-battis over the chasm, and the
+  // damage was never what killed anyone — knockback arriving with no warning while
   // airborne was. The wind-up is the part that addressed that specifically, and
   // it is the part with no cost to the threat level: you can see the shot
   // coming and still have to deal with it.

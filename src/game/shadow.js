@@ -1,17 +1,17 @@
-// SORGI — what a body leaves behind, and what rises from it.
+// PUKAR — what a body leaves behind, and what rises from it.
 //
 // Two small things live here and they are two halves of one mechanic: the
-// corpse is the offer, the shadow is what accepting it costs and buys.
+// corpse is the offer, the chaya is what accepting it costs and buys.
 //
-// The design rule that shapes both: **one shadow at a time.** That is not
+// The design rule that shapes both: **one chaya at a time.** That is not
 // enforced anywhere in this file, and deliberately so — the game holds a single
 // slot rather than a list, so "one" is a property of the shape rather than a
 // rule someone has to remember to check. Every readability rule in the combat
 // design exists so the player always knows what happened to them, and four
 // allies in a corridor arena destroy that.
 
-import { Beast, Charger } from './enemies.js';
-import { SHADOW } from './config.js';
+import { Raakchyas, Charger } from './enemies.js';
+import { CHAYA } from './config.js';
 import { P } from '../render/palette.js';
 import { clamp } from '../engine/mathx.js';
 
@@ -20,10 +20,10 @@ const SHARD_HEIGHT = 0.95;
 
 /** The ally wears its source's rig in the System's colours. See palette.js. */
 const SKIN = {
-  body: P.shadowBody,
-  dark: P.shadowBodyDark,
-  spine: P.shadowSpine,
-  eye: P.shadowEye,
+  body: P.chayaBody,
+  dark: P.chayaBodyDark,
+  spine: P.chayaSpine,
+  eye: P.chayaEye,
 };
 
 /**
@@ -53,12 +53,12 @@ export class Corpse {
    * @param {THREE.Group} body the dying enemy's own rig
    * @param {THREE.Group} shard borrowed from the game's pool, returned on expiry
    * @param {Function} sourceClass the dying enemy's own class — `extract()`
-   *   reads `sourceClass.shadowClass` off it to raise the matching ally.
+   *   reads `sourceClass.chayaClass` off it to raise the matching ally.
    */
   constructor(x, y, body, shard, sourceClass) {
     this.x = x;
     this.y = y;
-    this.windowT = SHADOW.corpseWindow;
+    this.windowT = CHAYA.corpseWindow;
     this.t = 0;
     this.body = body;
     this.shard = shard;
@@ -79,7 +79,7 @@ export class Corpse {
   update(dt) {
     this.windowT -= dt;
     this.t += dt;
-    const u = clamp(this.windowT / SHADOW.corpseWindow, 0, 1);
+    const u = clamp(this.windowT / CHAYA.corpseWindow, 0, 1);
     this.shard.scale.setScalar(0.34 + u * 0.66);
     this.shard.rotation.y += dt * 2.4;
     this.shard.position.y = this.y + SHARD_HEIGHT + Math.sin(this.t * 3.2) * 0.07;
@@ -91,17 +91,17 @@ export class Corpse {
 }
 
 /**
- * The raised shadow: one melee ally that follows and fights, wearing its
+ * The raised chaya: one melee ally that follows and fights, wearing its
  * source archetype's own rig and running its own state machine.
  *
- * A shadow is its source's own update loop pointed at a different target,
- * which is the single decision that makes this mechanic small. `Beast.update`
+ * A chaya is its source's own update loop pointed at a different target,
+ * which is the single decision that makes this mechanic small. `Raakchyas.update`
  * and `Charger.update` already took their target as a parameter rather than
  * reaching for the player, so an ally is that same state machine handed the
  * nearest enemy instead — and when there is no enemy, handed the hunter, with
  * its commit gated off by `_canCommit`.
  *
- * `shadowOf(Base)` is the glue every ally shares regardless of what it wears:
+ * `chayaOf(Base)` is the glue every ally shares regardless of what it wears:
  * never hostile toward the hunter, no corpse of its own, and it re-forms
  * beside the hunter when left behind. It obeys every rule the enemies obey —
  * no passive contact damage, it hurts things only by committing to its own
@@ -109,17 +109,17 @@ export class Corpse {
  * through it and it can never hold an encounter open.
  *
  * Generated once per archetype, at module load, by the two concrete classes
- * below — not per instance, so raising a shadow still allocates nothing
+ * below — not per instance, so raising a chaya still allocates nothing
  * beyond its rig.
  */
-function shadowOf(Base) {
+function chayaOf(Base) {
   // `speed`, `hw` and `hh` are pulled from the source archetype rather than
-  // `SHADOW`: keeping up with the hunter is `recallAt`'s job, and an ally
+  // `CHAYA`: keeping up with the hunter is `recallAt`'s job, and an ally
   // that outruns, lags, or fights with a different archetype's hitbox stops
   // reading as the same creature, which is the only reason the recolour
   // reads as one at all. Computed once here, not per instance, and not by
-  // mutating the shared `SHADOW` config that every archetype's ally reads.
-  const cfg = { ...SHADOW, speed: Base.stats.speed, hw: Base.stats.hw, hh: Base.stats.hh };
+  // mutating the shared `CHAYA` config that every archetype's ally reads.
+  const cfg = { ...CHAYA, speed: Base.stats.speed, hw: Base.stats.hw, hh: Base.stats.hh };
 
   return class extends Base {
     constructor(level, ctx, x, y) {
@@ -129,7 +129,7 @@ function shadowOf(Base) {
       this.hitSet = new Set();
       this.hurtCd = 0;
       /**
-       * A dead shadow leaves nothing. Raising one from your own shadow's body
+       * A dead chaya leaves nothing. Raising one from your own chaya's body
        * would make the corpse window irrelevant and the mechanic
        * self-sustaining, which is the opposite of a cost.
        */
@@ -167,16 +167,16 @@ function shadowOf(Base) {
      * be lost to every pit in the level, every encounter barrier that closes
      * behind the hunter, and every ledge its one-unit ledge check refuses to
      * walk off — and a slice meant to answer "does an ally make this combat
-     * better" would instead spend its evidence on navigation. A shadow
+     * better" would instead spend its evidence on navigation. A chaya
      * appearing out of nowhere beside its master costs the fiction nothing,
      * which is the rare case where the cheap answer is also the right one.
      */
     _recall(player) {
-      const behind = Math.abs(this.x - player.x) > SHADOW.recallAt;
-      const below = this.y < player.y - SHADOW.recallBelow;
+      const behind = Math.abs(this.x - player.x) > CHAYA.recallAt;
+      const below = this.y < player.y - CHAYA.recallBelow;
       if (!behind && !below) return;
-      this.x = player.x - player.facing * SHADOW.recallBehind;
-      this.y = player.y + SHADOW.recallAbove;
+      this.x = player.x - player.facing * CHAYA.recallBehind;
+      this.y = player.y + CHAYA.recallAbove;
       this.vx = 0;
       this.vy = 0;
       this.state = 'chase';
@@ -185,18 +185,18 @@ function shadowOf(Base) {
   };
 }
 
-/** A shadow raised from a Beast's remnant: chase-and-pounce, its own tell. */
-export class BeastShadow extends shadowOf(Beast) {}
+/** A chaya raised from a Raakchyas's remnant: chase-and-pounce, its own tell. */
+export class RaakchyasChaya extends chayaOf(Raakchyas) {}
 
-/** A shadow raised from a Charger's remnant: plant, telegraph, run a lane. */
-export class ChargerShadow extends shadowOf(Charger) {}
+/** A chaya raised from a Charger's remnant: plant, telegraph, run a lane. */
+export class ChargerChaya extends chayaOf(Charger) {}
 
 // `extract()` reads this off the dying enemy's own class (see `Corpse`
 // above), rather than through a lookup table kept elsewhere — the same place
 // each archetype already declares `leavesCorpse = true` is where a future
-// archetype would add its own shadow class. It is assigned here, not in
+// archetype would add its own chaya class. It is assigned here, not in
 // enemies.js, because `enemies.js` cannot import from this module: this
-// module already imports `Beast` and `Charger` from it to build these two
+// module already imports `Raakchyas` and `Charger` from it to build these two
 // classes, and a two-way import between them would make load order matter.
-Beast.shadowClass = BeastShadow;
-Charger.shadowClass = ChargerShadow;
+Raakchyas.chayaClass = RaakchyasChaya;
+Charger.chayaClass = ChargerChaya;

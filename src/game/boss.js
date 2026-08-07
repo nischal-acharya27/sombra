@@ -1,4 +1,4 @@
-// The Gate Guardian.
+// The Dwar-Rakshak.
 //
 // The fight has one rule and everything else follows from it: **the Guardian's
 // body is harmless, and every source of damage is an action it commits to,

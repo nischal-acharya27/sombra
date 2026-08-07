@@ -81,11 +81,11 @@ function coverage(layout) {
     if (!MOVESET.includes(c.verb)) stray.push(c.verb);
     seen.set(c.verb, (seen.get(c.verb) ?? 0) + 1);
   }
-  // SORGI has no target of its own — `DECISIONS.md` § The steer control
+  // PUKAR has no target of its own — `DECISIONS.md` § The steer control
   // becomes a stick reads it off the steer's `down` state instead. Credit it
   // the same way a real control would be credited, so a layout that forgets
   // `down` still shows up here as a verb with nothing behind it.
-  if (typeof layout.steer.down === 'string') seen.set('sorgi', (seen.get('sorgi') ?? 0) + 1);
+  if (typeof layout.steer.down === 'string') seen.set('pukar', (seen.get('pukar') ?? 0) + 1);
   return {
     missing: MOVESET.filter((v) => !seen.has(v)),
     stray,
@@ -262,7 +262,7 @@ const byVerb = (buttons, verb) => buttons.find((b) => b.verb === verb);
  * The first two are the budget's own failure modes and the reason this file
  * exists. `a verb with no control` is the eighth-button problem arriving from
  * the other direction — a moveset frozen at seven is only worth anything if all
- * seven are actually on the screen; for SORGI specifically that means the
+ * seven are actually on the screen; for PUKAR specifically that means the
  * steer's `down`, since it has no button of its own. `a button that needs two
  * fingers` and `the stick fires two actions from one field` are both
  * constraint 1 — a single point of contact must resolve to one well-formed
@@ -279,7 +279,7 @@ const CONTROLS = [
   {
     check: 'seven verbs',
     why: 'an eighth control',
-    // Parked above SORGI's old slot, in clear space, so this control breaks
+    // Parked above PUKAR's old slot, in clear space, so this control breaks
     // the count and nothing else — the eighth button the moveset was frozen
     // to prevent.
     layout: broken((l, b) => b.push({ ...b[0], verb: 'block', action: 'block', x: 3.05, y: 3.4, w: 1, h: 1 })),

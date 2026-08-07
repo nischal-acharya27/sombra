@@ -1,4 +1,4 @@
-// Shadow beasts, wisps, and the projectiles both sides throw.
+// Raakchyas, bhoot-battis, and the projectiles both sides throw.
 //
 // Design rule shared by everything in this file: **no passive contact damage.**
 // Touching an enemy is safe; only a committed, telegraphed action hurts. In a
@@ -8,8 +8,8 @@
 
 import * as THREE from 'three';
 import { Actor, boxHit } from './actor.js';
-import { buildBeast, buildCharger, buildWisp } from '../render/models.js';
-import { BEAST, CHARGER, WISP, PHYS, JUGGLE } from './config.js';
+import { buildRaakchyas, buildCharger, buildBhootBatti } from '../render/models.js';
+import { RAAKCHYAS, CHARGER, BHOOT_BATTI, PHYS, JUGGLE } from './config.js';
 import { P } from '../render/palette.js';
 import { clamp, damp, lerp, rand } from '../engine/mathx.js';
 
@@ -136,41 +136,41 @@ class Enemy extends Actor {
 }
 
 // ---------------------------------------------------------------------------
-// Shadow beast
+// Raakchyas
 // ---------------------------------------------------------------------------
 
 /**
  * The quadruped grunt — and, pointed at a different target and wearing a
- * different skin, the shadow the hunter raises from one. See `Shadow` in
+ * different skin, the chaya the hunter raises from one. See `chayaOf` in
  * game/shadow.js.
  *
- * Every number below is read from `this.cfg` rather than from `BEAST` directly,
- * which is what makes that reuse a subclass and not a copy. Behaviour that an
- * ally must *not* share is behind `_canCommit`.
+ * Every number below is read from `this.cfg` rather than from `RAAKCHYAS`
+ * directly, which is what makes that reuse a subclass and not a copy.
+ * Behaviour that an ally must *not* share is behind `_canCommit`.
  */
-export class Beast extends Enemy {
+export class Raakchyas extends Enemy {
   /** The block it is built from when a gate does not hand it another. */
-  static stats = BEAST;
+  static stats = RAAKCHYAS;
 
-  constructor(level, ctx, x, y, cfg = BEAST, skin = null) {
+  constructor(level, ctx, x, y, cfg = RAAKCHYAS, skin = null) {
     super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
-    this.root = buildBeast(skin);
+    this.root = buildRaakchyas(skin);
     this.n = this.root.userData.nodes;
     this.finishSetup();
     this.pounceCd = rand(0.4, 1.2);
     this.phase = 0; // pounce sub-phase timer
     this.homeX = x;
     this.legPhase = rand(0, 6);
-    /** A beast's body is claimable. Wisps and the Guardian leave nothing. */
+    /** A raakchyas's body is claimable. Bhoot-battis and the Guardian leave nothing. */
     this.leavesCorpse = true;
   }
 
   /**
    * Whether it may commit to a pounce at all.
    *
-   * Always, for a beast. The shadow overrides it: an ally trailing the hunter
-   * is running this same chase state with the hunter as its target, and without
-   * this gate it would pounce them.
+   * Always, for a raakchyas. The chaya overrides it: an ally trailing the
+   * hunter is running this same chase state with the hunter as its target, and
+   * without this gate it would pounce them.
    */
   _canCommit() {
     return true;
@@ -214,7 +214,7 @@ export class Beast extends Enemy {
         }
         // Walk in, but stop short: crowding the player's own hitbox is the
         // enemy's mistake to avoid, not the player's problem to solve. The
-        // shadow uses the same rule to keep out from under the hunter's feet.
+        // chaya uses the same rule to keep out from under the hunter's feet.
         const want = dist > this.cfg.stopAt ? this.facing * this.cfg.speed : 0;
         // Don't walk off a ledge chasing.
         const ahead = this.x + this.facing * 0.9;
@@ -369,7 +369,7 @@ export class Beast extends Enemy {
  * archetype, and it is the crossing's lesson in movement before the hells ask
  * for it.
  *
- * Three things it shares with the beast rather than reinventing:
+ * Three things it shares with the raakchyas rather than reinventing:
  *
  * The eye flare, because the hunter has already learned that eyes going bright
  * means something is about to commit, and a second visual language for the same
@@ -379,7 +379,7 @@ export class Beast extends Enemy {
  * pass — one victim per charge, so running through the hunter costs one hit and
  * not one per frame.
  *
- * `leavesCorpse`, because SORGI's promise cannot be selectively true.
+ * `leavesCorpse`, because PUKAR's promise cannot be selectively true.
  *
  * And the rule everything in this file obeys: no contact damage. Standing in
  * front of a charger is safe. Standing in front of a charge is not.
@@ -404,7 +404,7 @@ export class Charger extends Enemy {
 
   /**
    * Whether it may commit to a charge at all. Always, for a hostile charger.
-   * Mirrors `Beast._canCommit` — the shadow overrides it so an ally trailing
+   * Mirrors `Raakchyas._canCommit` — the chaya overrides it so an ally trailing
    * the hunter never plants a lane at them.
    */
   _canCommit() {
@@ -456,7 +456,7 @@ export class Charger extends Enemy {
           this.state = 'telegraph';
           this.phase = C.windup;
           this.vx = 0;
-          // `charge.chain` — the Ferryman's signature. Charges left after this
+          // `charge.chain` — the Kevat's signature. Charges left after this
           // one commits, so a fresh commitment (not a chained continuation)
           // is what resets the count.
           this.chargesLeft = (C.chain || 1) - 1;
@@ -647,25 +647,25 @@ export class Charger extends Enemy {
 }
 
 // ---------------------------------------------------------------------------
-// Wisp
+// Bhoot-Batti
 // ---------------------------------------------------------------------------
 
-export class Wisp extends Enemy {
-  static stats = WISP;
+export class BhootBatti extends Enemy {
+  static stats = BHOOT_BATTI;
 
   constructor(level, ctx, x, y) {
-    super(level, ctx, WISP, { x, y, hw: WISP.hw, hh: WISP.hh, maxHp: WISP.hp });
-    this.root = buildWisp();
+    super(level, ctx, BHOOT_BATTI, { x, y, hw: BHOOT_BATTI.hw, hh: BHOOT_BATTI.hh, maxHp: BHOOT_BATTI.hp });
+    this.root = buildBhootBatti();
     this.n = this.root.userData.nodes;
     this.finishSetup();
     this.baseY = y;
     this.homeX = x;
-    this.shootCd = rand(0.8, WISP.shoot.interval);
+    this.shootCd = rand(0.8, BHOOT_BATTI.shoot.interval);
     this.windup = 0;
     this.driftPhase = rand(0, 7);
   }
 
-  /** Wisps float: they ignore gravity and the level entirely. */
+  /** Bhoot-battis float: they ignore gravity and the level entirely. */
   update(dt, player) {
     this.t += dt;
     this.hitFlash -= dt;
@@ -685,25 +685,25 @@ export class Wisp extends Enemy {
 
     if (this.state !== 'hurt') {
       // Hold a ring at keepDistance: close in when far, back off when crowded.
-      let want = dist > WISP.keepDistance + 1.5 ? Math.sign(dx) * WISP.speed
-        : dist < WISP.keepDistance - 1.5 ? -Math.sign(dx) * WISP.speed
-        : Math.sin(this.t * 0.8) * WISP.speed * 0.4;
-      // Leashed to where it spawned. Without this a wisp will happily follow
-      // the player over the edge and hound them all the way down the pit,
-      // which turns a missed jump into an unrecoverable one.
-      if (this.x < this.homeX - WISP.leash) want = Math.max(want, WISP.speed * 0.6);
-      if (this.x > this.homeX + WISP.leash) want = Math.min(want, -WISP.speed * 0.6);
+      let want = dist > BHOOT_BATTI.keepDistance + 1.5 ? Math.sign(dx) * BHOOT_BATTI.speed
+        : dist < BHOOT_BATTI.keepDistance - 1.5 ? -Math.sign(dx) * BHOOT_BATTI.speed
+        : Math.sin(this.t * 0.8) * BHOOT_BATTI.speed * 0.4;
+      // Leashed to where it spawned. Without this a bhoot-batti will happily
+      // follow the player over the edge and hound them all the way down the
+      // pit, which turns a missed jump into an unrecoverable one.
+      if (this.x < this.homeX - BHOOT_BATTI.leash) want = Math.max(want, BHOOT_BATTI.speed * 0.6);
+      if (this.x > this.homeX + BHOOT_BATTI.leash) want = Math.min(want, -BHOOT_BATTI.speed * 0.6);
       this.vx = damp(this.vx, want, 0.002, dt);
 
       // Same for altitude: it tracks the player but never descends into the
       // void after them.
-      const hover = Math.sin(this.t * WISP.hover.freq + this.driftPhase) * WISP.hover.amp;
-      const targetY = clamp(player.y + WISP.hoverAbove + hover, this.baseY - WISP.descend, this.baseY + 5);
+      const hover = Math.sin(this.t * BHOOT_BATTI.hover.freq + this.driftPhase) * BHOOT_BATTI.hover.amp;
+      const targetY = clamp(player.y + BHOOT_BATTI.hoverAbove + hover, this.baseY - BHOOT_BATTI.descend, this.baseY + 5);
       this.vy = damp(this.vy, (targetY - this.y) * 2.2, 0.004, dt);
 
       this.shootCd -= dt;
       if (this.shootCd <= 0 && dist < 16 && this.windup <= 0) {
-        this.windup = WISP.shoot.windup;
+        this.windup = BHOOT_BATTI.shoot.windup;
       }
       if (this.windup > 0) {
         this.windup -= dt;
@@ -711,7 +711,7 @@ export class Wisp extends Enemy {
         if (this.windup <= 0) {
           const a = Math.atan2(player.y + 1 - this.y, player.x - this.x);
           this.ctx.spawnEnemyBolt(this.x, this.y, Math.cos(a), Math.sin(a));
-          this.shootCd = WISP.shoot.interval * rand(0.8, 1.25);
+          this.shootCd = BHOOT_BATTI.shoot.interval * rand(0.8, 1.25);
           this.ctx.audio?.play('wispShot');
         }
       }
@@ -728,7 +728,7 @@ export class Wisp extends Enemy {
   }
 
   attackBox() {
-    return null; // wisps threaten only at range
+    return null; // bhoot-battis threaten only at range
   }
 
   _animate(dt) {
@@ -737,7 +737,7 @@ export class Wisp extends Enemy {
     n.ring.rotation.z = Math.sin(this.t * 0.9) * 0.3;
     const charging = this.windup > 0;
     const pulse = charging
-      ? 1 + (1 - this.windup / WISP.shoot.windup) * 0.9
+      ? 1 + (1 - this.windup / BHOOT_BATTI.shoot.windup) * 0.9
       : 1 + Math.sin(this.t * 3) * 0.09;
     n.core.scale.setScalar(pulse);
     n.halo.scale.setScalar(1 + Math.sin(this.t * 2.2) * 0.12 + (charging ? 0.5 : 0));

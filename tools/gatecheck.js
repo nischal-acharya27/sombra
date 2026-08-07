@@ -25,7 +25,7 @@
 // descriptor is authored correctly, that one asks whether `Level` built what
 // the descriptor said.
 
-import { PLAYER, BARRIER, BEAST, CHARGER, WISP, GUARDIAN } from '../src/game/config.js';
+import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, BHOOT_BATTI, GUARDIAN } from '../src/game/config.js';
 import { ARCHETYPES } from '../src/game/game.js';
 import { GATES } from '../src/game/gates/index.js';
 
@@ -446,7 +446,7 @@ export function checkGates(arcs) {
  * Every tell in the game, and the shortest one the hunter has ever had to
  * answer.
  *
- * The floor is the beast's pounce, and it is *derived* rather than chosen: it
+ * The floor is the raakchyas's pounce, and it is *derived* rather than chosen: it
  * is the first tell gate 1 teaches, it is the one four playtest rounds were
  * played against, and the suite's paired signed-rank test is the evidence that
  * it buys what it is supposed to. A new enemy whose wind-up undercuts it is
@@ -459,9 +459,9 @@ export function checkGates(arcs) {
  * knowing and is not a number to go shaving.
  */
 const TELLS = [
-  { archetype: 'beast', tell: 'pounce', windup: BEAST.pounce.windup },
+  { archetype: 'raakchyas', tell: 'pounce', windup: RAAKCHYAS.pounce.windup },
   { archetype: 'charger', tell: 'charge', windup: CHARGER.charge.windup },
-  { archetype: 'wisp', tell: 'bolt', windup: WISP.shoot.windup },
+  { archetype: 'bhootBatti', tell: 'bolt', windup: BHOOT_BATTI.shoot.windup },
   ...Object.entries(GUARDIAN.attacks).map(([name, a]) => ({
     archetype: 'guardian',
     tell: `${name}, enraged`,
@@ -469,7 +469,7 @@ const TELLS = [
   })),
 ];
 
-const TELL_FLOOR = BEAST.pounce.windup;
+const TELL_FLOOR = RAAKCHYAS.pounce.windup;
 
 /**
  * The telegraph check.
@@ -494,7 +494,7 @@ export function telegraphs(reaction) {
   out.push({
     check: 'the floor outlasts the reaction',
     ok: TELL_FLOOR > reaction,
-    detail: `floor ${TELL_FLOOR.toFixed(3)}s against ${reaction.toFixed(2)}s — the beast's pounce sets it`,
+    detail: `floor ${TELL_FLOOR.toFixed(3)}s against ${reaction.toFixed(2)}s — the raakchyas's pounce sets it`,
   });
 
   // A list nobody maintains is a list that silently stops covering things, so
@@ -545,8 +545,8 @@ const CONTROL = {
       trigger: 18,
       lock: [15, 28],
       spawns: [
-        { type: 'beast', x: 20, delay: 0 },
-        { type: 'wisp', x: 24, y: 3, delay: 0.4 },
+        { type: 'raakchyas', x: 20, delay: 0 },
+        { type: 'bhootBatti', x: 24, y: 3, delay: 0.4 },
       ],
     },
   ],
@@ -663,13 +663,13 @@ const CONTROLS = [
     // name `charger`, which was a name nothing built right up until the
     // crossing's ticket built one — at which point a negative control would
     // have quietly gone green and taken the check's evidence with it.
-    gate: broken((g, e, s) => (s[0].type = 'beasts')),
+    gate: broken((g, e, s) => (s[0].type = 'raakchyases')),
   },
   {
     check: 'solo debut',
     why: 'a new archetype met in a crowd',
     // Nothing is mutated: the control gate's one encounter already mixes a
-    // beast and a wisp, and judged against an empty `seen` — a hunter who has
+    // raakchyas and a bhoot-batti, and judged against an empty `seen` — a hunter who has
     // met neither — that is precisely the fault. Which is also why every other
     // control here is judged against `nothingNew()`.
     gate: broken(() => {}),

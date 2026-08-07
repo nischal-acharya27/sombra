@@ -1447,3 +1447,118 @@ always called `_enterGate(0)`. Reading the resume point from the save instead
 fixes this for free: a same-session retry and a post-reload resume are the
 same code path, and neither had ever advanced the save past the gate the
 hunter was still fighting.
+
+## Naming pivots to Nepali: Aago, Pukar, Chaya, and the locked gates 3–10 table
+
+Settled 2026-08-07 via `/grill-with-docs`, ahead of building gates 3–10.
+**Uncommitted at the time of this entry** — the working tree carries the
+renames below but nothing has been committed; that is this handoff's first
+job for whoever (human or a future session) picks this up.
+
+**Three renames, not a wholesale i18n pivot.** § "Naming and positioning"
+committed the game to Romance-language move names (Sombra, Décret, Ascensão)
+as an authored-not-generic aesthetic, independent of the copyright reasoning
+that drove the original rename. This decision does not reverse that: only
+**Décret → Aago** (fire) and **SORGI → Pukar** (the command word) and
+**Shadow → Chaya** (the ally) change. **Ascensão stays Romance, deliberately**
+— explicitly decided against a full pivot, so the game now carries two naming
+conventions on purpose rather than by drift. Aago and Pukar are Nepali
+specifically, not Sanskrit or "South Asian" generally, even though gates 3–10
+lean on Sanskrit/Pali mythology (Naraka, preta, deva, asura, Yama) — those
+stayed as-is because they were already correct, not because this decision
+chose that register.
+
+**The Chaya/Shadow collision was caught and resolved before any code moved.**
+'Chaya' means "shadow" in Nepali, which would have collided with the existing
+glossary term **Shadow** — the ally raised from a remnant — had SORGI (the
+*command word*) taken that name. The mapping was swapped: **Chaya names the
+ally**, and the command word became **Pukar** instead, keeping "shadow" where
+the fiction already put it rather than putting it in two places that mean
+different things.
+
+**Décret → Aago is a reskin, not a rebalance.** Every `MAGIC` tunable in
+`config.js` (damage 23, cost 16, pierce 1, cooldown 0.34, etc.) is the
+survivor of three playtest rounds per this file's own record above; moving
+them now would make a future result unattributable to either the color change
+or the number change. Only the name and the bolt's palette (`aagoCore` /
+`aagoGlow`, warm orange-red) moved.
+
+**The sword became a khukuri in geometry only.** `buildBlade()` in
+`models.js` now extrudes a curved-belly, notched profile instead of a
+straight blade, still filling the same `n.sword` slot `player.js`'s animation
+rig already points at. `swordZ`/`swordX` and every juggle/combo timing curve
+in `player.js` are untouched — those numbers are tuned against hitboxes, not
+blade shape, and reworking them was explicitly ruled out of scope.
+
+**"Everywhere you can" was scoped down twice before it hit code.** The first
+ask was to Nepali-ify aggressively; two boundaries got drawn in the
+interview rather than assumed: genre-standard structural terms (Hunter,
+Gate, Realm-as-category, Rank, Style, Campaign, the System, Boss, and
+**Remnant**) stay English because `DECISIONS.md` already drew that line for
+LitRPG vocabulary and this extends the same reasoning to Remnant, which is
+a structural noun rather than a mechanic name or species. What *is* in scope:
+mechanic/ability names, enemy species, and — after a second widening —
+Warden titles and realm names, including gates 1–2's already-shipped
+`Gate Guardian` and `The Ferryman`, on the grounds that renaming a display
+string doesn't touch the frozen stats behind it.
+
+**The locked table, for gates 3–10 authoring:**
+
+| Category | Old / English | New / Nepali |
+|---|---|---|
+| Magic | Décret | **Aago** |
+| Command | SORGI | **Pukar** |
+| Ally | Shadow | **Chaya** |
+| Enemy species | Beast | **Raakchyas** |
+| Enemy species | Wisp | **Bhoot-Batti** |
+| Enemy archetype (new, gate 2/3) | Charger | **Mahish** — buffalo, Yama's own mount |
+| Enemy archetype (new, gate 3) | Armoured | **Kawach** |
+| Enemy archetype (new, gate 4) | Summoner | **Tantrik** |
+| Realm 02 | The crossing | **Ghat** |
+| Realm 03 | The hells | Naraka *(unchanged — already Nepali)* |
+| Realm 04 | The hungry ghosts | **Preta-lok** |
+| Realm 05 | The animal realm | **Pashu-lok** |
+| Realm 06 | The human realm | **Manav-lok** |
+| Realm 07 | The asuras | Asura-lok *(unchanged — already Nepali)* |
+| Realm 08 | The devas | Deva-lok *(unchanged — already Nepali)* |
+| Realm 09 | Yama's court | **Yama-sabha** |
+| Realm 10 | The Wheel | **Bhavachakra** |
+| Warden 01 | Gate Guardian | **Dwar-Rakshak** |
+| Warden 02 | The Ferryman | **Kevat** |
+| Warden 03 | The Ox-Headed | **Goru-Mukh** |
+| Warden 04 | The Unfilled | **Atripta** |
+| Warden 05 | The Pack-Mother | **Bagh-Aama** |
+| Warden 06 | The Magistrate | **Hakim** |
+| Warden 07 | The Ever-Warring | **Amar-Yoddha** |
+| Warden 08 | The Long-Lived | **Chiranjivi** |
+| Warden 09 | The Backlog | **Bakaya** |
+| Warden 10 | What Grew In The Stillness | **Maun-Ankur** |
+
+Gate 1's realm ("the breached world") stays unnamed, matching that it was
+never a proper noun in `SPEC-CAMPAIGN.md` either.
+
+**Verification status.** Both rename passes (Aago/Pukar/Chaya/khukuri, then
+Raakchyas/Bhoot-Batti/Dwar-Rakshak/Kevat) were run through `?sim` across all
+five recorded seeds after each pass. Result both times: identical PASS/FAIL
+shape to pre-change `main` at `d95ef55` — the same 4–5 already-deferred rows
+(`ranged` boss, `ranged +chaya` boss, charger `recovery-window`, charger
+`leaves-remnant`, occasionally flaky `signed-rank`), zero new failures. No
+suite row moved because of these renames.
+
+### Handoff: what the next session picks up
+
+Gates 3–10 have not been started. `CONTEXT.md`, `config.js`, `strings.js`,
+`shadow.js`, `enemies.js`, `game.js`, `player.js`, `models.js`, `palette.js`,
+`vfx.js`, `boss.js`, `level.js`, `touch.js`, `style.css`, `index.html`,
+`tools/sim.js`, `tools/gatecheck.js` and `tools/touchcheck.js` all carry
+**uncommitted** rename changes as of this entry — commit (or review then
+commit) them before starting gate 3, so gate 3's diff isn't tangled with the
+rename's.
+
+Build order from here is otherwise exactly `SPEC-CAMPAIGN.md`'s own: author
+one gate at a time (geometry, its new archetype where the table calls for
+one, Warden config, story beats), run it through Tier 1 static checks, verify
+`?sim` clean across the five seeds, and — per that spec's own checkpoint
+logic for gate 2 — play each new gate before starting the next one, since
+that checkpoint is the whole reason gates 3–10 weren't started before gate 2
+was played. Gate 3 (Naraka / Kawach / Goru-Mukh) is next.

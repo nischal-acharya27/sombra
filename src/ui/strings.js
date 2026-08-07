@@ -12,7 +12,7 @@
 // they are.
 //
 // Two functions live in this otherwise-flat object rather than two more flat
-// strings: the SORGI remnant-claim line and the title screen's gate tag both
+// strings: the PUKAR remnant-claim line and the title screen's gate tag both
 // interpolate something only known at the call site (a touch button's label,
 // the resumed gate's name).
 
@@ -25,9 +25,9 @@ export const STRINGS = {
   OBJ_LEAVE_GATE: 'LEAVE THE GATE',
 
   // -- toasts -------------------------------------------------------------
-  TOAST_SHADOW_LOST: 'SHADOW LOST',
+  TOAST_CHAYA_LOST: 'CHAYA LOST',
   TOAST_AREA_CLEARED: 'AREA CLEARED',
-  TOAST_SORGI: 'SORGI',
+  TOAST_PUKAR: 'PUKAR',
   TOAST_FORGOTTEN: 'FORGOTTEN',
   TOAST_NOT_ENOUGH_MANA: 'NOT ENOUGH MANA',
   TOAST_CHARGE: 'CHARGE',
@@ -39,18 +39,18 @@ export const STRINGS = {
   SYS_TITLE: 'THE SYSTEM',
   WARN_TITLE: 'WARNING',
   ENRAGE_BIG: 'THE CORE IGNITES',
-  ENRAGE_BODY: 'The Gate Guardian has entered its second phase.',
+  ENRAGE_BODY: 'The Dwar-Rakshak has entered its second phase.',
   REMNANT_BIG: 'A REMNANT REMAINS',
   /** The touch phrasing names the control that is actually on screen. */
   REMNANT_CLAIM_TOUCH: (heavyLabel) =>
     `Stand over the remnant, hold down on the stick and press ${heavyLabel}.`,
-  REMNANT_CLAIM_KEY: 'Stand over the remnant, hold S and press K. The command is SORGI.',
+  REMNANT_CLAIM_KEY: 'Stand over the remnant, hold S and press K. The command is PUKAR.',
   LEVEL_UP_TITLE: 'LEVEL UP',
   STAT_MAX_HP: 'MAX HP',
   STAT_MAX_MP: 'MAX MP',
   STAT_STATUS: 'STATUS',
   STAT_RESTORED: 'RESTORED',
-  SYS_BOSS_DEFAULT_NAME: 'GATE GUARDIAN',
+  SYS_BOSS_DEFAULT_NAME: 'DWAR-RAKSHAK',
 
   // -- run end ----------------------------------------------------------------
   RUNEND_TIME: 'TIME',
@@ -79,26 +79,26 @@ export const STRINGS = {
   TOUCH_JUMP: 'JUMP',
   TOUCH_RISE: 'RISE',
   TOUCH_STEP: 'STEP',
-  TOUCH_MAGIC: 'DÉCRET',
+  TOUCH_MAGIC: 'AAGO',
 
   // -- gate 1: Hollow of the Kneeling Stone ------------------------------------
   GATE1_NAME: 'Hollow of the Kneeling Stone',
-  GATE1_WARDEN_TITLE: 'GATE GUARDIAN',
+  GATE1_WARDEN_TITLE: 'DWAR-RAKSHAK',
   GATE1_FIRSTBLOOD_TITLE: 'THREAT DETECTED',
-  GATE1_FIRSTBLOOD_BODY: 'Shadow Beast × 3',
+  GATE1_FIRSTBLOOD_BODY: 'Raakchyas × 3',
   GATE1_FIRSTBLOOD_NOTE: 'Their bodies cannot harm you — only the <b>pounce</b>, and it announces itself.',
   GATE1_BRIDGE_TITLE: 'AMBUSH',
-  GATE1_BRIDGE_BODY: 'Shadow Beast × 4  ·  Wisp × 2',
+  GATE1_BRIDGE_BODY: 'Raakchyas × 4  ·  Bhoot-Batti × 2',
   GATE1_GUARDIAN_TITLE: 'GATE BOSS',
 
   // -- gate 2: The Crossing -----------------------------------------------
   GATE2_NAME: 'The Crossing',
-  GATE2_WARDEN_TITLE: 'THE FERRYMAN',
+  GATE2_WARDEN_TITLE: 'KEVAT',
   GATE2_CHARGER_TITLE: 'THREAT DETECTED',
   GATE2_CHARGER_BODY: 'Charger × 1',
   GATE2_CHARGER_NOTE: 'Its body cannot harm you — only the <b>charge</b>, and it plants its feet first.',
-  GATE2_FERRYMAN_TITLE: 'GATE WARDEN',
-  GATE2_FERRYMAN_NOTE: 'The same tell — it just does not stop at the far bank. It charges twice.',
+  GATE2_KEVAT_TITLE: 'GATE WARDEN',
+  GATE2_KEVAT_NOTE: 'The same tell — it just does not stop at the far bank. It charges twice.',
   GATE2_BEAT_ENTER_TITLE: 'THE SYSTEM',
   GATE2_BEAT_ENTER_BIG: 'NO RECORD FOUND',
   GATE2_BEAT_ENTER_BODY: 'It has never catalogued this realm.',

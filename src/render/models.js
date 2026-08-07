@@ -11,12 +11,12 @@
 // game/actor.js) to get a three-quarter read instead of a flat profile.
 
 import * as THREE from 'three';
-import { toonMaterial, glowMaterial, outlineFor } from './toon.js';
+import { toonMaterial, glowMaterial, outlineFor, faceted } from './toon.js';
 import { P } from './palette.js';
 
 const matCache = new Map();
 
-/** Shared cel material per colour, so a crowd of beasts costs one material. */
+/** Shared cel material per colour, so a crowd of raakchyas costs one material. */
 export function mat(color, opts = {}) {
   const key = `${color}|${JSON.stringify(opts)}`;
   let m = matCache.get(key);
@@ -220,44 +220,90 @@ function buildBlade() {
   guard.position.y = 0.16;
   g.add(guard);
 
-  const blade = part(0.045, 0.86, 0.11, P.bladeSteel, { pivot: 'bottom', outline: 0.016 });
+  const blade = buildKhukuriBlade();
   blade.position.y = 0.20;
   g.add(blade);
 
-  const tip = part(0.045, 0.14, 0.11, P.bladeSteel, { pivot: 'bottom', outline: 0.014 });
-  tip.position.y = 1.06;
-  tip.rotation.z = 0.0;
-  tip.scale.set(1, 1, 0.5);
-  g.add(tip);
-
   // Fuller: a violet glow line down each face of the blade, offset outward so
-  // it never intersects the blade box.
+  // it never intersects the blade mesh.
   for (const side of [-1, 1]) {
-    const line = decal(0.035, 0.84, P.violetGlow);
-    line.position.set(side * 0.024, 0.62, 0);
+    const line = decal(0.035, 0.66, P.violetGlow);
+    line.position.set(side * 0.024, 0.58, 0.03);
     line.rotation.y = Math.PI / 2;
     g.add(line);
   }
 
-  g.userData.length = 1.2;
+  g.userData.length = 1.0;
+  return g;
+}
+
+/**
+ * The khukuri: an inward-curved blade — the edge sweeps back toward the
+ * handle rather than away from it, the opposite curl from a scimitar — with
+ * a wide belly that narrows into the point, and a small notch (the *kaudi*,
+ * or *cho*) cut into the edge where it meets the guard.
+ *
+ * Built as a 2D profile and extruded, not another `part()` box: the curve is
+ * the entire point of a khukuri's silhouette and a box cannot bend. The
+ * profile is drawn with `x` as the edge-side curve offset and `y` as the
+ * length from guard (0) to point (1), because that is the plane a
+ * `THREE.Shape` draws in; `rotateY` afterward swaps the extrude's thin
+ * `z` axis (blade thickness) onto local `x` and the curve onto local `z`, so
+ * the finished mesh drops into the rig exactly where the old box did — thin
+ * on `x`, long on `y`, curving on `z`.
+ */
+function buildKhukuriBlade() {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  // Spine: a shallow outward bow up to the point. Almost straight — the
+  // curve that reads as "khukuri" belongs to the edge, not the spine.
+  shape.quadraticCurveTo(-0.02, 0.55, 0, 0.97);
+  shape.lineTo(0.015, 1.0); // the point
+  // Edge, tip to belly: sweeps wide first — this is the widest the blade
+  // gets, well past the halfway mark, which is what makes it read as a
+  // khukuri's belly rather than a straight dagger.
+  shape.quadraticCurveTo(0.17, 0.84, 0.21, 0.60);
+  // Edge, belly to hilt: curves back *in* toward the handle line — the
+  // inward curl that is the whole difference from a scimitar's outward one.
+  shape.quadraticCurveTo(0.25, 0.38, 0.15, 0.21);
+  shape.quadraticCurveTo(0.10, 0.13, 0.065, 0.095);
+  shape.lineTo(0.065, 0.06);
+  // The kaudi: a small notch cut into the edge right at the guard, the
+  // detail that most reliably reads as "khukuri" rather than "curved knife".
+  shape.absarc(0.035, 0.05, 0.028, 0, Math.PI, true);
+  shape.lineTo(0, 0);
+
+  const depth = 0.05;
+  const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 8 });
+  geo.translate(0, 0, -depth / 2);
+  geo.rotateY(Math.PI / 2);
+  faceted(geo);
+
+  const m = new THREE.Mesh(geo, mat(P.bladeSteel));
+  m.castShadow = true;
+  m.receiveShadow = true;
+  const g = new THREE.Group();
+  g.add(m);
+  g.add(outlineFor(geo, 0.015));
+  g.userData.mesh = m;
   return g;
 }
 
 // ---------------------------------------------------------------------------
-// Shadow beast — the quadruped grunt
+// Raakchyas — the quadruped grunt
 // ---------------------------------------------------------------------------
 
 /**
- * The quadruped grunt, and — with `skin` — the shadow raised from one.
+ * The quadruped grunt, and — with `skin` — the chaya raised from one.
  *
  * The ally is the same rig in different colours rather than a second model,
- * which is not laziness: measured, a second beast costs zero extra shader
+ * which is not laziness: measured, a second raakchyas costs zero extra shader
  * programs and at most two geometries, because `mat()` and `box()` both cache.
  * Recolouring changes uniform values, not the material type, so the ally
  * allocates essentially nothing and adds no compile.
  */
-export function buildBeast(skin = null) {
-  const c = skin || { body: P.beastBody, dark: P.beastBodyDark, spine: P.violetDeep, eye: P.beastEye };
+export function buildRaakchyas(skin = null) {
+  const c = skin || { body: P.raakchyasBody, dark: P.raakchyasBodyDark, spine: P.violetDeep, eye: P.raakchyasEye };
   const root = new THREE.Group();
   const n = {};
 
@@ -337,12 +383,13 @@ export function buildBeast(skin = null) {
  * Built low, long and front-heavy, because the silhouette has to say "this
  * travels in a straight line" before the hunter has ever seen it do so.
  *
- * The node names are the beast's on purpose — `body`, `neck`, `eyeL`, `eyeR`,
- * `leg0..3`. The eye flare is the game's shared vocabulary for "this is about
- * to commit", and an enemy whose tell is animated through differently named
- * nodes is an enemy whose tell drifts out of agreement with the others.
+ * The node names are the raakchyas's on purpose — `body`, `neck`, `eyeL`,
+ * `eyeR`, `leg0..3`. The eye flare is the game's shared vocabulary for "this
+ * is about to commit", and an enemy whose tell is animated through
+ * differently named nodes is an enemy whose tell drifts out of agreement with
+ * the others.
  *
- * `skin` follows `buildBeast`'s lead, for the same reason: a shadow raised
+ * `skin` follows `buildRaakchyas`'s lead, for the same reason: a chaya raised
  * from a Charger's remnant wears this rig in the System's colours rather than
  * the hostile charger's slate and bone. See `SKIN` in game/shadow.js.
  */
@@ -435,8 +482,8 @@ export function buildCharger(skin = null) {
 // four draws each — and `tools/sim.js` verifies the game against a *seeded*
 // `Math.random`. So anything the game allocates mid-run silently consumes the
 // gameplay stream and re-rolls every enemy's jitter after it. Building a shard
-// per corpse spent 32 draws at the instant of every beast's death, which was
-// enough to send eight fixed seeds down entirely different playthroughs. See
+// per corpse spent 32 draws at the instant of every raakchyas's death, which
+// was enough to send eight fixed seeds down entirely different playthroughs. See
 // the note in docs/DECISIONS.md.
 const shardCoreGeo = new THREE.OctahedronGeometry(0.19, 0);
 const shardHaloGeo = new THREE.OctahedronGeometry(0.36, 0);
@@ -461,14 +508,14 @@ export function buildShard() {
 }
 
 // ---------------------------------------------------------------------------
-// Wisp — the floating ranged enemy
+// Bhoot-Batti — the floating ranged enemy
 // ---------------------------------------------------------------------------
 
-export function buildWisp() {
+export function buildBhootBatti() {
   const root = new THREE.Group();
   const n = {};
 
-  const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.20, 0), glowMaterial({ color: P.wispCore }));
+  const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.20, 0), glowMaterial({ color: P.bhootBattiCore }));
   root.add(core);
   n.core = core;
 
@@ -492,7 +539,7 @@ export function buildWisp() {
   n.ring = ring;
   for (let i = 0; i < 5; i++) {
     const a = (i / 5) * Math.PI * 2;
-    const shard = part(0.09, 0.20, 0.05, P.beastBody, { outline: 0.014 });
+    const shard = part(0.09, 0.20, 0.05, P.raakchyasBody, { outline: 0.014 });
     shard.position.set(Math.cos(a) * 0.42, Math.sin(a) * 0.12, Math.sin(a) * 0.42);
     shard.rotation.set(a, a * 1.7, a * 0.5);
     ring.add(shard);
@@ -503,7 +550,7 @@ export function buildWisp() {
 }
 
 // ---------------------------------------------------------------------------
-// Gate Guardian — the level's boss
+// Dwar-Rakshak — the level's boss
 // ---------------------------------------------------------------------------
 
 export function buildGuardian() {

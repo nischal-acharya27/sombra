@@ -541,8 +541,8 @@ export class VFX {
     this.later(0.09, () => {
       this.hitSpark(x + dir * 0.35, y + 0.15, dir, 1.9, P.amber);
       // On the floor, not relative to the chest. Derived from the hit height it
-      // landed a beast's ring at y = -0.3, i.e. under the ground, where the one
-      // element meant to be unmistakable was invisible.
+      // landed a raakchyas's ring at y = -0.3, i.e. under the ground, where the
+      // one element meant to be unmistakable was invisible.
       // Tight. `shockRing` grows to radius × 2.4, so 1.7 drew a four-unit ring
       // around a sword hit — slam's territory, not a swing's.
       this.shockRing(x, groundY + 0.04, 0.95, P.amber);

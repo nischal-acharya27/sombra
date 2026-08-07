@@ -29,7 +29,7 @@ const ARENA_TOP = 3;
  * Lighting stays in `render/palette.js`. `skyFill` is also every toon material's
  * default rim, so it is not a realm's to own — the line is that a realm holds
  * what the hunter looks *at*, and the palette holds what lights it and what the
- * System, the shadow and the characters are made of.
+ * System, the chaya and the characters are made of.
  */
 const REALM = {
   sky: { zenith: 0x140b2e, mid: 0x3a2160, horizon: 0x8a5a86 },
@@ -81,7 +81,7 @@ const SEGMENTS = [
   { x0: 84, x1: 91.2, top: 3.4, boulders: 1 },
   { x0: 95, x1: 103, top: 5.2, crystals: 2, boulders: 1 },
 
-  // The chasm: small islands over the void, patrolled by wisps. The drop below
+  // The chasm: small islands over the void, patrolled by bhoot-battis. The drop below
   // is what makes it read as dangerous; the gap width only decides whether it
   // is *fair*, and it is the same 3.8 the rest of the gate now uses.
   { x0: 106.8, x1: 111.8, top: 5.2, barren: true, depth: 5 },
@@ -99,9 +99,9 @@ const SEGMENTS = [
  * The gate's Warden: an archetype, a title, and the numbers it is elevated to.
  *
  * Gate 1's is a boss — bespoke and multi-phase — so its archetype is a class of
- * its own rather than a beast with a bigger health bar. The stats still arrive
- * this way, because `Guardian` reads every number from the block it is handed
- * exactly as `Beast` does, and that is what makes the next nine Wardens
+ * its own rather than a raakchyas with a bigger health bar. The stats still
+ * arrive this way, because `Guardian` reads every number from the block it is
+ * handed exactly as `Raakchyas` does, and that is what makes the next nine Wardens
  * configuration instead of nine more files.
  */
 const WARDEN = {
@@ -124,11 +124,11 @@ const ENCOUNTERS = [
     // intro window*, not after it.
     //
     // It used to be a second window: 37 words, opening at 1.7 s, for 4.2 s.
-    // Beasts spawn at 0 s, 0.5 s and 1.4 s, so it arrived with all three
+    // Raakchyas spawn at 0 s, 0.5 s and 1.4 s, so it arrived with all three
     // already on the player and left before any of them was dead. Round 3:
     // "too much text, for a short period of time... reading the texts while
     // fighting them is not very feasible." A rule nobody can read is a rule
-    // nobody was taught, and if you believe touching a beast hurts, crowding
+    // nobody was taught, and if you believe touching a raakchyas hurts, crowding
     // reads as chip damage, backing off reads as correct, and the fight you are
     // actually being offered never starts.
     //
@@ -139,9 +139,9 @@ const ENCOUNTERS = [
       note: STRINGS.GATE1_FIRSTBLOOD_NOTE,
     },
     spawns: [
-      { type: 'beast', x: 52, delay: 0 },
-      { type: 'beast', x: 60, delay: 0.5 },
-      { type: 'beast', x: 46, delay: 1.4 },
+      { type: 'raakchyas', x: 52, delay: 0 },
+      { type: 'raakchyas', x: 60, delay: 0.5 },
+      { type: 'raakchyas', x: 46, delay: 1.4 },
     ],
   },
   {
@@ -149,15 +149,15 @@ const ENCOUNTERS = [
     trigger: 105,
     // No lock: the chasm's threat is the fall, not the fight.
     spawns: [
-      // Spawn altitude is the wisp's home altitude, and it only ranges a few
-      // units either side of it — so these have to sit near where the hunter
-      // will actually be, not far overhead.
-      // Positioned over the *islands*, not the gaps. A wisp hovering above a
-      // gap baits the player into jumping at it instead of across, and the
-      // punishment for taking that bait is the void. Fights belong on floor.
-      { type: 'wisp', x: 109.3, y: 7.0, delay: 0 },
-      { type: 'wisp', x: 118.1, y: 8.2, delay: 0.3 },
-      { type: 'wisp', x: 126.9, y: 6.8, delay: 0.9 },
+      // Spawn altitude is the bhoot-batti's home altitude, and it only ranges a
+      // few units either side of it — so these have to sit near where the
+      // hunter will actually be, not far overhead.
+      // Positioned over the *islands*, not the gaps. A bhoot-batti hovering
+      // above a gap baits the player into jumping at it instead of across, and
+      // the punishment for taking that bait is the void. Fights belong on floor.
+      { type: 'bhootBatti', x: 109.3, y: 7.0, delay: 0 },
+      { type: 'bhootBatti', x: 118.1, y: 8.2, delay: 0.3 },
+      { type: 'bhootBatti', x: 126.9, y: 6.8, delay: 0.9 },
     ],
   },
   {
@@ -166,7 +166,7 @@ const ENCOUNTERS = [
     lock: [134, 161],
     intro: { title: STRINGS.GATE1_BRIDGE_TITLE, body: STRINGS.GATE1_BRIDGE_BODY },
     // Six enemies, but spread over seven seconds rather than dropped at once.
-    // Arriving together, four beasts pounce often enough to out-damage the
+    // Arriving together, four raakchyas pounce often enough to out-damage the
     // hunter's entire health bar before the first one dies; arriving in waves,
     // the same six are a fight you can actually work through. The count is the
     // spectacle, the spacing is the difficulty.
@@ -174,12 +174,12 @@ const ENCOUNTERS = [
     // materialises overlapping one has to be ejected by the collision solver,
     // and "wherever the solver puts it" is not a spawn point.
     spawns: [
-      { type: 'beast', x: 147, delay: 0 },
-      { type: 'beast', x: 155, delay: 1.4 },
-      { type: 'wisp', x: 151, y: 6.2, delay: 2.8 },
-      { type: 'beast', x: 141, delay: 4.2 },
-      { type: 'wisp', x: 145, y: 6.6, delay: 5.6 },
-      { type: 'beast', x: 157, delay: 7.0 },
+      { type: 'raakchyas', x: 147, delay: 0 },
+      { type: 'raakchyas', x: 155, delay: 1.4 },
+      { type: 'bhootBatti', x: 151, y: 6.2, delay: 2.8 },
+      { type: 'raakchyas', x: 141, delay: 4.2 },
+      { type: 'bhootBatti', x: 145, y: 6.6, delay: 5.6 },
+      { type: 'raakchyas', x: 157, delay: 7.0 },
     ],
   },
   {

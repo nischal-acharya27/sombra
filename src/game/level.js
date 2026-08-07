@@ -209,7 +209,7 @@ export class Level {
    *
    * The crossing has black water where gate 1 has void, and that is most of
    * what makes the two read as different places from the same silhouette. The
-   * broth that makes the hunter *forget* — and lose the shadow they carried in
+   * broth that makes the hunter *forget* — and lose the chaya they carried in
    * — is the crossing's mechanic and is not built here; this is the surface it
    * will happen on.
    */
