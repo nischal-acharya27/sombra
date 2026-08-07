@@ -25,7 +25,7 @@
 // descriptor is authored correctly, that one asks whether `Level` built what
 // the descriptor said.
 
-import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, GUARDIAN, GORU_MUKH } from '../src/game/config.js';
+import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, GUARDIAN, GORU_MUKH, HAKIM } from '../src/game/config.js';
 import { ARCHETYPES } from '../src/game/game.js';
 import { GATES } from '../src/game/gates/index.js';
 
@@ -473,6 +473,11 @@ const TELLS = [
     archetype: 'goruMukh',
     tell: `${name}, enraged`,
     windup: a.windup * GORU_MUKH.enrageWindupMul,
+  })),
+  ...Object.entries(HAKIM.attacks).map(([name, a]) => ({
+    archetype: 'hakim',
+    tell: `${name}, enraged`,
+    windup: a.windup * HAKIM.enrageWindupMul,
   })),
 ];
 

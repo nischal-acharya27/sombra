@@ -154,6 +154,23 @@ export const STRINGS = {
   GATE5_BEAT_CLEARED_BIG: 'STILL UNCLASSIFIED',
   GATE5_BEAT_CLEARED_BODY: 'It does not know what it just watched die, only that it did.',
 
+  // -- gate 6: Manav-lok -----------------------------------------------------
+  GATE6_NAME: 'Manav-lok',
+  GATE6_WARDEN_TITLE: 'HAKIM',
+  GATE6_MARKET_TITLE: 'THREAT DETECTED',
+  GATE6_MARKET_BODY: 'Raakchyas × 2  ·  Bhoot-Batti × 1',
+  GATE6_ANTECHAMBER_TITLE: 'THREAT DETECTED',
+  GATE6_ANTECHAMBER_BODY: 'Kawach × 1  ·  Tantrik × 1  ·  Raakchyas × 1',
+  GATE6_HAKIM_TITLE: 'GATE BOSS',
+  GATE6_BEAT_ENTER_TITLE: 'THE SYSTEM',
+  GATE6_BEAT_ENTER_BIG: 'HOME, ALMOST',
+  GATE6_BEAT_ENTER_BODY: 'Every door here opens. Nothing behind them is right.',
+  // Not "THE SYSTEM" — the first real conversation in the game, and the
+  // reveal `docs/SPEC-CAMPAIGN.md` names as gate 6's whole job.
+  GATE6_BEAT_CLEARED_TITLE: 'HAKIM',
+  GATE6_BEAT_CLEARED_BIG: 'YAMA STOPPED JUDGING',
+  GATE6_BEAT_CLEARED_BODY: 'He could not bear it. Someone still has to.',
+
   // -- title screen -------------------------------------------------------
   /** `n` is 1-based; `name` is the resumed gate's own name. */
   TITLE_TAG: (n, name) => `GATE ${n} — ${name}`,

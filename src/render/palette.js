@@ -88,5 +88,17 @@ export const P = {
   tantrikEye: 0xcdeaff,
   tantrikSigil: 0xe4d9ff,
 
+  // Manav-lok — the human realm. Warm brass rather than the two iron/pale
+  // bosses before it: `docs/SPEC-CAMPAIGN.md` calls this realm "warm,
+  // familiar, wrong", and the wrongness has to survive on top of a palette
+  // that reads as home. `hakimSick` is the one note that doesn't belong — a
+  // sickly green worked into the judge's regalia, the only colour in the rig
+  // that isn't brass, bone or ember.
+  manavPlate: 0x5c4526,
+  manavPlateDark: 0x2b2013,
+  manavCore: 0xf2b23c,
+  manavAccent: 0x8a6a2e,
+  hakimSick: 0x5a6a3a,
+
   outline: 0x0a0813,
 };

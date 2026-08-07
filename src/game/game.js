@@ -9,7 +9,7 @@ import { Level } from './level.js';
 import { Player } from './player.js';
 import { Raakchyas, Charger, Kawach, BhootBatti, Tantrik, Bolt } from './enemies.js';
 import { Corpse } from './shadow.js';
-import { Guardian, GoruMukh } from './boss.js';
+import { Guardian, GoruMukh, Hakim } from './boss.js';
 import { GameCamera } from './camera.js';
 import { VFX } from '../render/vfx.js';
 import { buildShard } from '../render/models.js';
@@ -51,6 +51,7 @@ export const ARCHETYPES = {
   tantrik: Tantrik,
   guardian: Guardian,
   goruMukh: GoruMukh,
+  hakim: Hakim,
 };
 
 export class Game {

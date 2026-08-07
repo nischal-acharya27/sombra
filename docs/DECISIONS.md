@@ -1830,3 +1830,65 @@ the campaign's hinge, "the first real conversation in the game," where the
 hunter learns Yama stopped. Tier 1 clean, `?sim` clean across the five
 recorded seeds, same as every gate before it. Then hand off to gate 7,
 same shape, no playtest between.
+
+## Gate 6 (Manav-lok): Hakim built, the campaign's third boss
+
+Authored 2026-08-08, continuing straight from the amendment above — no
+playtest checkpoint owed before this one, per that amendment.
+
+**Hakim is bespoke, not an elevated grunt.** Vyaghri, gate 5's own
+no-new-archetype Warden, reused `Charger`'s class with elevated numbers —
+the pattern `SPEC-CAMPAIGN.md` calls "Wardens are configuration, not code."
+Gate 6 also introduces no new grunt, but the same spec's table marks it
+boss-tier — one of the four Guardian-class fights, at gates 3, 6, 8 and 10 —
+so its Warden follows the Goru-Mukh's precedent instead of Vyaghri's:
+`Hakim extends Boss` in `src/game/boss.js`,
+its own rig (`buildHakim` in `models.js`), its own config block (`HAKIM`),
+same three-part kit as the Goru-Mukh (charge, slam, sweep — a court's
+verdict is delivered close, and the campaign's one ranged boss attack stays
+the Guardian's alone). What makes it read as its own fight rather than the
+Goru-Mukh recoloured: Manav-lok's brass-and-bone palette
+(`manavPlate`/`manavCore`/`hakimSick` in `palette.js`), a judge's headdress
+and floating seal-tablets in place of horns and pauldrons, and the seal of
+judgment (`sealL`/`sealR`) flaring in place of the Goru-Mukh's eyes. Its
+sweep enraged clears the 0.42s reaction floor by 60ms (0.60 × 0.80 =
+0.480s), the same margin order as the campaign's other two melee bosses.
+
+**The gate combines what earlier gates taught separately, rather than
+teaching anything new.** The market (raakchyas + bhoot-batti, both from
+gate 1, met together for the first time) and the antechamber (kawach and
+tantrik, each taught alone in gates 3 and 4, sharing a fight for the first
+time, plus a raakchyas) are both `soloDebut`-clean by construction: Hakim's
+own archetype is the only fresh one, and it is met alone in its own
+encounter, same shape as every prior Warden fight.
+
+**The hinge's reveal breaks the "THE SYSTEM" framing on purpose.** Every
+prior gate's boundary beats are voiced by the System; gate 6's `cleared`
+beat is titled `HAKIM` instead — `docs/SPEC-CAMPAIGN.md` names this as "the
+first real conversation in the game," and the System has had no voice for
+that yet. Mechanically it is still an ordinary `_fireBeats('cleared')` call
+through the same descriptor shape every other gate uses; only the string
+carries the difference.
+
+**Verification status.** `?sim` across all five recorded seeds (headless
+Chrome, `--use-angle=swiftshader-webgl`, no interactive session available
+this pass — not a substitute for the still-owed full-campaign human
+playtest `docs/SPEC-CAMPAIGN.md` names once all ten gates exist): gate 6's
+Tier 1 rows all PASS (jump reserve 26%, matching every prior gate's own
+figure; 7 spawns clear; 4/4 platforms reachable; 3 encounter locks sealed;
+`enemy types` resolves raakchyas/bhootBatti/kawach/tantrik/warden → hakim;
+`solo debut` reports `hakim in hakim`), and all three Hakim telegraph rows
+clear the reaction floor with 0.230–0.358s to spare. No suite row moved
+beyond the already-frozen deferred set (`ranged` boss, `ranged +chaya`,
+charger `recovery-window`, charger `leaves-remnant`, occasionally flaky
+`signed-rank` — all the documented HP-hack regressions, untouched by this
+gate).
+
+### Handoff: what the next session picks up
+
+Gates 7–10 are otherwise unstarted. Gate 7 (the asuras — Asura-lok, no new
+archetype per the table, "the most fight-dense gate," Warden **The
+Ever-Warring**) is next. Build order per the dropped-checkpoint amendment:
+author one gate at a time, Tier 1 clean, `?sim` clean across the five
+recorded seeds, no playtest between — the campaign is played end to end,
+on a phone, only once all ten gates exist.

@@ -983,3 +983,134 @@ export function buildGoruMukh() {
   root.userData.nodes = n;
   return root;
 }
+
+// ---------------------------------------------------------------------------
+// Hakim — gate 6's Warden
+// ---------------------------------------------------------------------------
+
+/**
+ * The Magistrate. Brass and bone in place of the Dwar-Rakshak's violet plate
+ * or the Goru-Mukh's iron — Manav-lok reads as home, so its judge has to look
+ * like an official rather than a monster at first glance. No horns: in their
+ * place a judge's tall headdress, and a pair of floating seal-tablets at the
+ * shoulders standing in for the Guardian's pauldrons — the same "flare before
+ * it commits" vocabulary read off objects that belong to a court rather than
+ * a beast. `hakimSick` marks the one wrong note, a thin band on the
+ * headdress that doesn't belong on anything else in the rig.
+ */
+export function buildHakim() {
+  const root = new THREE.Group();
+  const n = {};
+
+  const hips = new THREE.Group();
+  hips.position.y = 1.7;
+  root.add(hips);
+  n.hips = hips;
+
+  const torso = part(0.92, 1.18, 1.08, P.manavPlate, { pivot: 'bottom', outline: 0.05 });
+  hips.add(torso);
+  n.torso = torso;
+
+  // The seal of judgment — the same telegraph vocabulary as the Dwar-Rakshak's
+  // core and the Goru-Mukh's brand, read off a magistrate's own emblem.
+  const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.29, 1), glowMaterial({ color: P.manavCore }));
+  core.position.set(0.48, 0.74, 0);
+  torso.add(core);
+  n.core = core;
+
+  const coreGlow = decal(0.88, 0.88, P.manavCore, { opacity: 0.4 });
+  coreGlow.position.set(0.49, 0.74, 0);
+  coreGlow.rotation.y = Math.PI / 2;
+  torso.add(coreGlow);
+  n.coreGlow = coreGlow;
+
+  const head = new THREE.Group();
+  head.position.y = 1.18;
+  torso.add(head);
+  n.head = head;
+
+  const skull = part(0.5, 0.44, 0.54, P.manavPlateDark, { pivot: 'bottom', outline: 0.04 });
+  head.add(skull);
+
+  // The judge's headdress in place of horns — tall, brass, with the one wrong
+  // stripe running up it.
+  const headdress = part(0.4, 0.5, 0.36, P.manavAccent, { pivot: 'bottom', outline: 0.03 });
+  headdress.position.y = 0.44;
+  head.add(headdress);
+  const sickBand = decal(0.07, 0.46, P.hakimSick);
+  sickBand.position.set(0.19, 0.68, 0);
+  sickBand.rotation.set(0, Math.PI / 2, Math.PI / 2);
+  head.add(sickBand);
+
+  for (const side of [-1, 1]) {
+    const seal = decal(0.07, 0.05, P.manavCore);
+    seal.position.set(0.30, 0.10, side * 0.14);
+    seal.rotation.y = Math.PI / 2;
+    head.add(seal);
+    n[side < 0 ? 'sealL' : 'sealR'] = seal;
+  }
+
+  // A pair of floating seal-tablets at the shoulders — the Guardian's
+  // pauldrons and the Goru-Mukh's horns both read as "this hits hard" from
+  // the silhouette; a magistrate's read the same way as "this rules on you".
+  for (const side of [-1, 1]) {
+    const tablet = part(0.1, 0.5, 0.34, P.manavAccent, { pivot: 'bottom', outline: 0.03 });
+    tablet.position.set(-0.1, 0.30, side * 0.42);
+    tablet.rotation.z = side * 0.18;
+    head.add(tablet);
+  }
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const shoulder = new THREE.Group();
+    shoulder.position.set(0, 1.0, side * 0.64);
+    torso.add(shoulder);
+    n['shoulder' + key] = shoulder;
+
+    const pauldron = part(0.52, 0.36, 0.44, P.manavPlate, { outline: 0.04 });
+    pauldron.position.y = 0.06;
+    shoulder.add(pauldron);
+
+    const upper = part(0.31, 0.62, 0.31, P.manavPlateDark, { pivot: 'top', outline: 0.032 });
+    upper.position.y = -0.12;
+    shoulder.add(upper);
+
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.72;
+    shoulder.add(elbow);
+    n['elbow' + key] = elbow;
+
+    const fore = part(0.37, 0.60, 0.37, P.manavPlate, { pivot: 'top', outline: 0.032 });
+    elbow.add(fore);
+
+    const fist = part(0.47, 0.42, 0.47, P.manavPlateDark, { pivot: 'top', outline: 0.036 });
+    fist.position.y = -0.60;
+    elbow.add(fist);
+  }
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const hip = new THREE.Group();
+    hip.position.set(0, 0, side * 0.33);
+    hips.add(hip);
+    n['hip' + key] = hip;
+
+    const thigh = part(0.37, 0.86, 0.41, P.manavPlateDark, { pivot: 'top', outline: 0.034 });
+    hip.add(thigh);
+
+    const knee = new THREE.Group();
+    knee.position.y = -0.86;
+    hip.add(knee);
+    n['knee' + key] = knee;
+
+    const shin = part(0.33, 0.78, 0.35, P.manavPlate, { pivot: 'top', outline: 0.032 });
+    knee.add(shin);
+
+    const foot = part(0.61, 0.20, 0.45, P.manavPlateDark, { pivot: 'top', outline: 0.03 });
+    foot.position.set(0.10, -0.78, 0);
+    knee.add(foot);
+  }
+
+  root.userData.nodes = n;
+  return root;
+}

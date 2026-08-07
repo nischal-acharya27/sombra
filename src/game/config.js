@@ -653,6 +653,39 @@ export const GORU_MUKH = {
   cooldown: [0.9, 1.7],
 };
 
+/**
+ * Hakim — the Magistrate, Manav-lok's Warden and the campaign's third boss
+ * per `docs/SPEC-CAMPAIGN.md`'s table (gates 3, 6, 8, 10). Bespoke numbers and
+ * its own rig (`buildHakim` in `models.js`), the same relationship the
+ * Goru-Mukh has to the Dwar-Rakshak rather than an elevated grunt archetype —
+ * gate 6 introduces no new grunt, and its Warden is boss-tier, not a second
+ * elevation of an existing one.
+ *
+ * Same three-part kit as the Goru-Mukh (charge, slam, sweep) — a court's
+ * verdict is delivered close, not from range, so there is no volley here
+ * either. Its sweep enraged clears the 0.42 s reaction floor
+ * `telegraphs()` in `tools/gatecheck.js` holds every tell to by 60 ms
+ * (0.60 × 0.80 = 0.480 s), the same margin the campaign's other melee bosses
+ * hold theirs by.
+ */
+export const HAKIM = {
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hw: 1.6,
+  hh: 1.95,
+  speed: 3.5,
+  exp: 460,
+  contactDamage: 0,
+  enrageAt: 0.5,
+  enrageSpeedMul: 1.3,
+  enrageWindupMul: 0.8,
+  attacks: {
+    charge: { windup: 0.76, speed: 18.5, dur: 0.82, recover: 0.92, damage: 23, knock: 13, shake: 0.3 },
+    slam: { windup: 0.72, rise: 0.34, fall: 0.24, recover: 1.0, damage: 26, radius: 5.8, knock: 15, shake: 0.55 },
+    sweep: { windup: 0.60, active: 0.30, recover: 0.8, damage: 19, reach: 5.3, knock: 11, shake: 0.28 },
+  },
+  cooldown: [0.9, 1.7],
+};
+
 /** Style ranks. `decay` is meter lost per second while not attacking. */
 export const STYLE = {
   ranks: [
