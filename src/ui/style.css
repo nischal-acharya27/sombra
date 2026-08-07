@@ -620,13 +620,16 @@ kbd {
 /* The stick's knob — see `touch.js`'s `_placeKnob` — slides toward whichever
    edge is held, on the two independent axes `_setDir`/`_setDown` already
    read. It carries no label: direction is legible from position alone the
-   way a real thumbstick's is, which text glyphs never were. */
+   way a real thumbstick's is, which text glyphs never were.
+
+   Width and height are set inline by `_buildSteer` from `KNOB.size` rather
+   than restated here, so the knob's own size and `_placeKnob`'s travel
+   distance share one source of truth — see `KNOB`'s doc comment for why
+   that pairing has to hold. */
 .touch-steer .knob {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 44%;
-  height: 44%;
   border-radius: 50%;
   background: rgba(159, 196, 221, 0.22);
   border: 1px solid rgba(159, 196, 221, 0.5);

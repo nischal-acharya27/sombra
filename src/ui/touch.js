@@ -102,6 +102,18 @@ export const UNIT = { min: 46, vw: 12, vh: 13.5, max: 70 };
 export const JUMP_HOLD = { rise: RISE, buffer: BUFFER, need: RISE + BUFFER };
 
 /**
+ * The steer's knob, as a fraction of the base circle's own diameter.
+ *
+ * One source for both `_buildSteer` (sizes the element) and `_placeKnob`
+ * (slides it), so the two cannot drift out of sync the way a size in
+ * `style.css` and a travel distance in this file otherwise would. `travel`
+ * has to keep the knob's edge inside the base at full deflection: a knob of
+ * `size` centred `travel` away from the middle reaches `travel + size / 2`
+ * from centre, which must stay under the base's own radius of 50.
+ */
+export const KNOB = { size: 44, travel: 26 }; // 26 + 44 / 2 = 48 < 50
+
+/**
  * Where each control sits.
  *
  * `x` is measured from the control's own edge of the screen and `y` from the
@@ -283,6 +295,7 @@ export class TouchControls {
     this.root.appendChild(el);
     this.steer = el;
     this.knob = el.querySelector('.knob');
+    this.knob.style.width = this.knob.style.height = `${KNOB.size}%`;
 
     // Horizontal and vertical read off the same point of contact
     // independently, the way a real stick's two axes do — a thumb can hold a
@@ -395,12 +408,11 @@ export class TouchControls {
    * Slides the knob toward whichever edge `dir`/`pressingDown` currently
    * hold, independently on each axis — the same two independent reads
    * `_setDir`/`_setDown` already make, drawn rather than computed twice.
-   * `26%` keeps the knob inside the base circle at rest and at full
-   * deflection; it is a visual travel distance, not an input threshold.
+   * `KNOB.travel` is a visual travel distance, not an input threshold.
    */
   _placeKnob() {
-    const x = this.dir * 26;
-    const y = this.pressingDown ? 26 : 0;
+    const x = this.dir * KNOB.travel;
+    const y = this.pressingDown ? KNOB.travel : 0;
     this.knob.style.transform = `translate(calc(-50% + ${x}%), calc(-50% + ${y}%))`;
   }
 

@@ -119,6 +119,19 @@ function chords(layout) {
 }
 
 /**
+ * Whether the steer's box is a square, which is what lets `touch.js` render
+ * it as a circle rather than an ellipse — see `DECISIONS.md` § The steer
+ * control becomes a stick and issue #23. `TouchControls` reads `w`/`h` for
+ * hit-testing either way, so an unequal box would not break input, only the
+ * shape the budget asked for; this is the arithmetic proxy for that ask, the
+ * same way `chords` is the proxy for "one target, one action."
+ */
+function round(layout) {
+  const s = layout.steer;
+  return { ok: s.w === s.h, detail: `${s.w} × ${s.h}` };
+}
+
+/**
  * Whether the layout still holds together at a given screen size: nothing
  * overlapping, nothing off the edge, nothing under the size a thumb can hit.
  *
@@ -175,6 +188,9 @@ export function checkLayout(layout = TOUCH_LAYOUT) {
 
   const ch = chords(layout);
   out.push(row('no chord', ch.ok, ch.bad.join('; ') || 'every control is one target, one action'));
+
+  const rd = round(layout);
+  out.push(row('steer is round', rd.ok, rd.detail));
 
   // Constraint 2, from the other end.
   //
@@ -250,7 +266,9 @@ const byVerb = (buttons, verb) => buttons.find((b) => b.verb === verb);
  * steer's `down`, since it has no button of its own. `a button that needs two
  * fingers` and `the stick fires two actions from one field` are both
  * constraint 1 — a single point of contact must resolve to one well-formed
- * action.
+ * action. `the base stops being a circle` is issue #23's own failure mode:
+ * nothing about input breaks if the steer's box goes rectangular again, only
+ * the shape the second phone playtest asked for.
  */
 const CONTROLS = [
   {
@@ -275,6 +293,11 @@ const CONTROLS = [
     check: 'no chord',
     why: "the stick's down fires two actions",
     layout: broken((l) => (l.steer.down = ['down', 'extra'])),
+  },
+  {
+    check: 'steer is round',
+    why: 'the base stops being a circle',
+    layout: broken((l) => (l.steer.h = l.steer.w + 0.5)),
   },
   {
     check: 'a tap is a whole jump',
