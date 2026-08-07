@@ -1230,6 +1230,48 @@ mid-campaign. Revisit it at the same checkpoint as the HP hack itself, once
 all ten gates are built. Until then, a red `FULL PLAYTHROUGH` row on 4-of-5
 seeds is expected here, not a regression to chase.
 
+## GATE GUARDIAN and THE CHARGER also stay red under the HP hack, deferred to the same checkpoint
+
+Settled 2026-08-07, from issues #24 ("ranged beats the Gate Guardian on a
+majority of runs"), #25 ("The Charger's recovery window isn't punishable")
+and #26 ("A Charger killed outright leaves no claimable remnant").
+
+**Same mechanism as #22, isolated the same way.** Each row was confirmed by
+temporarily restoring the pre-hack value and re-running `?sim`, then reverting
+before commit:
+
+- `GUARDIAN.hp` at 900 (its pre-hack, previously-verified value — see § "The
+  Guardian re-tune", discharged 2026-08-03): all six `GATE GUARDIAN` rows pass,
+  `ranged` wins 0 of 40 and leaves the Guardian around 590–598 of its 900 HP —
+  reproducing that discharged finding almost exactly.
+- `CHARGER.hp` at 64 (its pre-hack value — see the `charge.recover` comment in
+  `config.js`, "measures 59 of its 64 HP"): both `THE CHARGER` rows pass, 59
+  damage landing in the recovery window and one claimable remnant.
+
+At `hp: 5`, both probes break for the reason `FULL PLAYTHROUGH` does: they
+measure something that only exists across multiple hits or a sustained
+window — a DPS race the boss must survive long enough to lose, a punish
+window worth two light swings, a fight that ends by being fought down rather
+than one-shot. One-shot-kill HP collapses all three into "whoever lands the
+first hit," which is a different, uninteresting question, and answers it
+before the mechanic under test ever runs. `ranged`'s own bolt (23 damage) is
+larger than `hp: 5`, so `GATE GUARDIAN` is not merely flaky at this HP, it is
+structurally unwinnable by the invariant it checks. `THE CHARGER`'s first
+light swing (13 damage) exceeds `hp: 5` the same way, and issue #26 is a
+downstream symptom of #25: the charger already died mid-recovery-window, so
+the remnant probe's "before" baseline was taken after the real remnant had
+already been claimed.
+
+**Deferred, not fixed, for the same reason as #22.** Restoring these two
+values alone (leaving `BEAST`/`WISP`/`FERRYMAN` at the phone-playtest `hp: 5`)
+would satisfy the letter of "do not revert it," since bosses and the Charger
+sit outside what a phone playtest round is checking. But making that call
+piecemeal, three issues at a time, is exactly what the frozen-gate decision
+already warned against. Revisit `GUARDIAN.hp` and `CHARGER.hp` at the same
+HP-hack checkpoint as #22 — the ten-gate campaign completion, or the Android
+port, whichever comes first. Until then, red `GATE GUARDIAN` and `THE
+CHARGER` rows are expected here, not regressions to chase.
+
 ## The System window pauses the fight it explains
 
 Settled 2026-08-06, via `/grill-with-docs` on issue #18 ("The System covers

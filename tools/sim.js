@@ -363,6 +363,14 @@ function measureJuggle(game, input) {
       // what is under test here is the *juggle*, so the target has to hold
       // still for it.
       e.cfg = { ...e.cfg, chaseRange: 0, pounce: { ...e.cfg.pounce, range: 0 } };
+      // The beast's phone-playtest hp (5) is below the launcher's own damage
+      // (21), so the very hit this probe measures was one-shotting the target
+      // and sending it down `_dieAnim`'s death-pop physics instead of the
+      // juggle path — a different gravity and a target gone in 0.42s. Nothing
+      // about the geometry under test is about combat balance, so the target
+      // needs enough hp to survive the hit that starts the measurement.
+      e.hp = 999;
+      e.maxHp = 999;
 
       const groundY = e.y;
       const L = ATTACKS.launcher;
