@@ -32,14 +32,6 @@ const BINDINGS = {
   light: ['KeyJ', 'KeyZ'],
   heavy: ['KeyK', 'KeyX'],
   magic: ['KeyL', 'KeyC'],
-  // SORGI, and deliberately unbound.
-  //
-  // On the keyboard it is `hold S + K` and stays that way — a chord is free
-  // when one hand is idle. A thumb steering with the other hand has nothing to
-  // hold `S` with, so the touch layout gives it a target of its own and sends
-  // this, which `player.js` reads as the same intent. Binding a key to it as
-  // well would be an eighth control on a moveset frozen at seven.
-  sorgi: [],
   pause: ['Escape'],
   restart: ['KeyR'],
 };

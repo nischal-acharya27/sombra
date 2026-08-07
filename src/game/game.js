@@ -910,12 +910,15 @@ export class Game {
     // The command the line names is the one the device in the player's hands
     // actually offers: `this.touch` is set once, at boot, from whether
     // `TouchControls` exists — see `main.js` — so this reads that rather than
-    // guessing from screen width. The button's own label comes from the touch
-    // layer's descriptor rather than being spelled out a second time here, so
-    // a future relabelling of the control cannot leave this line stale.
-    const sorgiLabel = this.touch?.layout.buttons.find((b) => b.verb === 'sorgi')?.label ?? 'SORGI';
+    // guessing from screen width. The heavy button's own label comes from the
+    // touch layer's descriptor rather than being spelled out a second time
+    // here, so a future relabelling of the control cannot leave this line
+    // stale. SORGI itself has no button of its own any more — see
+    // `DECISIONS.md` § The steer control becomes a stick — so touch's phrasing
+    // names the stick the same way the keyboard line names `S`.
+    const heavyLabel = this.touch?.layout.buttons.find((b) => b.verb === 'heavy')?.label ?? 'RISE';
     const claim = this.touch
-      ? `Stand over the remnant and press ${sorgiLabel}.`
+      ? `Stand over the remnant, hold down on the stick and press ${heavyLabel}.`
       : 'Stand over the remnant, hold S and press K. The command is SORGI.';
     this.hud.window({
       title: 'THE SYSTEM',

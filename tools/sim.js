@@ -1998,8 +1998,10 @@ function print(r) {
   }
   lines.push('');
   lines.push('  Constraint 1 of the touch budget — no move may require a chord — is the');
-  lines.push('  `no chord` row, and it is why SORGI has a target of its own rather than');
-  lines.push("  the keyboard's `hold S + K`. Constraint 2 is the jump reserve, checked");
+  lines.push('  `no chord` row. Reversed for SORGI by DECISIONS.md § The steer control');
+  lines.push("  becomes a stick: held down on the stick plus RISE is the keyboard's own");
+  lines.push("  `hold S + K`, sent by a thumb already resting on the stick rather than a");
+  lines.push("  second target. Constraint 2 is the jump reserve, checked");
   lines.push('  against every gate above. Constraint 3 — never a direction plus two');
   lines.push('  buttons — is not here and cannot be: it is a claim about what a fight');
   lines.push('  demands, not about what the screen offers, and a thumb is the only');

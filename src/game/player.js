@@ -186,32 +186,30 @@ export class Player extends Actor {
     // SORGI, and it has to be tested before the launcher below or the launcher
     // consumes the press first.
     //
-    // `down` is held, which is the whole reason this is not plain heavy. Bodies
-    // are harmless and corpses stay claimable for seconds, so they exist
-    // mid-fight and standing next to one is *correct* play — overloading heavy
-    // would turn the move you reach for when a crowd closes into a 0.8 s root,
-    // decided by whether a body happened to be in range. Gating it on "only
-    // when nothing is near" would fix that and gut the design, because standing
-    // still mid-fight being a gamble is the entire cost of the mechanic.
+    // `down` held plus `heavy` pressed, one route for every device. Bodies are
+    // harmless and corpses stay claimable for seconds, so they exist mid-fight
+    // and standing next to one is *correct* play — overloading heavy would turn
+    // the move you reach for when a crowd closes into a 0.8 s root, decided by
+    // whether a body happened to be in range. Gating it on "only when nothing
+    // is near" would fix that and gut the design, because standing still
+    // mid-fight being a gamble is the entire cost of the mechanic.
     //
-    // A thumb cannot hold `down`, though, so touch sends `sorgi` — one target,
-    // which is the touch budget's first constraint. Two ways in, one behaviour:
-    // the keyboard keeps its chord and neither route knows the other exists.
+    // Touch used to send a dedicated `sorgi` action here instead, because a
+    // thumb steering with one hand had nothing to hold `down` with. It now
+    // does — `ui/touch.js`'s stick reads a press toward its bottom edge as
+    // `down`, the same action the keyboard's `S`/`ArrowDown` sends — so both
+    // devices land on this one branch. See `DECISIONS.md` § The steer control
+    // becomes a stick.
     //
-    // `pressed()` is the last term, as everywhere in this file: establish there
-    // is a body to claim, then consume. `peek` decides *which* press to look
-    // for without consuming either, so the frames where neither route is asking
-    // skip the branch entirely — which is what keeps a keyboard run
-    // bit-identical and keeps `nearestCorpse` off the frames nobody is trying
-    // to claim a remnant on.
-    if (canCancel && this.grounded) {
-      const claim = input.down('down') ? 'heavy' : input.peek('sorgi') ? 'sorgi' : null;
-      if (claim) {
-        const corpse = this.ctx.nearestCorpse?.(this.x, this.y);
-        if (corpse && input.pressed(claim)) {
-          this._startExtract(corpse);
-          return;
-        }
+    // `pressed()` is the last term, as everywhere in this file: establish
+    // there is a body to claim, then consume. Gating on `input.down('down')`
+    // first is what keeps `nearestCorpse` off the frames nobody is holding
+    // the claim down on.
+    if (canCancel && this.grounded && input.down('down')) {
+      const corpse = this.ctx.nearestCorpse?.(this.x, this.y);
+      if (corpse && input.pressed('heavy')) {
+        this._startExtract(corpse);
+        return;
       }
     }
 

@@ -603,10 +603,15 @@ kbd {
   box-shadow: 0 0 26px rgba(157, 92, 255, 0.55), inset 0 0 22px rgba(157, 92, 255, 0.25);
 }
 
-/* One target, not two. A thumb slides across it and the direction follows; a
-   pair of separate buttons would need a gap between them that eats the input
-   halfway through a turn. */
+/* One target, not three. A thumb rests on it: sliding gives the direction,
+   pressing toward the bottom edge gives SORGI's `down` — see DECISIONS.md
+   § The steer control becomes a stick. Separate targets would need gaps
+   between them that eat input mid-slide, same as the two-button pad this
+   replaced. */
 .touch-steer {
+  /* `.touch-target` already sets `position: absolute`, which is also what
+     gives an absolutely-positioned `.d` child something to anchor against —
+     restating it here as `relative` would fight that rule instead. */
   border-radius: calc(var(--b) * 0.3);
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -626,6 +631,18 @@ kbd {
   opacity: 1;
   color: var(--cyan);
   text-shadow: 0 0 16px var(--cyan);
+}
+.touch-steer .d {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--b) * 0.1);
+  transform: translateX(-50%);
+  font-size: calc(var(--b) * 0.28);
+}
+.touch-steer.d .d {
+  opacity: 1;
+  color: var(--violet);
+  text-shadow: 0 0 16px var(--violet);
 }
 
 /* The keyboard legend on the title screen is a list of keys the device does

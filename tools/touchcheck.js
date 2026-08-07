@@ -81,6 +81,11 @@ function coverage(layout) {
     if (!MOVESET.includes(c.verb)) stray.push(c.verb);
     seen.set(c.verb, (seen.get(c.verb) ?? 0) + 1);
   }
+  // SORGI has no target of its own — `DECISIONS.md` § The steer control
+  // becomes a stick reads it off the steer's `down` state instead. Credit it
+  // the same way a real control would be credited, so a layout that forgets
+  // `down` still shows up here as a verb with nothing behind it.
+  if (typeof layout.steer.down === 'string') seen.set('sorgi', (seen.get('sorgi') ?? 0) + 1);
   return {
     missing: MOVESET.filter((v) => !seen.has(v)),
     stray,
@@ -94,10 +99,13 @@ function coverage(layout) {
 /**
  * Whether any control asks for more than one action at a time.
  *
- * A button carries one action, spelled as one string. The axis carries two and
- * asserts at most one of them by construction — `_setDir` releases the old
- * before it presses the new — which is what makes an axis a single target
- * rather than a chord waiting to happen.
+ * A button carries one action, spelled as one string. The axis carries three —
+ * `neg`/`pos` and now `down` — and asserts each as one well-formed action, one
+ * point of contact: `_setDir` releases the old horizontal action before it
+ * presses the new one, and `down` is read independently of it, the same way a
+ * keyboard holds a movement key and `S` together without either being a
+ * second target. What this check forbids is a *button* needing two fingers,
+ * or any single field on the steer resolving to more than one action.
  */
 function chords(layout) {
   const bad = [];
@@ -106,6 +114,7 @@ function chords(layout) {
   }
   const s = layout.steer;
   if (typeof s.neg !== 'string' || typeof s.pos !== 'string') bad.push(`${s.verb} is not one axis`);
+  if (s.down !== undefined && typeof s.down !== 'string') bad.push(`${s.verb}'s down fires ${JSON.stringify(s.down)}`);
   return { bad, ok: bad.length === 0 };
 }
 
@@ -237,26 +246,35 @@ const byVerb = (buttons, verb) => buttons.find((b) => b.verb === verb);
  * The first two are the budget's own failure modes and the reason this file
  * exists. `a verb with no control` is the eighth-button problem arriving from
  * the other direction — a moveset frozen at seven is only worth anything if all
- * seven are actually on the screen. `a button that needs two fingers` is
- * constraint 1: the keyboard's `hold S + K` transcribed onto a phone.
+ * seven are actually on the screen; for SORGI specifically that means the
+ * steer's `down`, since it has no button of its own. `a button that needs two
+ * fingers` and `the stick fires two actions from one field` are both
+ * constraint 1 — a single point of contact must resolve to one well-formed
+ * action.
  */
 const CONTROLS = [
   {
     check: 'seven verbs',
     why: 'a verb with no control',
-    layout: broken((l) => (l.buttons = l.buttons.filter((b) => b.verb !== 'sorgi'))),
+    layout: broken((l) => delete l.steer.down),
   },
   {
     check: 'seven verbs',
     why: 'an eighth control',
-    // Parked above SORGI, in clear space, so this control breaks the count and
-    // nothing else — the eighth button the moveset was frozen to prevent.
+    // Parked above SORGI's old slot, in clear space, so this control breaks
+    // the count and nothing else — the eighth button the moveset was frozen
+    // to prevent.
     layout: broken((l, b) => b.push({ ...b[0], verb: 'block', action: 'block', x: 3.05, y: 3.4, w: 1, h: 1 })),
   },
   {
     check: 'no chord',
     why: 'a button that needs two fingers',
-    layout: broken((l, b) => (byVerb(b, 'sorgi').action = ['down', 'heavy'])),
+    layout: broken((l, b) => (byVerb(b, 'dash').action = ['dash', 'heavy'])),
+  },
+  {
+    check: 'no chord',
+    why: "the stick's down fires two actions",
+    layout: broken((l) => (l.steer.down = ['down', 'extra'])),
   },
   {
     check: 'a tap is a whole jump',

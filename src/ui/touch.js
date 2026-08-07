@@ -12,12 +12,16 @@
 //   3. No beat may require a direction plus two buttons at once.
 //
 // Constraint 2 is `tools/gatecheck.js`'s and has nothing to do with this file.
-// Constraint 1 is this file's, and it is the reason SORGI gets a target of its
-// own: on the keyboard it is `hold S + K`, and a thumb steering with the other
-// hand has nothing to hold `S` with. Constraint 3 is a property of what a gate
-// *asks for* rather than of what the screen offers, so nothing here can check
-// it — the layout below simply never needs two of these pressed together, and
-// the phone playtest is the instrument that says whether that survives contact.
+// Constraint 1 is reversed here for one case, by `DECISIONS.md` § The steer
+// control becomes a stick: the first phone playtest found a held direction on
+// a stick is not the chord the constraint was written against, since the
+// thumb steering is already resting on it. SORGI is that one case — hold down
+// on the stick, press RISE — so the steer descriptor below carries a third
+// action alongside its left/right pair, and there is no dedicated SORGI
+// target any more. Constraint 3 is a property of what a gate *asks for*
+// rather than of what the screen offers, so nothing here can check it — the
+// layout below simply never needs two buttons pressed together, and the phone
+// playtest is the instrument that says whether that survives contact.
 //
 // **No new verb and no eighth control.** The seven are the seven the hunter
 // learned in gate 1. There is deliberately no pause control: pause is not a
@@ -70,8 +74,10 @@ const TAP_WORTH = (RISE + BUFFER) * 1.1;
  * to steer with, which is what freezes the moveset rather than taste.
  *
  * Each id is the input action it drives, so there is no second vocabulary here
- * to fall out of step with `engine/input.js`. `move` is the axis; the rest are
- * buttons.
+ * to fall out of step with `engine/input.js`. `move` is the axis; most of the
+ * rest are buttons. `sorgi` is neither — it is `down` held on the axis plus
+ * `heavy` pressed, the same chord the keyboard sends, so `tools/touchcheck.js`
+ * credits it against the steer rather than looking for a control of its own.
  */
 export const MOVESET = ['move', 'jump', 'dash', 'light', 'heavy', 'magic', 'sorgi'];
 
@@ -100,16 +106,16 @@ export const JUMP_HOLD = { rise: RISE, buffer: BUFFER, need: RISE + BUFFER };
  *
  * `x` is measured from the control's own edge of the screen and `y` from the
  * bottom, both in units, so the two clusters stay pinned under the two thumbs
- * at any width. The six buttons sweep up and to the left from where a right
+ * at any width. The five buttons sweep up and to the left from where a right
  * thumb rests, and **the order along that sweep is how often a hand reaches for
  * the move**: SLASH biggest and nearest, then JUMP and RISE, then STEP, then
- * DÉCRET, and SORGI furthest.
+ * DÉCRET furthest. SORGI is not on this sweep — see the steer descriptor
+ * below.
  *
  * STEP outranks DÉCRET there for the reason `player.js` tests dash before
  * everything else — it is the defensive option, and a player mashing it under
  * pressure means it. DÉCRET costs 16 MP and has a cooldown, so it is never the
- * move a panicking thumb wants. SORGI is last because it is claimed standing
- * over a remnant with the fight already over.
+ * move a panicking thumb wants.
  *
  * Both clusters hug the bottom corners, and that is not decoration: the camera
  * frames the hunter around the centre of the screen with the horizon high, so
@@ -125,16 +131,37 @@ export const JUMP_HOLD = { rise: RISE, buffer: BUFFER, need: RISE + BUFFER };
 export const TOUCH_LAYOUT = {
   unit: UNIT,
   /**
-   * One axis, not two buttons. A thumb slides across it and the direction
-   * follows, which a pair of separate targets cannot do without a gap in the
-   * middle that eats the input mid-slide.
+   * A stick, not three buttons. A thumb rests on it and both the horizontal
+   * direction and a press toward the bottom edge follow, which separate
+   * targets cannot do without a gap between them that eats input mid-slide.
    *
-   * `deadzone` is a fraction of the half-width: inside it the hunter stands
-   * still, so stopping does not require lifting off.
+   * `deadzone` gates left/right the same way it always did: inside it the
+   * hunter stands still, so stopping does not require lifting off.
+   * `downDeadzone` gates `down` the same way, independently — a thumb can
+   * hold left or right and down at once, exactly like a keyboard holding
+   * `A`/`D` and `S` together, because they are different fingers' worth of
+   * travel on the same stick rather than a second target to reach for.
+   *
+   * `down` is `DECISIONS.md` § The steer control becomes a stick: held here,
+   * it is read by `player.js` exactly as the keyboard's `S`/`ArrowDown` is —
+   * see `engine/input.js`'s `down` binding — so SORGI needs no route of its
+   * own any more.
    */
-  steer: { verb: 'move', side: 'left', x: 0.25, y: 0.35, w: 2.7, h: 1.4, neg: 'left', pos: 'right', deadzone: 0.18 },
+  steer: {
+    verb: 'move',
+    side: 'left',
+    x: 0.25,
+    y: 0.35,
+    w: 2.7,
+    h: 1.4,
+    neg: 'left',
+    pos: 'right',
+    down: 'down',
+    deadzone: 0.18,
+    downDeadzone: 0.35,
+  },
   buttons: [
-    { verb: 'light', action: 'light', label: 'SLASH', side: 'right', x: 0.30, y: 0.30, w: 1.18, h: 1.18, tone: 'cyan' },
+    { verb: 'light', action: 'light', label: 'SLASH', side: 'right', x: 0.30, y: 0.30, w: 1.35, h: 1.32, tone: 'cyan' },
     /**
      * `sustain` is the one place the touch scheme is not a transcription of
      * the keyboard, and it is here because measuring said it had to be.
@@ -161,11 +188,10 @@ export const TOUCH_LAYOUT = {
      * arc — and a gate that did would be authoring against an input half the
      * players do not have.
      */
-    { verb: 'jump', action: 'jump', label: 'JUMP', side: 'right', x: 1.70, y: 0.42, w: 1.05, h: 1.05, tone: 'plain', sustain: TAP_WORTH },
-    { verb: 'heavy', action: 'heavy', label: 'RISE', side: 'right', x: 0.45, y: 1.70, w: 1.05, h: 1.05, tone: 'cyan' },
-    { verb: 'dash', action: 'dash', label: 'STEP', side: 'right', x: 1.80, y: 1.95, w: 1.00, h: 1.00, tone: 'plain' },
-    { verb: 'magic', action: 'magic', label: 'DÉCRET', side: 'right', x: 3.00, y: 0.80, w: 1.00, h: 1.00, tone: 'blue' },
-    { verb: 'sorgi', action: 'sorgi', label: 'SORGI', side: 'right', x: 3.05, y: 2.20, w: 1.00, h: 1.00, tone: 'violet' },
+    { verb: 'jump', action: 'jump', label: 'JUMP', side: 'right', x: 1.70, y: 0.42, w: 1.20, h: 1.30, tone: 'plain', sustain: TAP_WORTH },
+    { verb: 'heavy', action: 'heavy', label: 'RISE', side: 'right', x: 0.45, y: 1.70, w: 1.25, h: 1.25, tone: 'cyan' },
+    { verb: 'dash', action: 'dash', label: 'STEP', side: 'right', x: 1.80, y: 1.95, w: 1.20, h: 1.20, tone: 'plain' },
+    { verb: 'magic', action: 'magic', label: 'DÉCRET', side: 'right', x: 3.00, y: 0.80, w: 1.15, h: 1.20, tone: 'blue' },
   ],
 };
 
@@ -210,6 +236,7 @@ export class TouchControls {
     this.layout = layout;
     this.visible = false;
     this.dir = 0;
+    this.pressingDown = false;
     this.steerPointer = null;
     this.heldBy = new Map(); // pointerId -> {action, el}
 
@@ -240,15 +267,22 @@ export class TouchControls {
   _buildSteer(c) {
     const el = document.createElement('div');
     el.className = 'touch-target touch-steer';
-    el.innerHTML = '<span class="l">◀</span><span class="r">▶</span>';
+    el.innerHTML = '<span class="l">◀</span><span class="r">▶</span><span class="d">▼</span>';
     this._place(el, c);
     this.root.appendChild(el);
     this.steer = el;
 
+    // Horizontal and vertical read off the same point of contact
+    // independently, the way a real stick's two axes do — a thumb can hold a
+    // direction and `down` together without that being two targets.
     const read = (e) => {
       const r = el.getBoundingClientRect();
       const u = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
       this._setDir(u > c.deadzone ? 1 : u < -c.deadzone ? -1 : 0);
+      if (c.down) {
+        const v = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
+        this._setDown(v > c.downDeadzone);
+      }
     };
     el.addEventListener('pointerdown', (e) => {
       e.preventDefault();
@@ -263,6 +297,7 @@ export class TouchControls {
       if (e.pointerId !== this.steerPointer) return;
       this.steerPointer = null;
       this._setDir(0);
+      this._setDown(false);
     };
     el.addEventListener('pointerup', up);
     el.addEventListener('pointercancel', up);
@@ -324,9 +359,28 @@ export class TouchControls {
     this.steer.classList.toggle('r', dir === 1);
   }
 
+  /**
+   * The stick's third state, independent of `_setDir`'s two.
+   *
+   * `player.js` reads `down` exactly as it reads the keyboard's `S` /
+   * `ArrowDown` — see `engine/input.js` — so this is the whole touch route
+   * for SORGI. Nothing here knows that; it just holds a direction the same
+   * way the keyboard does.
+   */
+  _setDown(on) {
+    if (on === this.pressingDown) return;
+    this.pressingDown = on;
+    const action = this.layout.steer.down;
+    if (!action) return;
+    if (on) this.input.actionDown(action);
+    else this.input.actionUp(action);
+    this.steer.classList.toggle('d', on);
+  }
+
   /** Let go of everything — pausing, dying, or losing the window. */
   releaseAll() {
     this._setDir(0);
+    this._setDown(false);
     for (const [, held] of this.heldBy) {
       held.el.classList.remove('on');
       // `now`: a sustained jump must not outlive the pause that interrupted it.

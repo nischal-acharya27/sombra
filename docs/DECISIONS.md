@@ -1204,6 +1204,32 @@ an Android app, full HP tuning becomes testable on-device again without this
 workaround, and this decision should be revisited then — restore real HP
 values as part of that port, not before.
 
+## The frozen telegraph gate's FULL PLAYTHROUGH probe stays red under the HP hack, deferred to the ten-gate checkpoint
+
+Settled 2026-08-07, from issue #22 ("The frozen telegraph gate is failing on 4
+of 5 canonical seeds").
+
+**Confirmed, not noise.** Reproduced independently on all five canonical seeds
+at `f243d6f`: 4 of 5 FAIL (p 0.103, 0.060, 0.145, 0.397; only `7777777` clears,
+at p 0.026), against a documented false-negative rate of roughly two seeds in
+nine. The pattern holds both before and after #18's fix, so that change isn't
+the cause.
+
+**Suspected mechanism.** The HP hack above set every villain/boss to `hp: 5` —
+equal to a single light attack. `FULL PLAYTHROUGH`'s signed-rank test measures
+the damage-taken gap between a bot that reads tells and one that ignores them;
+one-shot-kill minimizes both bots' exposure time alike, which would narrow
+that gap regardless of seed. Not confirmed by isolating the mechanism —
+only by correlation and the test's own stated premise.
+
+**Deferred, not fixed, until the ten-gate campaign is complete.**
+Reconciling this — restoring real HP, reworking the gate's math to tolerate
+one-shot HP, or something else — is a call between two already-recorded
+decisions (the HP hack and the frozen gate) that shouldn't be made piecemeal
+mid-campaign. Revisit it at the same checkpoint as the HP hack itself, once
+all ten gates are built. Until then, a red `FULL PLAYTHROUGH` row on 4-of-5
+seeds is expected here, not a regression to chase.
+
 ## The System window pauses the fight it explains
 
 Settled 2026-08-06, via `/grill-with-docs` on issue #18 ("The System covers
@@ -1286,3 +1312,30 @@ side effect having nothing to do with the pause's own duration — that
 composition shift is what swamps the raw pause time in this particular
 metric. **This measured range — not the 11.7s estimate — is what a future
 `FULL PLAYTHROUGH` change should be checked against.**
+
+## The steer control becomes a stick; SORGI goes back to hold-down + heavy
+
+Settled 2026-08-07, from issue #17 (the first phone playtest's touch-control
+findings) via `/grill-with-docs`. Reverses part of § The touch budget's
+constraint 1.
+
+**The steer pad becomes a joystick — PS/Xbox-style, direction only, held with
+the thumb.** It replaces the one-axis slide-to-steer pad. SORGI returns to a
+held-direction chord: hold down on the stick, press the heavy-attack button —
+the same `down` + `heavy` combination the keyboard already sends. The
+dedicated `sorgi` touch action is retired; touch converges on the keyboard's
+existing route through `player.js`.
+
+**Constraint 1 ("no chord may be required") is reversed for this one case,
+not in general.** It was written against the keyboard's `hold S + K`, where
+one hand is fully committed to two simultaneous demands. Holding a direction
+on a stick the thumb is already resting on is a single continuous gesture,
+not a second competing input, so it isn't the chord the constraint was
+guarding against. Constraint 3 ("no beat may require a direction plus two
+buttons at once") is untouched and still stands.
+
+**Not yet resolved by this decision, left to implementation:** whether
+`tools/touchcheck.js`'s `no chord` check needs to change shape now that a
+held direction is expected, and the exact stick geometry (round vs. a
+three-way control, given the game has no vertical movement). Both are
+mechanical follow-ons of the decision above, not open design questions.
