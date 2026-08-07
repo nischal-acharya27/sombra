@@ -138,6 +138,22 @@ export const STRINGS = {
   GATE4_BEAT_CLEARED_BIG: 'STILL UNFILLED',
   GATE4_BEAT_CLEARED_BODY: 'One fewer mouth, and the hunger was never the point.',
 
+  GATE5_NAME: 'Tiryak-lok',
+  GATE5_WARDEN_TITLE: 'VYAGHRI',
+  GATE5_DEN_TITLE: 'THREAT DETECTED',
+  GATE5_DEN_BODY: 'Raakchyas × 3',
+  GATE5_HERD_TITLE: 'THREAT DETECTED',
+  GATE5_HERD_BODY: 'Raakchyas × 2  ·  Charger × 1',
+  GATE5_STAMPEDE_TITLE: 'THREAT DETECTED',
+  GATE5_STAMPEDE_BODY: 'Raakchyas × 3  ·  Charger × 2',
+  GATE5_VYAGHRI_TITLE: 'GATE WARDEN',
+  GATE5_BEAT_ENTER_TITLE: 'THE SYSTEM',
+  GATE5_BEAT_ENTER_BIG: 'UNABLE TO CLASSIFY',
+  GATE5_BEAT_ENTER_BODY: 'No judgment reaches this far down. Nothing here asks to be spared it.',
+  GATE5_BEAT_CLEARED_TITLE: 'THE SYSTEM',
+  GATE5_BEAT_CLEARED_BIG: 'STILL UNCLASSIFIED',
+  GATE5_BEAT_CLEARED_BODY: 'It does not know what it just watched die, only that it did.',
+
   // -- title screen -------------------------------------------------------
   /** `n` is 1-based; `name` is the resumed gate's own name. */
   TITLE_TAG: (n, name) => `GATE ${n} — ${name}`,

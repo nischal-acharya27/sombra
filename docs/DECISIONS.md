@@ -1716,3 +1716,117 @@ Tantrik fight.
 Gates 5–10 are otherwise unstarted. Build order is unchanged: author one gate
 at a time, Tier 1 clean, `?sim` clean across the five seeds, played before the
 next one starts — and this time, played.
+
+## Gate 5 (Tiryak-lok): both owed playtests cleared, Vyaghri authored
+
+The session that opened this work reported both debts from gate 4's handoff
+paid: gate 3 and gate 4 played on a phone, on the touch controls that were
+built alongside them, and both ran well. That closes the checkpoint
+`SPEC-CAMPAIGN.md` names before the next gate is authored, for the first time
+since gate 2 — gates 3 and 4 were both authored back to back against a
+knowingly deferred playtest, recorded as such in this file's own prior
+entries. Gate 5 is the first gate since 2 to start clean.
+
+**No new archetype, so the Warden is a second elevation of an existing one,
+not a fifth.** `docs/SPEC-CAMPAIGN.md`'s table is explicit that gate 5
+introduces nothing new — "No judgment, no speech, no negotiation. The densest
+beast encounters in the game" — so the gate's whole job is making raakchyas
+and charger, both already taught, read as a pack rather than a queue of solo
+fights. Its Warden, the Pack-Mother, follows from that directly: `VYAGHRI` in
+`src/game/config.js` extends `CHARGER` exactly the way `KEVAT` already does,
+one gate earlier. Two Wardens sharing an archetype key is not a shortcut
+around authoring a new one — `docs/SPEC-CAMPAIGN.md`'s "Wardens are
+configuration, not code" and `CONTEXT.md`'s own definition of Warden ("built
+by parameterising a common archetype... one signature addition") name no rule
+against reusing the same archetype twice, and a beast realm reaching for the
+one archetype that already reads as an animal charging a lane is the fit,
+not a compromise. Its signature addition is one further than the Kevat's own:
+`charge.chain: 3` against `KEVAT`'s 2 — the Pack-Mother does not stop at two.
+
+**Density is authored as three grunt encounters that thicken in sequence, not
+as one large one.** The Den (Raakchyas ×3) → the Herd (Raakchyas ×2, Charger
+×1) → the Stampede (Raakchyas ×3, Charger ×2) — the densest pre-Warden
+encounter the campaign has built — each sealed by `gatecheck.js`'s encounter-
+lock check the same as every prior gate's. Five chambers rather than four,
+the first gate longer than its predecessor since gate 1, because a build-up
+across three fights needed room the flatter four-chamber gates didn't ask
+for.
+
+**`solo debut` reads `nothing new here`, correctly, rather than failing
+open.** The check exists to catch a new archetype met in a crowd; gate 5
+introduces none, so it has nothing to assert and says so rather than passing
+silently on an empty set — worth naming because a check that goes quiet when
+it has nothing to check is indistinguishable from a check nobody wired up
+until someone reads what it printed.
+
+**Verification status.** `?sim` across all five recorded seeds: gate 5's
+Tier 1 rows all PASS (jump reserve 26%, matching every prior gate's own
+figure; 12 spawns clear; 5/5 platforms reachable; 4 encounter locks sealed;
+`enemy types` resolves raakchyas/charger/warden → charger). No suite row
+moved beyond the already-frozen deferred set (`ranged` boss, `ranged
++chaya`, charger `recovery-window`, charger `leaves-remnant`, occasionally
+flaky `signed-rank`). Run headless via Chrome
+(`--use-angle=swiftshader-webgl`) rather than `tools/serve.py` in a real
+browser, since no interactive session was available this pass.
+
+### Handoff: what the next session picks up
+
+**Gate 5 has not been played by a human.** Same checkpoint as every gate
+before it: play it, on a phone, before gate 6 is authored. Look specifically
+at whether the three grunt encounters actually read as escalating density
+rather than as three copies of the same fight, and whether the Pack-Mother's
+triple chain reads as "the pack doesn't stop at two" or as an unfair third
+hit nobody was taught to expect out of the Kevat's own two.
+
+Gates 6–10 are otherwise unstarted. Gate 6 (the human realm, no new
+archetype per the table, boss-tier — **The Magistrate**, the hinge of the
+campaign and "the first real conversation in the game") is next once gate
+5's playtest is done. Build order is unchanged: author one gate at a time,
+Tier 1 clean, `?sim` clean across the five seeds, played before the next one
+starts.
+
+## Amended 2026-08-08: the per-gate playtest checkpoint is dropped
+
+`SPEC-CAMPAIGN.md` § Further Notes and every handoff since gate 2 have named
+a human playtest, on a phone, as the checkpoint before the next gate is
+authored. That checkpoint is retired for gates 6–10.
+
+**Why.** Each gate session up to now has spent part of its budget re-deriving
+whether the last gate's playtest debt was paid before it could start the
+next one, and gates 3 and 4 were authored back to back with that debt
+knowingly deferred anyway — recorded as a decision each time rather than a
+lapse, which is itself a sign the checkpoint was being paid around rather
+than paid. The thing the checkpoint protects — a phone can actually clear
+what `gatecheck.js` only proves arithmetically — was answered directly this
+session: gates 3 and 4 were both played on a phone, on the built touch
+controls, and both ran well. That is the proof the checkpoint existed to
+get, and getting it once establishes that the touch scheme itself holds,
+not only that one gate's geometry does.
+
+**What replaces it.** Every other gate of Tier 1 and `?sim` still applies,
+unchanged, to every gate: jump reserve, spawn points, reachability,
+encounter locks, enemy types, solo debut, telegraphs, all clean across the
+five recorded seeds before a gate is considered built. What changes is only
+*when* a human plays: gates 6–10 are authored back to back, session by
+session, and the campaign is played end to end — on a phone — only once all
+ten gates exist. One full-campaign playtest, not nine per-gate ones.
+
+**The honest risk, named rather than hidden.** This is the same shape of
+amendment the project has made once before — see § The next milestone is
+depth, not breadth, amended 2026-08-03 — and that entry's own warning
+applies here too: a rule overturned by the person it constrains, on the
+grounds that its conditions were met, is exactly how a load-bearing rule
+dies quietly. The check is the same one that entry proposed: if all ten
+gates are authored and the campaign is unplayed at the end of it, this
+amendment was a rationalisation. Tier 1 and `?sim` catch authoring and
+mechanic bugs; neither one can say whether ten gates in a row plays well,
+and nothing stands in for that until gate 10 is built.
+
+### Handoff: what the next session picks up
+
+No playtest gate blocks gate 6. Build it now: the human realm, no new
+archetype per `SPEC-CAMPAIGN.md`'s table, boss-tier — **The Magistrate**,
+the campaign's hinge, "the first real conversation in the game," where the
+hunter learns Yama stopped. Tier 1 clean, `?sim` clean across the five
+recorded seeds, same as every gate before it. Then hand off to gate 7,
+same shape, no playtest between.

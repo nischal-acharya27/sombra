@@ -559,6 +559,42 @@ export const ATRIPTA = {
   contactDamage: 0,
 };
 
+/**
+ * Vyaghri — the Pack-Mother, the animal realm's Warden.
+ *
+ * An existing archetype, elevated, exactly as `KEVAT` is to `CHARGER` — gate
+ * 5 introduces no new archetype per `docs/SPEC-CAMPAIGN.md`'s table, so its
+ * Warden is a second elevation of the same one, not a fifth. The signature
+ * addition is the same shape as the Kevat's: `charge.chain` goes to 3 rather
+ * than 2, one more commitment than the hunter has ever had to read out of a
+ * single wind-up — fitting a gate whose whole job is teaching that a beast
+ * pack does not stop at two.
+ *
+ * `cooldown` is tighter than `CHARGER`'s and even `KEVAT`'s: the density this
+ * gate spends four encounters building is the setup, and the Warden is meant
+ * to read as what the pack has been rehearsing the whole way in.
+ */
+export const VYAGHRI = {
+  ...CHARGER,
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hw: 0.72,
+  hh: 0.7,
+  speed: 3.4,
+  charge: {
+    ...CHARGER.charge,
+    range: 8,
+    speed: 19,
+    dur: 0.48,
+    damage: 16,
+    knock: 10,
+    /** One more than the Kevat's — the Pack-Mother does not stop at two. */
+    chain: 3,
+  },
+  cooldown: [0.7, 1.2],
+  exp: 430,
+  contactDamage: 0,
+};
+
 export const GUARDIAN = {
   hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 1.5,

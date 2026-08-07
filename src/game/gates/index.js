@@ -9,5 +9,6 @@ import { GATE_1 } from './gate1.js';
 import { GATE_2 } from './gate2.js';
 import { GATE_3 } from './gate3.js';
 import { GATE_4 } from './gate4.js';
+import { GATE_5 } from './gate5.js';
 
-export const GATES = [GATE_1, GATE_2, GATE_3, GATE_4];
+export const GATES = [GATE_1, GATE_2, GATE_3, GATE_4, GATE_5];
