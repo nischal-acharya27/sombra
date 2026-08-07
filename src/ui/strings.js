@@ -171,6 +171,23 @@ export const STRINGS = {
   GATE6_BEAT_CLEARED_BIG: 'YAMA STOPPED JUDGING',
   GATE6_BEAT_CLEARED_BODY: 'He could not bear it. Someone still has to.',
 
+  // -- gate 7: Asura-lok -----------------------------------------------------
+  GATE7_NAME: 'Asura-lok',
+  GATE7_WARDEN_TITLE: 'AMAR-YODDHA',
+  GATE7_VANGUARD_TITLE: 'THREAT DETECTED',
+  GATE7_VANGUARD_BODY: 'Raakchyas × 2  ·  Charger × 1',
+  GATE7_LINE_TITLE: 'THREAT DETECTED',
+  GATE7_LINE_BODY: 'Kawach × 2  ·  Raakchyas × 1',
+  GATE7_MELEE_TITLE: 'THREAT DETECTED',
+  GATE7_MELEE_BODY: 'Raakchyas × 2  ·  Charger × 1  ·  Kawach × 1  ·  Tantrik × 1  ·  Bhoot-Batti × 1',
+  GATE7_YODDHA_TITLE: 'GATE WARDEN',
+  GATE7_BEAT_ENTER_TITLE: 'THE SYSTEM',
+  GATE7_BEAT_ENTER_BIG: 'NO CEASEFIRE ON RECORD',
+  GATE7_BEAT_ENTER_BODY: 'They fought this long before the Wheel stopped, and never noticed.',
+  GATE7_BEAT_CLEARED_TITLE: 'THE SYSTEM',
+  GATE7_BEAT_CLEARED_BIG: 'ONE FEWER COMBATANT',
+  GATE7_BEAT_CLEARED_BODY: 'The war does not end because one side changed by one.',
+
   // -- title screen -------------------------------------------------------
   /** `n` is 1-based; `name` is the resumed gate's own name. */
   TITLE_TAG: (n, name) => `GATE ${n} — ${name}`,

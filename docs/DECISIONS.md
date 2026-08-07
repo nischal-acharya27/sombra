@@ -1892,3 +1892,69 @@ Ever-Warring**) is next. Build order per the dropped-checkpoint amendment:
 author one gate at a time, Tier 1 clean, `?sim` clean across the five
 recorded seeds, no playtest between — the campaign is played end to end,
 on a phone, only once all ten gates exist.
+
+## Gate 7 (Asura-lok): Amar-Yoddha authored, a third elevation of Charger
+
+Authored 2026-08-08, continuing straight from the handoff above — no
+playtest checkpoint owed before this one, same standing amendment.
+
+**No new archetype, so the Warden is a third elevation of the same one, not
+a fourth.** `docs/SPEC-CAMPAIGN.md`'s table names nothing new for gate 7 and
+calls it "the most fight-dense gate" — war without end, and the asuras "do
+not know the Wheel stopped and would not care." `AMAR_YODDHA` in
+`src/game/config.js` extends `CHARGER` exactly as `KEVAT` and `VYAGHRI`
+already do; a third reuse follows directly from `VYAGHRI`'s own entry in
+this file, which already argued the point against a second. The signature
+addition continues the escalation those two started: `charge.chain: 4`
+against the Pack-Mother's 3 — an asura does not stop charging because it has
+already charged three times. `charge.windup` is untouched, same as every
+prior elevation: no new telegraph, because there is nothing left to teach.
+`cooldown` is the tightest of the three, for the same reason `VYAGHRI`'s is
+tighter than `KEVAT`'s — the density the gate spends three encounters
+building is the setup the Warden is meant to read as the culmination of.
+
+**Density is authored as three grunt encounters that each combine more
+archetypes than the last, ending in the campaign's densest pre-Warden
+fight.** The Vanguard (raakchyas ×2, charger ×1 — the pairing gate 5 already
+taught, met on this gate's own ground) → the Line (kawach ×2, raakchyas ×1 —
+an armoured front rather than a lone shield) → the Melee (raakchyas ×2,
+charger ×1, kawach ×1, tantrik ×1, bhoot-batti ×1 — every archetype the
+campaign has taught, together, six bodies against the five of gate 5's own
+Stampede), each sealed by `gatecheck.js`'s encounter-lock check the same as
+every prior gate's.
+
+**The word-budget check caught a real miss on the first pass.** The `enter`
+beat's body was authored at 15 words on its own, but `storyBeats()` in
+`tools/gatecheck.js` counts `big` and `body` together against the 16-word
+glance ceiling — `NO CEASEFIRE ON RECORD` (4 words) plus the original body
+put the beat at 19, over budget. Trimmed to `They fought this long before
+the Wheel stopped, and never noticed.`, which reads the same idea shorter
+rather than dropping it. Worth naming because gates 2–6 never exercised this
+edge — their `big` strings are short enough that authoring the body alone
+against the 16-word figure happened to be safe, and gate 7 is the first
+descriptor where that coincidence ran out.
+
+**Verification status.** `?sim` across all five recorded seeds (headless
+Chrome, `--use-angle=swiftshader-webgl`): gate 7's Tier 1 rows all PASS
+(jump reserve 26%, matching every prior gate's own figure; 13 spawns clear;
+5/5 platforms reachable; 4 encounter locks sealed; `enemy types` resolves
+raakchyas/charger/kawach/tantrik/bhootBatti/warden → charger; `solo debut`
+correctly reports `nothing new here`; `story beats` clean on all five seeds
+after the trim above). No suite row moved beyond the already-frozen deferred
+set (`ranged` boss, `ranged +chaya`, charger `recovery-window`, charger
+`leaves-remnant`, occasionally flaky `signed-rank` — all the documented
+HP-hack regressions, untouched by this gate). No `boss.js`, `models.js` or
+`palette.js` change was needed: the Warden reuses the Charger's existing
+class and rig, exactly as `KEVAT` and `VYAGHRI` did.
+
+### Handoff: what the next session picks up
+
+Gates 8–10 are otherwise unstarted. Gate 8 (the devas — Deva-lok, palette
+returning to gate 1's pastel per the spec's own "art direction's payoff,"
+Warden **The Long-Lived** — boss-tier, one of the four Guardian-class
+fights) is next, and per `docs/SPEC-CAMPAIGN.md`'s locked table it needs a
+bespoke `Boss` subclass and rig, the same relationship `Hakim` has to
+`Goru-Mukh`, not a fourth elevation of an existing grunt. Build order per
+the dropped-checkpoint amendment: author one gate at a time, Tier 1 clean,
+`?sim` clean across the five recorded seeds, no playtest between — the
+campaign is played end to end, on a phone, only once all ten gates exist.

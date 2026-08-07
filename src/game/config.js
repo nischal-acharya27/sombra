@@ -595,6 +595,46 @@ export const VYAGHRI = {
   contactDamage: 0,
 };
 
+/**
+ * Amar-Yoddha — the Ever-Warring, Asura-lok's Warden.
+ *
+ * An existing archetype, elevated, exactly as `KEVAT` and `VYAGHRI` are to
+ * `CHARGER` — gate 7 introduces no new archetype per
+ * `docs/SPEC-CAMPAIGN.md`'s table, and a third elevation of the same one is
+ * the fit `docs/DECISIONS.md`'s Vyaghri entry already argued for reuse, not a
+ * shortcut around authoring a fourth. The signature addition continues the
+ * same escalation: `charge.chain: 4`, one more than the Pack-Mother's 3 — an
+ * asura does not stop charging because it has already charged three times,
+ * which is the whole idea of a war without end. `charge.windup` is untouched,
+ * same as every prior elevation: no new telegraph, because there is nothing
+ * left to teach.
+ *
+ * `cooldown` is the tightest of the three — Asura-lok is named "the most
+ * fight-dense gate" in the spec, and the Warden closing it is meant to read
+ * as the density the gate has been building the whole way in, the same job
+ * `VYAGHRI.cooldown` already does for gate 5.
+ */
+export const AMAR_YODDHA = {
+  ...CHARGER,
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hw: 0.7,
+  hh: 0.72,
+  speed: 3.5,
+  charge: {
+    ...CHARGER.charge,
+    range: 8.5,
+    speed: 20,
+    dur: 0.5,
+    damage: 17,
+    knock: 10,
+    /** One more than the Pack-Mother's — the war does not stop at three. */
+    chain: 4,
+  },
+  cooldown: [0.65, 1.1],
+  exp: 500,
+  contactDamage: 0,
+};
+
 export const GUARDIAN = {
   hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 1.5,
