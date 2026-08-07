@@ -464,6 +464,109 @@ export function buildCharger(skin = null) {
   return root;
 }
 
+// ---------------------------------------------------------------------------
+// Kawach — Naraka's armoured grunt
+// ---------------------------------------------------------------------------
+
+/**
+ * Bulkier and lower than anything gate 1 or 2 built: a plated torso, a
+ * shield bolted to the near arm, a wide low-slung stance. The silhouette has
+ * to say "this does not flinch" before the hunter has swung at it once —
+ * `Kawach.takeHit` in `game/enemies.js` is what makes that literally true for
+ * most of the move list.
+ */
+export function buildKawach(skin = null) {
+  const c = skin || { body: P.kawachPlate, dark: P.kawachPlateDark, eye: P.kawachEye };
+  const root = new THREE.Group();
+  const n = {};
+
+  const body = new THREE.Group();
+  body.position.y = 0.72;
+  root.add(body);
+  n.body = body;
+
+  const torso = part(0.48, 0.56, 0.48, c.body, { pivot: 'bottom', outline: 0.03 });
+  body.add(torso);
+
+  // The plate: a slab bolted over the chest, wider than the body beneath it.
+  const plate = part(0.56, 0.34, 0.54, c.dark, { outline: 0.028 });
+  plate.position.set(0.02, 0.30, 0);
+  torso.add(plate);
+
+  const head = new THREE.Group();
+  head.position.y = 0.62;
+  torso.add(head);
+  n.head = head;
+
+  const helm = part(0.30, 0.26, 0.30, c.dark, { pivot: 'bottom', outline: 0.024 });
+  head.add(helm);
+
+  // Eyes, in the game's shared vocabulary: they flare when a commit is near.
+  for (const side of [-1, 1]) {
+    const eye = decal(0.07, 0.045, c.eye);
+    eye.position.set(0.155, 0.13, side * 0.075);
+    eye.rotation.y = Math.PI / 2;
+    head.add(eye);
+    n[side < 0 ? 'eyeL' : 'eyeR'] = eye;
+  }
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const shoulder = new THREE.Group();
+    shoulder.position.set(0, 0.46, side * 0.28);
+    torso.add(shoulder);
+    n['shoulder' + key] = shoulder;
+
+    const pauldron = part(0.22, 0.20, 0.22, c.dark, { outline: 0.022 });
+    shoulder.add(pauldron);
+
+    const upper = part(0.15, 0.28, 0.15, c.body, { pivot: 'top', outline: 0.02 });
+    upper.position.y = -0.05;
+    shoulder.add(upper);
+
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.28;
+    shoulder.add(elbow);
+    n['elbow' + key] = elbow;
+
+    const fore = part(0.13, 0.26, 0.13, c.dark, { pivot: 'top', outline: 0.02 });
+    elbow.add(fore);
+  }
+
+  // The shield, bolted to the near arm: a slab that reads "this doesn't
+  // flinch head-on" before the bash ever telegraphs.
+  const shield = part(0.05, 0.48, 0.34, c.dark, { outline: 0.02 });
+  shield.position.set(0.10, -0.05, 0);
+  n.elbowL.add(shield);
+
+  // Legs — wide, low. Standing armour, not something built to chase.
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const hip = new THREE.Group();
+    hip.position.set(0, 0, side * 0.15);
+    body.add(hip);
+    n['hip' + key] = hip;
+
+    const thigh = part(0.19, 0.28, 0.19, c.dark, { pivot: 'top', outline: 0.022 });
+    hip.add(thigh);
+
+    const knee = new THREE.Group();
+    knee.position.y = -0.28;
+    hip.add(knee);
+    n['knee' + key] = knee;
+
+    const shin = part(0.17, 0.26, 0.17, c.body, { pivot: 'top', outline: 0.02 });
+    knee.add(shin);
+
+    const foot = part(0.25, 0.09, 0.19, c.dark, { pivot: 'top', outline: 0.018 });
+    foot.position.set(0.04, -0.26, 0);
+    knee.add(foot);
+  }
+
+  root.userData.nodes = n;
+  return root;
+}
+
 /**
  * The shard that marks a claimable body.
  *
@@ -668,6 +771,132 @@ export function buildGuardian() {
     knee.add(shin);
 
     const foot = part(0.60, 0.20, 0.44, P.bossPlateDark, { pivot: 'top', outline: 0.03 });
+    foot.position.set(0.10, -0.78, 0);
+    knee.add(foot);
+  }
+
+  root.userData.nodes = n;
+  return root;
+}
+
+// ---------------------------------------------------------------------------
+// Goru-Mukh — gate 3's Warden
+// ---------------------------------------------------------------------------
+
+/**
+ * The Ox-Headed. Broader than the Dwar-Rakshak, with a snout and a pair of
+ * forward-curving horns rather than the Guardian's short ones — the
+ * silhouette has to read "ox" from across the arena. Naraka's iron and
+ * red-black in place of the Guardian's violet plate, and its own flare: a
+ * branded seal in the chest, ember rather than violet, so the two boss
+ * fights don't blur into one even though the rig underneath borrows the same
+ * joints.
+ */
+export function buildGoruMukh() {
+  const root = new THREE.Group();
+  const n = {};
+
+  const hips = new THREE.Group();
+  hips.position.y = 1.68;
+  root.add(hips);
+  n.hips = hips;
+
+  const torso = part(1.0, 1.14, 1.16, P.narakaIron, { pivot: 'bottom', outline: 0.05 });
+  hips.add(torso);
+  n.torso = torso;
+
+  // The branded seal — Naraka's processing mark, the ember that flares before
+  // it commits. Same telegraph vocabulary as the Dwar-Rakshak's core, read
+  // off a different object.
+  const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.28, 1), glowMaterial({ color: P.narakaCore }));
+  core.position.set(0.50, 0.70, 0);
+  torso.add(core);
+  n.core = core;
+
+  const coreGlow = decal(0.86, 0.86, P.narakaCore, { opacity: 0.4 });
+  coreGlow.position.set(0.51, 0.70, 0);
+  coreGlow.rotation.y = Math.PI / 2;
+  torso.add(coreGlow);
+  n.coreGlow = coreGlow;
+
+  const head = new THREE.Group();
+  head.position.y = 1.14;
+  torso.add(head);
+  n.head = head;
+
+  const skull = part(0.62, 0.46, 0.66, P.narakaIronDark, { pivot: 'bottom', outline: 0.04 });
+  head.add(skull);
+
+  // The snout: a box extending past the skull on +X, which is what makes the
+  // silhouette read "ox" rather than "helmed" at a glance.
+  const snout = part(0.30, 0.24, 0.34, P.narakaIronDark, { outline: 0.03 });
+  snout.position.set(0.42, -0.08, 0);
+  head.add(snout);
+
+  for (const side of [-1, 1]) {
+    const eye = decal(0.07, 0.05, P.narakaCore);
+    eye.position.set(0.32, 0.10, side * 0.14);
+    eye.rotation.y = Math.PI / 2;
+    head.add(eye);
+    n[side < 0 ? 'eyeL' : 'eyeR'] = eye;
+  }
+
+  // Horns — bigger and forward-curving, unlike the Dwar-Rakshak's short pair.
+  for (const side of [-1, 1]) {
+    const horn = part(0.14, 0.74, 0.14, P.narakaHorn, { pivot: 'bottom', outline: 0.03 });
+    horn.position.set(0.10, 0.32, side * 0.30);
+    horn.rotation.z = 0.30;
+    horn.rotation.x = side * 0.5;
+    head.add(horn);
+  }
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const shoulder = new THREE.Group();
+    shoulder.position.set(0, 1.0, side * 0.66);
+    torso.add(shoulder);
+    n['shoulder' + key] = shoulder;
+
+    const pauldron = part(0.54, 0.36, 0.46, P.narakaIron, { outline: 0.04 });
+    pauldron.position.y = 0.06;
+    shoulder.add(pauldron);
+
+    const upper = part(0.32, 0.62, 0.32, P.narakaIronDark, { pivot: 'top', outline: 0.032 });
+    upper.position.y = -0.12;
+    shoulder.add(upper);
+
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.72;
+    shoulder.add(elbow);
+    n['elbow' + key] = elbow;
+
+    const fore = part(0.38, 0.60, 0.38, P.narakaIron, { pivot: 'top', outline: 0.032 });
+    elbow.add(fore);
+
+    const fist = part(0.48, 0.42, 0.48, P.narakaIronDark, { pivot: 'top', outline: 0.036 });
+    fist.position.y = -0.60;
+    elbow.add(fist);
+  }
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const hip = new THREE.Group();
+    hip.position.set(0, 0, side * 0.34);
+    hips.add(hip);
+    n['hip' + key] = hip;
+
+    const thigh = part(0.38, 0.86, 0.42, P.narakaIronDark, { pivot: 'top', outline: 0.034 });
+    hip.add(thigh);
+
+    const knee = new THREE.Group();
+    knee.position.y = -0.86;
+    hip.add(knee);
+    n['knee' + key] = knee;
+
+    const shin = part(0.34, 0.78, 0.36, P.narakaIron, { pivot: 'top', outline: 0.032 });
+    knee.add(shin);
+
+    const foot = part(0.62, 0.20, 0.46, P.narakaIronDark, { pivot: 'top', outline: 0.03 });
     foot.position.set(0.10, -0.78, 0);
     knee.add(foot);
   }

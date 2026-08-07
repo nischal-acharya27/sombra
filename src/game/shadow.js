@@ -10,7 +10,7 @@
 // design exists so the player always knows what happened to them, and four
 // allies in a corridor arena destroy that.
 
-import { Raakchyas, Charger } from './enemies.js';
+import { Raakchyas, Charger, Kawach } from './enemies.js';
 import { CHAYA } from './config.js';
 import { P } from '../render/palette.js';
 import { clamp } from '../engine/mathx.js';
@@ -191,12 +191,27 @@ export class RaakchyasChaya extends chayaOf(Raakchyas) {}
 /** A chaya raised from a Charger's remnant: plant, telegraph, run a lane. */
 export class ChargerChaya extends chayaOf(Charger) {}
 
+/**
+ * A chaya raised from a Kawach's remnant: plant, telegraph, one bash.
+ *
+ * Its armour rule does not come along for the ride — `chayaOf` builds `cfg`
+ * from `CHAYA` plus the source's `speed`/`hw`/`hh` only, so this ally has no
+ * `armorBreakLaunch` of its own and `Kawach.takeHit`'s guard simply reads
+ * `undefined` as "nothing qualifies", never firing. That is the right
+ * failure direction: an ally that could not be hit at all would be a bug, an
+ * ally whose armour never mattered in the first place is merely one that
+ * never had any to begin with.
+ */
+export class KawachChaya extends chayaOf(Kawach) {}
+
 // `extract()` reads this off the dying enemy's own class (see `Corpse`
 // above), rather than through a lookup table kept elsewhere — the same place
 // each archetype already declares `leavesCorpse = true` is where a future
 // archetype would add its own chaya class. It is assigned here, not in
 // enemies.js, because `enemies.js` cannot import from this module: this
-// module already imports `Raakchyas` and `Charger` from it to build these two
-// classes, and a two-way import between them would make load order matter.
+// module already imports `Raakchyas`, `Charger` and `Kawach` from it to build
+// these classes, and a two-way import between them would make load order
+// matter.
 Raakchyas.chayaClass = RaakchyasChaya;
 Charger.chayaClass = ChargerChaya;
+Kawach.chayaClass = KawachChaya;

@@ -447,6 +447,51 @@ export const BHOOT_BATTI = {
   contactDamage: 0,
 };
 
+/**
+ * Kawach — Naraka's armoured grunt.
+ *
+ * The raakchyas comes to you, the charger plants and runs a lane; this one
+ * stands its ground and shrugs. Its threat is not a lane or a leap, it is
+ * that most of the move list does nothing to it — see `Kawach.takeHit` in
+ * `enemies.js`, and `armorBreakLaunch` below, which is the number that
+ * decides "nothing" from "everything".
+ */
+export const KAWACH = {
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hw: 0.66,
+  hh: 0.76,
+  speed: 2.6,
+  chaseRange: 26,
+  /** How close it walks in before it plants for a bash — a shield-bash needs no lane. */
+  stopAt: 1.7,
+  bash: {
+    range: 2.3,
+    // Comfortably clear of the 0.42 s floor `telegraphs()` in
+    // `tools/gatecheck.js` holds every tell to. Nothing forces this one tight
+    // the way the charger's lane math does — a planted, stationary swing has
+    // no distance to close, so the tell can afford to be generous and still
+    // teach "this one you cannot just walk through" on its own.
+    windup: 0.6,
+    active: 0.22,
+    recover: 1.15,
+    damage: 17,
+    knock: 10,
+    shake: 0.22,
+  },
+  cooldown: [0.9, 1.6],
+  /**
+   * The launcher's own `launch` value (see `ATTACKS.launcher` above), not a
+   * boolean. `Kawach.takeHit` in `enemies.js` compares an incoming hit's
+   * `launch` against this directly — matching the launcher's number exactly
+   * means "what breaks the armor" is answerable by reading one existing
+   * config entry rather than a second threshold that could quietly drift out
+   * of sync with it.
+   */
+  armorBreakLaunch: 13.0,
+  exp: 42,
+  contactDamage: 0,
+};
+
 export const GUARDIAN = {
   hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 1.5,
@@ -471,6 +516,38 @@ export const GUARDIAN = {
     volley: { windup: 0.7, shots: 3, gap: 0.22, recover: 0.8, damage: 13, speed: 17, shake: 0.12 },
   },
   cooldown: [0.9, 1.7], // idle window between attacks, shortened when enraged
+};
+
+/**
+ * Goru-Mukh — the Ox-Headed, Naraka's Warden.
+ *
+ * Three attacks rather than the Guardian's four: no volley. A judge of the
+ * hells does not need to keep its distance, and the campaign already has one
+ * ranged boss attack to teach — a second only for gate 3 to reuse would be
+ * repetition dressed as a new fight. `horn` reuses the Guardian's `charge`
+ * shape, `stamp` its `slam`, `sweep` its own name — same arithmetic, gate 3's
+ * own numbers.
+ *
+ * Its sweep enraged is the tightest wind-up in the game after the Guardian's
+ * own: 0.62 × 0.78 = 0.484 s, thirty-odd ms clear of the 0.42 s floor
+ * `telegraphs()` holds every tell to. Worth knowing, not a number to shave.
+ */
+export const GORU_MUKH = {
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hw: 1.7,
+  hh: 2.0,
+  speed: 3.4,
+  exp: 360,
+  contactDamage: 0,
+  enrageAt: 0.5,
+  enrageSpeedMul: 1.3,
+  enrageWindupMul: 0.78,
+  attacks: {
+    charge: { windup: 0.78, speed: 18, dur: 0.8, recover: 0.95, damage: 22, knock: 13, shake: 0.3 },
+    slam: { windup: 0.70, rise: 0.34, fall: 0.24, recover: 1.0, damage: 25, radius: 5.6, knock: 15, shake: 0.55 },
+    sweep: { windup: 0.62, active: 0.30, recover: 0.8, damage: 18, reach: 5.2, knock: 11, shake: 0.28 },
+  },
+  cooldown: [0.9, 1.7],
 };
 
 /** Style ranks. `decay` is meter lost per second while not attacking. */

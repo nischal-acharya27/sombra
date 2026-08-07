@@ -7,9 +7,9 @@
 import * as THREE from 'three';
 import { Level } from './level.js';
 import { Player } from './player.js';
-import { Raakchyas, Charger, BhootBatti, Bolt } from './enemies.js';
+import { Raakchyas, Charger, Kawach, BhootBatti, Bolt } from './enemies.js';
 import { Corpse } from './shadow.js';
-import { Guardian } from './boss.js';
+import { Guardian, GoruMukh } from './boss.js';
 import { GameCamera } from './camera.js';
 import { VFX } from '../render/vfx.js';
 import { buildShard } from '../render/models.js';
@@ -43,7 +43,14 @@ function attackDamage(e) {
  * A gate names a grunt archetype directly and says `warden` for its own — which
  * archetype that is, and with what numbers, is the Warden block's to say.
  */
-export const ARCHETYPES = { raakchyas: Raakchyas, charger: Charger, bhootBatti: BhootBatti, guardian: Guardian };
+export const ARCHETYPES = {
+  raakchyas: Raakchyas,
+  charger: Charger,
+  kawach: Kawach,
+  bhootBatti: BhootBatti,
+  guardian: Guardian,
+  goruMukh: GoruMukh,
+};
 
 export class Game {
   /**

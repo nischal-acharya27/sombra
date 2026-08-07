@@ -8,8 +8,8 @@
 
 import * as THREE from 'three';
 import { Actor, boxHit } from './actor.js';
-import { buildRaakchyas, buildCharger, buildBhootBatti } from '../render/models.js';
-import { RAAKCHYAS, CHARGER, BHOOT_BATTI, PHYS, JUGGLE } from './config.js';
+import { buildRaakchyas, buildCharger, buildKawach, buildBhootBatti } from '../render/models.js';
+import { RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, PHYS, JUGGLE } from './config.js';
 import { P } from '../render/palette.js';
 import { clamp, damp, lerp, rand } from '../engine/mathx.js';
 
@@ -643,6 +643,221 @@ export class Charger extends Enemy {
       const off = (i % 2) * Math.PI;
       leg.rotation.z = lerp(leg.rotation.z, Math.sin(this.legPhase + off) * 0.5 * sign + legSwing * sign, k);
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Kawach
+// ---------------------------------------------------------------------------
+
+/**
+ * Naraka's armoured grunt.
+ *
+ * It does not chase and it does not run a lane — it walks in close and
+ * plants for one heavy, telegraphed bash. The archetype's whole idea lives in
+ * `takeHit` below rather than in this state machine, which is otherwise the
+ * charger's shape with a shorter approach and a stationary attack in place of
+ * a charge: chase → telegraph → attack → recover, `_canCommit()` for the
+ * same ally-reuse symmetry the raakchyas and charger keep, `chargeHitSet` for
+ * one victim per commit, `leavesCorpse = true` because PUKAR's promise cannot
+ * be selectively true.
+ */
+export class Kawach extends Enemy {
+  static stats = KAWACH;
+
+  constructor(level, ctx, x, y, cfg = KAWACH, skin = null) {
+    super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
+    this.root = buildKawach(skin);
+    this.n = this.root.userData.nodes;
+    this.finishSetup();
+    this.phase = 0;
+    this.cooldown = rand(cfg.cooldown[0], cfg.cooldown[1]);
+    /** One victim per commit — the same convention the charger and Guardian read. */
+    this.chargeHitSet = new Set();
+    this.leavesCorpse = true;
+  }
+
+  /** Always, for a hostile Kawach. Mirrors `Charger._canCommit`. */
+  _canCommit() {
+    return true;
+  }
+
+  /**
+   * Armour absorbs anything except a hit that qualifies as `armorBreakLaunch`
+   * or better — see `KAWACH.armorBreakLaunch` in `config.js` for why that
+   * number is the launcher's own `launch` value and not a separate one. A
+   * shrugged-off hit does not so much as flinch the state machine: no hurt
+   * state, no stagger, chase or telegraph or attack keeps running exactly as
+   * it was. A qualifying hit gets none of that protection — it is `Enemy`'s
+   * ordinary reaction, unabridged, because armour that breaks halfway is not
+   * armour breaking.
+   */
+  takeHit({ damage, knock = 0, launch = 0, fromX = 0 }) {
+    if (this.dead) return false;
+    if (launch < this.cfg.armorBreakLaunch) {
+      this.hitFlash = 0.05; // a duller flash than a real hit — a shrug, not a stagger
+      this.ctx.audio?.play('impact');
+      return true;
+    }
+    return super.takeHit({ damage, knock, launch, fromX });
+  }
+
+  update(dt, player) {
+    this.t += dt;
+    this.hitFlash -= dt;
+    this._flash(dt);
+
+    if (this.state === 'dying') return this._dieAnim(dt);
+    if (this.spawnT > 0) this._spawnAnim(dt);
+
+    const B = this.cfg.bash;
+    const dx = player.x - this.x;
+    const dist = Math.abs(dx);
+    const canSee = dist < this.cfg.chaseRange && Math.abs(player.y - this.y) < 6;
+
+    if (this.stagger > 0) {
+      this.stagger -= dt;
+      if (this.stagger <= 0 && this.state === 'hurt') this.state = 'idle';
+    }
+
+    switch (this.state) {
+      case 'idle':
+      case 'chase': {
+        this.cooldown -= dt;
+        if (!canSee) {
+          this.state = 'idle';
+          this.vx = damp(this.vx, 0, 0.001, dt);
+          break;
+        }
+        this.state = 'chase';
+        this.faceToward(player.x);
+
+        if (this._canCommit() && this.cooldown <= 0 && this.grounded && dist < B.range) {
+          this.state = 'telegraph';
+          this.phase = B.windup;
+          this.vx = 0;
+          this.chargeHitSet.clear();
+          this.ctx.audio?.play('growl');
+          break;
+        }
+
+        const want = dist > this.cfg.stopAt ? this.facing * this.cfg.speed : 0;
+        const ahead = this.x + this.facing * 0.9;
+        if (want !== 0 && !this.level.hasFloorAhead(ahead, this.y)) this.vx = 0;
+        else this.vx = damp(this.vx, want, 0.0008, dt);
+        break;
+      }
+
+      case 'telegraph': {
+        // Planted, shield raised, eyes bright — the shared "about to commit"
+        // vocabulary every archetype in this file uses.
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0001, dt);
+        if (this.phase > B.windup * 0.35) this.faceToward(player.x);
+        if (this.phase <= 0) {
+          this.state = 'attack';
+          this.phase = B.active;
+          this.chargeHitSet.clear();
+          this.ctx.audio?.play('pounce');
+        }
+        break;
+      }
+
+      case 'attack': {
+        this.phase -= dt;
+        if (this.phase <= 0) {
+          this.state = 'recover';
+          this.phase = B.recover;
+        }
+        break;
+      }
+
+      case 'recover': {
+        // The punish window a planted swing owes the hunter for reading it.
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0005, dt);
+        if (this.phase <= 0) {
+          this.state = 'chase';
+          this.cooldown = rand(this.cfg.cooldown[0], this.cfg.cooldown[1]);
+        }
+        break;
+      }
+
+      case 'hurt':
+        this.vx = damp(this.vx, 0, 0.06, dt);
+        break;
+    }
+
+    if (this.juggleT > 0) this.juggleT = this.grounded ? 0 : this.juggleT - dt;
+    this.applyGravity(dt, PHYS.gravity * (this.juggleT > 0 ? JUGGLE.gravityMul : 1));
+    this.moveAndCollide(dt);
+    this._animate(dt);
+    this.syncRig();
+  }
+
+  /** Live only during the bash's active window — standing next to it otherwise is safe. */
+  attackBox() {
+    if (this.state !== 'attack' || this.dead) return null;
+    return {
+      x0: this.x - this.hw - 0.3,
+      x1: this.x + this.hw + 0.3,
+      y0: this.y,
+      y1: this.y + this.hh * 2,
+    };
+  }
+
+  currentAttackDamage() {
+    if (this.state !== 'attack' || this.dead) return null;
+    return { damage: this.cfg.bash.damage, knock: this.cfg.bash.knock };
+  }
+
+  _animate(dt) {
+    const n = this.n;
+    const k = 1 - Math.pow(0.0002, dt);
+    const B = this.cfg.bash;
+    let bodyZ = 0;
+    let bodyY = 0;
+    let headZ = 0;
+
+    if (this.state === 'telegraph') {
+      const u = 1 - this.phase / B.windup;
+      bodyZ = -0.08 - u * 0.14;
+      bodyY = -0.05 - u * 0.05;
+      headZ = 0.12 + u * 0.16;
+      const g = 0.3 + u * 0.7;
+      n.eyeL.material.opacity = g;
+      n.eyeR.material.opacity = g;
+      n.eyeL.material.transparent = true;
+      n.eyeR.material.transparent = true;
+      n.eyeL.scale.setScalar(1 + u * 0.6);
+      n.eyeR.scale.setScalar(1 + u * 0.6);
+    } else {
+      n.eyeL.scale.setScalar(damp(n.eyeL.scale.x, 1, 0.001, dt));
+      n.eyeR.scale.setScalar(n.eyeL.scale.x);
+      n.eyeL.material.opacity = 1;
+      n.eyeR.material.opacity = 1;
+    }
+
+    if (this.state === 'attack') {
+      const u = clamp(1 - this.phase / B.active, 0, 1);
+      bodyZ = lerp(0.22, -0.12, u);
+      headZ = lerp(-0.2, 0.1, u);
+      bodyY = -0.08;
+    } else if (this.state === 'recover') {
+      const u = clamp(this.phase / B.recover, 0, 1);
+      bodyZ = -0.1 * u;
+      bodyY = -0.06 * u;
+    } else if (this.state === 'hurt') {
+      bodyZ = 0.2;
+    } else if (this.state === 'chase' && Math.abs(this.vx) > 0.3) {
+      bodyY = Math.abs(Math.sin(this.t * 6)) * 0.03;
+    } else if (this.state !== 'telegraph') {
+      bodyY = Math.sin(this.t * 1.6) * 0.025;
+    }
+
+    n.body.rotation.z = lerp(n.body.rotation.z, bodyZ, k);
+    n.body.position.y = lerp(n.body.position.y, 0.72 + bodyY, k);
+    n.head.rotation.z = lerp(n.head.rotation.z, headZ, k);
   }
 }
 

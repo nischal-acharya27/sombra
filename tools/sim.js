@@ -1148,7 +1148,10 @@ function transition(game, input) {
     finish.releaseAll();
   }
 
-  const walked = arrived && game.state === 'ended';
+  // "Walkable" means the arch took the hunter through — not that the crossing
+  // happened to be the last gate. A campaign that keeps growing must not make
+  // this row read the count of gates that exist.
+  const walked = arrived && game.gateIndex !== 1;
   say(
     'and the crossing is walkable',
     walked,

@@ -106,6 +106,22 @@ export const STRINGS = {
   GATE2_BEAT_CLEARED_BIG: 'RECORD: INCOMPLETE',
   GATE2_BEAT_CLEARED_BODY: 'It logged the crossing. It could not say why.',
 
+  // -- gate 3: Naraka ------------------------------------------------------
+  GATE3_NAME: 'Naraka',
+  GATE3_WARDEN_TITLE: 'GORU-MUKH',
+  GATE3_KAWACH_TITLE: 'THREAT DETECTED',
+  GATE3_KAWACH_BODY: 'Kawach × 1',
+  GATE3_KAWACH_NOTE: 'Its plate turns aside anything that does not send it airborne — that is the one hit that breaks it.',
+  GATE3_PROCESSING_TITLE: 'THREAT DETECTED',
+  GATE3_PROCESSING_BODY: 'Kawach × 1  ·  Raakchyas × 2',
+  GATE3_GORUMUKH_TITLE: 'GATE BOSS',
+  GATE3_BEAT_ENTER_TITLE: 'THE SYSTEM',
+  GATE3_BEAT_ENTER_BIG: 'PROCESSING HALTED',
+  GATE3_BEAT_ENTER_BODY: 'Every soul here is still waiting on a judgment that stopped coming.',
+  GATE3_BEAT_CLEARED_TITLE: 'THE SYSTEM',
+  GATE3_BEAT_CLEARED_BIG: 'ONE FEWER IN LINE',
+  GATE3_BEAT_CLEARED_BODY: 'It cannot say if that is mercy or malfunction.',
+
   // -- title screen -------------------------------------------------------
   /** `n` is 1-based; `name` is the resumed gate's own name. */
   TITLE_TAG: (n, name) => `GATE ${n} — ${name}`,

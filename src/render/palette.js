@@ -68,5 +68,17 @@ export const P = {
   bossCore: 0xb072ff,
   bossHorn: 0xcfc6b0,
 
+  // Naraka — iron and red-black, gate 3's own register. Kept apart from the
+  // Dwar-Rakshak's violet plate and core so the second boss doesn't read as
+  // the first one recoloured.
+  kawachPlate: 0x4a3230,
+  kawachPlateDark: 0x241512,
+  kawachEye: 0xffb347,
+
+  narakaIron: 0x5a2e2e,
+  narakaIronDark: 0x291414,
+  narakaCore: 0xff5a3a,
+  narakaHorn: 0x2c2422,
+
   outline: 0x0a0813,
 };
