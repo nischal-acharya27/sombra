@@ -124,9 +124,9 @@ export const JUMP_HOLD = { rise: RISE, buffer: BUFFER, need: RISE + BUFFER };
  * How much room is left *between* the clusters depends on the screen, and the
  * honest figure is reported by the suite rather than claimed here. In landscape
  * — the orientation the game is for — it is most of the width. At the narrowest
- * portrait the layout supports it is 38 px, so the two clusters very nearly
- * meet along the bottom strip; what saves it there is that they are still below
- * the hunter, and that they are translucent.
+ * portrait the layout supports it, the two clusters very nearly meet along the
+ * bottom strip; what saves it there is that they are still below the hunter,
+ * and that they are translucent.
  */
 export const TOUCH_LAYOUT = {
   unit: UNIT,
@@ -146,14 +146,22 @@ export const TOUCH_LAYOUT = {
    * it is read by `player.js` exactly as the keyboard's `S`/`ArrowDown` is —
    * see `engine/input.js`'s `down` binding — so SORGI needs no route of its
    * own any more.
+   *
+   * `w` and `h` are equal — a second phone playtest (issue #23) asked for the
+   * shape to read as a circular joystick rather than the one-axis slide pad's
+   * rectangle. Nothing about the read above changes: horizontal direction and
+   * `down` stay two independent thresholds off the same point of contact, not
+   * a combined vector, so a round base does not imply diagonal movement the
+   * game still doesn't have. `_buildSteer` draws the circle and the knob that
+   * moves inside it; this descriptor only fixes the box it's read against.
    */
   steer: {
     verb: 'move',
     side: 'left',
     x: 0.25,
     y: 0.35,
-    w: 2.7,
-    h: 1.4,
+    w: 1.8,
+    h: 1.8,
     neg: 'left',
     pos: 'right',
     down: 'down',
@@ -161,7 +169,7 @@ export const TOUCH_LAYOUT = {
     downDeadzone: 0.35,
   },
   buttons: [
-    { verb: 'light', action: 'light', label: 'SLASH', side: 'right', x: 0.30, y: 0.30, w: 1.35, h: 1.32, tone: 'cyan' },
+    { verb: 'light', action: 'light', label: 'SLASH', side: 'right', x: 0.36, y: 0.36, w: 1.62, h: 1.58, tone: 'cyan' },
     /**
      * `sustain` is the one place the touch scheme is not a transcription of
      * the keyboard, and it is here because measuring said it had to be.
@@ -188,10 +196,10 @@ export const TOUCH_LAYOUT = {
      * arc — and a gate that did would be authoring against an input half the
      * players do not have.
      */
-    { verb: 'jump', action: 'jump', label: 'JUMP', side: 'right', x: 1.70, y: 0.42, w: 1.20, h: 1.30, tone: 'plain', sustain: TAP_WORTH },
-    { verb: 'heavy', action: 'heavy', label: 'RISE', side: 'right', x: 0.45, y: 1.70, w: 1.25, h: 1.25, tone: 'cyan' },
-    { verb: 'dash', action: 'dash', label: 'STEP', side: 'right', x: 1.80, y: 1.95, w: 1.20, h: 1.20, tone: 'plain' },
-    { verb: 'magic', action: 'magic', label: 'DÉCRET', side: 'right', x: 3.00, y: 0.80, w: 1.15, h: 1.20, tone: 'blue' },
+    { verb: 'jump', action: 'jump', label: 'JUMP', side: 'right', x: 2.04, y: 0.50, w: 1.44, h: 1.56, tone: 'plain', sustain: TAP_WORTH },
+    { verb: 'heavy', action: 'heavy', label: 'RISE', side: 'right', x: 0.54, y: 2.04, w: 1.50, h: 1.50, tone: 'cyan' },
+    { verb: 'dash', action: 'dash', label: 'STEP', side: 'right', x: 2.16, y: 2.34, w: 1.44, h: 1.44, tone: 'plain' },
+    { verb: 'magic', action: 'magic', label: 'DÉCRET', side: 'right', x: 3.60, y: 0.96, w: 1.38, h: 1.44, tone: 'blue' },
   ],
 };
 
@@ -267,10 +275,14 @@ export class TouchControls {
   _buildSteer(c) {
     const el = document.createElement('div');
     el.className = 'touch-target touch-steer';
-    el.innerHTML = '<span class="l">◀</span><span class="r">▶</span><span class="d">▼</span>';
+    // A knob rather than glyphs — see the descriptor's `w`/`h` note on why the
+    // base is now a circle. `_placeKnob` slides it toward whichever edge is
+    // held, which is the only thing that has to say "left" or "down" now.
+    el.innerHTML = '<div class="knob"></div>';
     this._place(el, c);
     this.root.appendChild(el);
     this.steer = el;
+    this.knob = el.querySelector('.knob');
 
     // Horizontal and vertical read off the same point of contact
     // independently, the way a real stick's two axes do — a thumb can hold a
@@ -357,6 +369,7 @@ export class TouchControls {
     if (now) this.input.actionDown(now);
     this.steer.classList.toggle('l', dir === -1);
     this.steer.classList.toggle('r', dir === 1);
+    this._placeKnob();
   }
 
   /**
@@ -375,6 +388,20 @@ export class TouchControls {
     if (on) this.input.actionDown(action);
     else this.input.actionUp(action);
     this.steer.classList.toggle('d', on);
+    this._placeKnob();
+  }
+
+  /**
+   * Slides the knob toward whichever edge `dir`/`pressingDown` currently
+   * hold, independently on each axis — the same two independent reads
+   * `_setDir`/`_setDown` already make, drawn rather than computed twice.
+   * `26%` keeps the knob inside the base circle at rest and at full
+   * deflection; it is a visual travel distance, not an input threshold.
+   */
+  _placeKnob() {
+    const x = this.dir * 26;
+    const y = this.pressingDown ? 26 : 0;
+    this.knob.style.transform = `translate(calc(-50% + ${x}%), calc(-50% + ${y}%))`;
   }
 
   /** Let go of everything — pausing, dying, or losing the window. */
