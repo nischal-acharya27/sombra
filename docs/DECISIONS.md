@@ -1629,3 +1629,90 @@ Gates 4–10 are otherwise unstarted. Build order is unchanged from
 across the five seeds, played before the next one starts. Gate 4 (the hungry
 ghosts / preta-lok, the summoner archetype, The Unfilled) is next once gate
 3's playtest is done.
+
+## Gate 4 (Preta-lok): Tantrik, Atripta, and the checkpoint knowingly deferred
+
+Authored 2026-08-07, continuing straight from gate 3's handoff above.
+
+**The checkpoint was not met, and that is a recorded decision rather than a
+lapse.** The session that opened this work was told directly: gate 3 will not
+be played now, build the next stage anyway. Asked to confirm given
+`SPEC-CAMPAIGN.md`'s explicit warning that skipping this exact checkpoint is
+the failure that killed two prior versions of this project, the answer held:
+start gate 4, playtest later. So gate 3's own human playtest is still owed,
+and now gate 4's is too — both queued behind whoever plays next, not silently
+dropped. Nothing below substitutes for that; it is the Tier 1/telegraph floor
+the checkpoint sits on top of, same as gate 3's own bots-clean status was.
+
+**Tantrik never deals damage — its entire threat is the queue it raises.**
+User story 13 asks for a summoner that must be prioritised over what it
+summons, and the way that holds without a rule the player has to be told is
+to give the archetype nothing else to threaten with: `Tantrik.attackBox`
+always returns null. It keeps `BHOOT_BATTI`'s ring-hold — close when far,
+back off when crowded — walked instead of flown, so melee only happens
+because the hunter chose to close the distance. `children`/`TANTRIK.
+maxLiving` (2) bound the queue: left alone, it summons until it has two live
+raakchyas and then waits rather than stacking a fight nobody could clear in
+time.
+
+**Atripta is an elevated Tantrik, not a fifth boss.** Per `SPEC-CAMPAIGN.md`'s
+table only gates 3, 6, 8 and 10 are boss-tier; gate 4's Warden follows
+"Wardens are configuration, not code" exactly the way `KEVAT` follows
+`CHARGER` — same archetype key (`tantrik`), same class, elevated stats
+(`ATRIPTA` in `config.js`), and one added move: `summon.burst: 2`. The same
+telegraph the hunter already reads, just never satisfied by raising only
+one — the same shape as the Kevat's `charge.chain`, and fitting for a hunger
+that is never filled.
+
+**Tantrik does not leave a remnant, and that is a disclosed exception to user
+story 16, not an oversight.** Every other new archetype this campaign has
+introduced obeys "every new enemy leaves a remnant" by giving `chayaOf` in
+`game/shadow.js` a real ally to build — `RaakchyasChaya`, `ChargerChaya`,
+`KawachChaya`. Tantrik's one action is summoning, and neither way to carry
+that into an ally is a job this gate's build order accounted for: raising a
+*hostile* raakchyas next to the ally's own master (which is what a naive
+`TantrikChaya` reusing `_raise` would do, since `ctx.spawnMinion` has no
+notion of allegiance) is a real bug, not a design choice, and raising an
+*allied* one needs PUKAR's one-chaya-at-a-time slot — a rule stated as load-
+bearing at the top of `shadow.js` — widened into a list it has never had to
+be. Left as a gap for whoever picks this up next to close deliberately,
+rather than papered over with an ally that fights nothing. `BhootBatti` is
+the existing precedent for an enemy that simply never opts in.
+
+**`ctx.spawnMinion` is new, and it is not a new allocation pattern.**
+`Tantrik._raise` needs a way to put a fresh raakchyas on the field mid-fight,
+and the existing `Game._spawn` already does exactly this the moment a
+delayed encounter spawn's timer elapses — mid-run, not at gate-build time.
+`spawnMinion` in `game.js` is that same call reachable from an enemy's own
+`ctx` rather than only from the pending-spawn queue, carrying the caller's
+`encounter` id so a sealed chamber's clear condition still waits on what it
+raised. The rule against allocating mid-run is about a *gate transition* —
+the one event big enough to re-roll every enemy's jitter — not about a fight
+producing a body it did not have a moment ago; bolts, delayed spawns and
+corpses already establish that boundary and this does not move it.
+
+**Verification status.** `?sim` across all five recorded seeds: gate 4's
+Tier 1 rows all PASS (jump reserve 26%, matching gates 1–3's own figure),
+`enemy types` resolves `tantrik`/`raakchyas`/`warden → tantrik`, `solo debut`
+confirms Tantrik is met alone in `tantrik-alone` before `the-waiting` combines
+it with raakchyas, `telegraphs` passes Tantrik's summon at 0.620s (0.370s of
+margin past the 250ms reaction floor). No suite row moved beyond the already-
+frozen deferred set (`ranged` boss, `ranged +chaya`, charger `recovery-
+window`, charger `leaves-remnant`, occasionally flaky `signed-rank`). Run
+headless via Chrome (`--use-angle=swiftshader-webgl`) rather than
+`tools/serve.py` in a real browser, since no interactive session was
+available this pass — the report text is identical either way, but this is
+not a substitute for the human playtest both gates still owe.
+
+### Handoff: what the next session picks up
+
+**Two human playtests are owed, not one.** Gate 3's was already outstanding;
+gate 4 now carries the same debt. Play both — on a phone, per the touch-
+budget checkpoint — before gate 5 is authored. Look specifically at whether
+"prioritise the Tantrik" reads as the obvious play or has to be inferred, and
+whether Atripta's doubled summon reads as escalation rather than a reskinned
+Tantrik fight.
+
+Gates 5–10 are otherwise unstarted. Build order is unchanged: author one gate
+at a time, Tier 1 clean, `?sim` clean across the five seeds, played before the
+next one starts — and this time, played.

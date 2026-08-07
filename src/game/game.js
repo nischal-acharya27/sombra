@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { Level } from './level.js';
 import { Player } from './player.js';
-import { Raakchyas, Charger, Kawach, BhootBatti, Bolt } from './enemies.js';
+import { Raakchyas, Charger, Kawach, BhootBatti, Tantrik, Bolt } from './enemies.js';
 import { Corpse } from './shadow.js';
 import { Guardian, GoruMukh } from './boss.js';
 import { GameCamera } from './camera.js';
@@ -48,6 +48,7 @@ export const ARCHETYPES = {
   charger: Charger,
   kawach: Kawach,
   bhootBatti: BhootBatti,
+  tantrik: Tantrik,
   guardian: Guardian,
   goruMukh: GoruMukh,
 };
@@ -115,6 +116,7 @@ export class Game {
       styleMul: () => STYLE.mpRegenByRank[this.styleRank()] ?? 1,
       nearestCorpse: (x, y) => this.nearestCorpse(x, y),
       extract: (corpse) => this.extract(corpse),
+      spawnMinion: (type, x, y, encounter) => this.spawnMinion(type, x, y, encounter),
     };
 
     this.player = new Player(this.level, this.ctx);
@@ -907,6 +909,28 @@ export class Game {
     this.entityRoot.add(e.root);
     this.vfx.shadowBurst(s.x, y + 0.6, 22, P.violetDeep);
     this.audio.play('systemOpen');
+  }
+
+  /**
+   * What `Tantrik._raise` calls through `ctx.spawnMinion` to put a fresh body
+   * on the field mid-fight. Not a new allocation pattern: an encounter's own
+   * delayed spawns already construct an `Archetype` mid-run through `_spawn`
+   * above, the moment their timer elapses rather than at gate-build time — the
+   * rule against allocating is about a *gate transition*, the one event big
+   * enough to re-roll every enemy's jitter, not about a fight producing a body
+   * it did not have a moment ago. `encounter` is carried over from the caller
+   * so a sealed encounter's clear condition still waits on what it raised.
+   */
+  spawnMinion(type, x, y, encounter) {
+    const Archetype = ARCHETYPES[type];
+    if (!Archetype) return null;
+    const e = new Archetype(this.level, this.ctx, x, y);
+    e.encounter = encounter;
+    this.enemies.push(e);
+    this.entityRoot.add(e.root);
+    this.vfx.shadowBurst(x, y + 0.6, 22, P.violetDeep);
+    this.audio.play('systemOpen');
+    return e;
   }
 
   // -- PUKAR ------------------------------------------------------------------

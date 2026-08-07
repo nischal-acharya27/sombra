@@ -122,6 +122,22 @@ export const STRINGS = {
   GATE3_BEAT_CLEARED_BIG: 'ONE FEWER IN LINE',
   GATE3_BEAT_CLEARED_BODY: 'It cannot say if that is mercy or malfunction.',
 
+  // -- gate 4: Preta-lok -----------------------------------------------------
+  GATE4_NAME: 'Preta-lok',
+  GATE4_WARDEN_TITLE: 'ATRIPTA',
+  GATE4_TANTRIK_TITLE: 'THREAT DETECTED',
+  GATE4_TANTRIK_BODY: 'Tantrik × 1',
+  GATE4_TANTRIK_NOTE: 'It cannot harm you — only what it <b>raises</b>. Reach it before the queue does.',
+  GATE4_WAITING_TITLE: 'THREAT DETECTED',
+  GATE4_WAITING_BODY: 'Tantrik × 1  ·  Raakchyas × 2',
+  GATE4_ATRIPTA_TITLE: 'GATE WARDEN',
+  GATE4_BEAT_ENTER_TITLE: 'THE SYSTEM',
+  GATE4_BEAT_ENTER_BIG: 'NOTHING HERE IS FED',
+  GATE4_BEAT_ENTER_BODY: 'They are waiting for something that stopped coming.',
+  GATE4_BEAT_CLEARED_TITLE: 'THE SYSTEM',
+  GATE4_BEAT_CLEARED_BIG: 'STILL UNFILLED',
+  GATE4_BEAT_CLEARED_BODY: 'One fewer mouth, and the hunger was never the point.',
+
   // -- title screen -------------------------------------------------------
   /** `n` is 1-based; `name` is the resumed gate's own name. */
   TITLE_TAG: (n, name) => `GATE ${n} — ${name}`,

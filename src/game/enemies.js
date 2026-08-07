@@ -8,8 +8,8 @@
 
 import * as THREE from 'three';
 import { Actor, boxHit } from './actor.js';
-import { buildRaakchyas, buildCharger, buildKawach, buildBhootBatti } from '../render/models.js';
-import { RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, PHYS, JUGGLE } from './config.js';
+import { buildRaakchyas, buildCharger, buildKawach, buildBhootBatti, buildTantrik } from '../render/models.js';
+import { RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, PHYS, JUGGLE } from './config.js';
 import { P } from '../render/palette.js';
 import { clamp, damp, lerp, rand } from '../engine/mathx.js';
 
@@ -958,6 +958,238 @@ export class BhootBatti extends Enemy {
     n.halo.scale.setScalar(1 + Math.sin(this.t * 2.2) * 0.12 + (charging ? 0.5 : 0));
     n.core.material.color.setHex(charging ? P.crimson : P.wispCore);
     n.halo.material.opacity = charging ? 0.55 : 0.3;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tantrik
+// ---------------------------------------------------------------------------
+
+/**
+ * Preta-lok's summoner.
+ *
+ * It does no damage of its own — `attackBox` always returns null — because
+ * its entire threat is the queue of raakchyas it keeps raising. User story 13
+ * asks that it be prioritised over what it summons, and the way that holds
+ * without a rule the player has to be told is to give the archetype nothing
+ * else to threaten with: ignoring it and fighting what it raises instead is
+ * the losing play by construction, not by a note in a System window.
+ *
+ * `keepDistance` is `BHOOT_BATTI`'s ring-hold walked instead of flown — close
+ * when far, back off when crowded — so melee only happens because the hunter
+ * chose to close the distance, not because it ran out of somewhere to
+ * retreat to. `children`/`maxLiving` bound the queue: a Tantrik left alone
+ * does not summon forever, it summons until it has two live and then waits.
+ *
+ * **It does not leave a remnant.** User story 16 asks that every new
+ * archetype does, and this is a deliberate, disclosed exception rather than
+ * an oversight — the same one `BhootBatti` already is. A PUKAR ally raised
+ * from a Tantrik's body would have to either cast its one move against the
+ * hunter's own enemies by raising a *hostile* raakchyas next to its own
+ * master, which `chayaOf` in `game/shadow.js` has no hook to redirect, or
+ * raise an allied one, which needs PUKAR's one-ally-at-a-time slot widened
+ * into a list — a bigger job than this gate's build order calls for. Left as
+ * a gap to close deliberately rather than papered over with an ally that
+ * fights nothing.
+ */
+export class Tantrik extends Enemy {
+  static stats = TANTRIK;
+
+  constructor(level, ctx, x, y, cfg = TANTRIK, skin = null) {
+    super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
+    this.root = buildTantrik(skin);
+    this.n = this.root.userData.nodes;
+    this.finishSetup();
+    this.phase = 0;
+    this.cooldown = rand(cfg.cooldown[0], cfg.cooldown[1]);
+    // No `this.leavesCorpse = true` — see the class doc.
+    /** Raakchyas this Tantrik has raised and not yet lost. */
+    this.children = [];
+  }
+
+  get liveChildren() {
+    this.children = this.children.filter((c) => !c.dead);
+    return this.children.length;
+  }
+
+  update(dt, player) {
+    this.t += dt;
+    this.hitFlash -= dt;
+    this._flash(dt);
+
+    if (this.state === 'dying') return this._dieAnim(dt);
+    if (this.spawnT > 0) this._spawnAnim(dt);
+
+    const S = this.cfg.summon;
+    const dx = player.x - this.x;
+    const dist = Math.abs(dx);
+    const canSee = dist < this.cfg.chaseRange && Math.abs(player.y - this.y) < 6;
+
+    if (this.stagger > 0) {
+      this.stagger -= dt;
+      if (this.stagger <= 0 && this.state === 'hurt') this.state = 'idle';
+    }
+
+    switch (this.state) {
+      case 'idle':
+      case 'chase': {
+        this.cooldown -= dt;
+        if (!canSee) {
+          this.state = 'idle';
+          this.vx = damp(this.vx, 0, 0.001, dt);
+          break;
+        }
+        this.state = 'chase';
+        this.faceToward(player.x);
+
+        if (this.cooldown <= 0 && this.grounded && dist < S.range && this.liveChildren < this.cfg.maxLiving) {
+          this.state = 'telegraph';
+          this.phase = S.windup;
+          this.vx = 0;
+          this.ctx.audio?.play('growl');
+          break;
+        }
+
+        // Ring-hold: close in when far, back off when crowded — the ground
+        // version of what BhootBatti does at range.
+        const want =
+          dist < this.cfg.keepDistance - 1.5 ? -Math.sign(dx) * this.cfg.speed
+          : dist > this.cfg.keepDistance + 1.5 ? Math.sign(dx) * this.cfg.speed
+          : 0;
+        const ahead = this.x + Math.sign(want) * 0.9;
+        if (want !== 0 && !this.level.hasFloorAhead(ahead, this.y)) this.vx = 0;
+        else this.vx = damp(this.vx, want, 0.0008, dt);
+        break;
+      }
+
+      case 'telegraph': {
+        // Planted, hands raised, eyes bright and the sigil climbing — the
+        // shared "about to commit" vocabulary every archetype in this file
+        // uses, read off a cast instead of a swing.
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0001, dt);
+        if (this.phase > S.windup * 0.35) this.faceToward(player.x);
+        if (this.phase <= 0) {
+          this.state = 'casting';
+          this.phase = S.active;
+          this._raise();
+        }
+        break;
+      }
+
+      case 'casting': {
+        this.phase -= dt;
+        this.vx = 0;
+        if (this.phase <= 0) {
+          this.state = 'recover';
+          this.phase = S.recover;
+        }
+        break;
+      }
+
+      case 'recover': {
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0005, dt);
+        if (this.phase <= 0) {
+          this.state = 'chase';
+          this.cooldown = rand(this.cfg.cooldown[0], this.cfg.cooldown[1]);
+        }
+        break;
+      }
+
+      case 'hurt':
+        this.vx = damp(this.vx, 0, 0.06, dt);
+        break;
+    }
+
+    if (this.juggleT > 0) this.juggleT = this.grounded ? 0 : this.juggleT - dt;
+    this.applyGravity(dt, PHYS.gravity * (this.juggleT > 0 ? JUGGLE.gravityMul : 1));
+    this.moveAndCollide(dt);
+    this._animate(dt);
+    this.syncRig();
+  }
+
+  /**
+   * Raises `summon.burst` raakchyas near itself — 1 for a Tantrik, 2 for
+   * Atripta, whose one added move this is. Spawned through `ctx.spawnMinion`
+   * rather than through the gate's own pending-spawn queue, because these
+   * bodies do not exist until the cast lands; `encounter` is carried over so
+   * the seal they were raised inside still waits on them.
+   */
+  _raise() {
+    const S = this.cfg.summon;
+    const burst = S.burst || 1;
+    for (let i = 0; i < burst; i++) {
+      const x = this.x + this.facing * (1.6 + i * 1.1);
+      if (!this.level.hasFloorAhead(x, this.y)) continue;
+      const y = this.level.groundAt(x) + 0.1;
+      const raised = this.ctx.spawnMinion('raakchyas', x, y, this.encounter);
+      if (raised) this.children.push(raised);
+    }
+    this.ctx.vfx.shadowBurst(this.x + this.facing * 1.2, this.y + 0.4, 18, P.violetDeep);
+    this.ctx.audio?.play('systemOpen');
+  }
+
+  /** Never a live source of damage. Its threat is entirely what it raises. */
+  attackBox() {
+    return null;
+  }
+
+  _animate(dt) {
+    const n = this.n;
+    const k = 1 - Math.pow(0.0002, dt);
+    const S = this.cfg.summon;
+    let bodyZ = 0;
+    let bodyY = 0;
+    let headZ = 0;
+    let shLz = -0.2;
+    let shRz = -0.2;
+
+    if (this.state === 'telegraph') {
+      const u = 1 - this.phase / S.windup;
+      bodyZ = -0.05 - u * 0.05;
+      headZ = -0.1 - u * 0.15;
+      shLz = -0.3 - u * 1.6;
+      shRz = -0.3 - u * 1.6;
+      const g = 0.3 + u * 0.7;
+      n.eyeL.material.opacity = g;
+      n.eyeR.material.opacity = g;
+      n.eyeL.material.transparent = true;
+      n.eyeR.material.transparent = true;
+      n.core.scale.setScalar(1 + u * 1.2);
+      n.coreGlow.material.opacity = 0.2 + u * 0.6;
+    } else if (this.state === 'casting') {
+      const u = clamp(1 - this.phase / S.active, 0, 1);
+      shLz = -1.9;
+      shRz = -1.9;
+      headZ = -0.25;
+      n.core.scale.setScalar(lerp(2.2, 0.8, u));
+      n.coreGlow.material.opacity = lerp(0.8, 0.2, u);
+    } else {
+      n.eyeL.material.opacity = 0.8;
+      n.eyeR.material.opacity = 0.8;
+      n.eyeL.material.transparent = true;
+      n.eyeR.material.transparent = true;
+      n.core.scale.setScalar(1 + Math.sin(this.t * 2) * 0.08);
+      n.coreGlow.material.opacity = 0.25 + Math.sin(this.t * 2) * 0.05;
+    }
+
+    if (this.state === 'recover') {
+      bodyZ = 0.12 * clamp(this.phase / S.recover, 0, 1);
+    } else if (this.state === 'hurt') {
+      bodyZ = 0.22;
+    } else if (this.state === 'chase' && Math.abs(this.vx) > 0.3) {
+      bodyY = Math.abs(Math.sin(this.t * 5)) * 0.03;
+    } else if (this.state !== 'telegraph' && this.state !== 'casting') {
+      bodyY = Math.sin(this.t * 1.4) * 0.03;
+      headZ = Math.sin(this.t * 0.8) * 0.08;
+    }
+
+    n.body.rotation.z = lerp(n.body.rotation.z, bodyZ, k);
+    n.body.position.y = lerp(n.body.position.y, 0.64 + bodyY, k);
+    n.head.rotation.z = lerp(n.head.rotation.z, headZ, k);
+    n.shoulderL.rotation.z = lerp(n.shoulderL.rotation.z, shLz, k);
+    n.shoulderR.rotation.z = lerp(n.shoulderR.rotation.z, shRz, k);
   }
 }
 

@@ -653,6 +653,85 @@ export function buildBhootBatti() {
 }
 
 // ---------------------------------------------------------------------------
+// Tantrik — Preta-lok's summoner (and, elevated, Atripta)
+// ---------------------------------------------------------------------------
+
+/**
+ * A hunched, robed figure — no shield, no pauldrons, nothing built to trade
+ * blows. `n.core`/`n.coreGlow` is a floating sigil rather than a chest plate:
+ * the same "a flare announces the commit" vocabulary the bosses' cores and
+ * Goru-Mukh's seal already teach, read off an object that sits between the
+ * raised hands so a cast reads as a cast and not a swing.
+ */
+export function buildTantrik(skin = null) {
+  const c = skin || { robe: P.tantrikRobe, dark: P.tantrikRobeDark, eye: P.tantrikEye, sigil: P.tantrikSigil };
+  const root = new THREE.Group();
+  const n = {};
+
+  const body = new THREE.Group();
+  body.position.y = 0.64;
+  root.add(body);
+  n.body = body;
+
+  const robe = part(0.42, 0.6, 0.42, c.robe, { pivot: 'bottom', outline: 0.03 });
+  body.add(robe);
+
+  // The hem: a wide skirt rather than jointed legs — a Tantrik never runs, it
+  // keeps a ring and casts from inside it.
+  const hem = part(0.5, 0.3, 0.5, c.dark, { pivot: 'top', outline: 0.026 });
+  robe.add(hem);
+
+  const head = new THREE.Group();
+  head.position.y = 0.56;
+  robe.add(head);
+  n.head = head;
+
+  const hood = part(0.26, 0.28, 0.26, c.dark, { pivot: 'bottom', outline: 0.024 });
+  head.add(hood);
+
+  for (const side of [-1, 1]) {
+    const eye = decal(0.055, 0.045, c.eye);
+    eye.position.set(0.135, 0.12, side * 0.07);
+    eye.rotation.y = Math.PI / 2;
+    head.add(eye);
+    n[side < 0 ? 'eyeL' : 'eyeR'] = eye;
+  }
+
+  const sigil = new THREE.Mesh(new THREE.IcosahedronGeometry(0.15, 0), glowMaterial({ color: c.sigil }));
+  sigil.position.set(0.34, 0.32, 0);
+  robe.add(sigil);
+  n.core = sigil;
+
+  const sigilGlow = decal(0.5, 0.5, c.sigil, { opacity: 0.32 });
+  sigilGlow.position.set(0.345, 0.32, 0);
+  sigilGlow.rotation.y = Math.PI / 2;
+  robe.add(sigilGlow);
+  n.coreGlow = sigilGlow;
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const shoulder = new THREE.Group();
+    shoulder.position.set(0, 0.5, side * 0.22);
+    robe.add(shoulder);
+    n['shoulder' + key] = shoulder;
+
+    const upper = part(0.1, 0.28, 0.1, c.dark, { pivot: 'top', outline: 0.018 });
+    shoulder.add(upper);
+
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.28;
+    shoulder.add(elbow);
+    n['elbow' + key] = elbow;
+
+    const fore = part(0.09, 0.24, 0.09, c.robe, { pivot: 'top', outline: 0.016 });
+    elbow.add(fore);
+  }
+
+  root.userData.nodes = n;
+  return root;
+}
+
+// ---------------------------------------------------------------------------
 // Dwar-Rakshak — the level's boss
 // ---------------------------------------------------------------------------
 

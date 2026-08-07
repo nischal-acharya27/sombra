@@ -492,6 +492,73 @@ export const KAWACH = {
   contactDamage: 0,
 };
 
+/**
+ * Tantrik — Preta-lok's summoner.
+ *
+ * Every other grunt threatens with its own body committing to something; this
+ * one never does — `Tantrik.attackBox` in `enemies.js` always returns null.
+ * Its entire threat is the queue of raakchyas it keeps raising, which is user
+ * story 13's whole ask: prioritising it over what it summons has to be the
+ * winning play because nothing else about the fight rewards ignoring it.
+ *
+ * `keepDistance` is the ground version of `BHOOT_BATTI.keepDistance` — closes
+ * when far, backs off when crowded — so melee only ever happens because the
+ * hunter chose to close the distance, not because the Tantrik ran out of
+ * somewhere to retreat to. `maxLiving` is the bound on the queue: reached, it
+ * stops casting rather than stacking a fight nobody could clear in time.
+ */
+export const TANTRIK = {
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hw: 0.42,
+  hh: 0.64,
+  speed: 2.4,
+  chaseRange: 26,
+  keepDistance: 6.5,
+  summon: {
+    // A plant, not a lane — nothing forces this tight the way a charger's
+    // lane math does, so it is generous like Kawach's bash and clears the
+    // 0.42s floor `telegraphs()` in `tools/gatecheck.js` holds every tell to.
+    range: 20,
+    windup: 0.62,
+    active: 0.14,
+    recover: 1.2,
+    /** Raakchyas raised per cast. Atripta's one added move moves this to 2. */
+    burst: 1,
+  },
+  cooldown: [1.8, 2.6],
+  /** Live raakchyas this Tantrik tolerates before it stops casting again. */
+  maxLiving: 2,
+  exp: 44,
+  contactDamage: 0,
+};
+
+/**
+ * Atripta — The Unfilled, Preta-lok's Warden.
+ *
+ * An existing archetype, elevated, per `docs/SPEC-CAMPAIGN.md` § "Wardens are
+ * configuration, not code" — the same relationship `KEVAT` has to `CHARGER`.
+ * The one added move is `summon.burst: 2`: the same telegraph the hunter
+ * already reads, just never satisfied by raising only one — fitting for a
+ * hunger that is never filled, and the same shape as the Kevat's `charge.chain`.
+ */
+export const ATRIPTA = {
+  ...TANTRIK,
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hw: 0.56,
+  hh: 0.82,
+  speed: 2.1,
+  summon: {
+    ...TANTRIK.summon,
+    windup: 0.66,
+    recover: 1.4,
+    burst: 2,
+  },
+  cooldown: [1.4, 2.0],
+  maxLiving: 4,
+  exp: 380,
+  contactDamage: 0,
+};
+
 export const GUARDIAN = {
   hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 1.5,

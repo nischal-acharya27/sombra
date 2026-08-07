@@ -80,5 +80,13 @@ export const P = {
   narakaCore: 0xff5a3a,
   narakaHorn: 0x2c2422,
 
+  // Preta-lok — the hungry ghosts. Pale and washed out on purpose, against
+  // Naraka's iron: `docs/SPEC-CAMPAIGN.md` draws gate 4 sympathetically rather
+  // than as villainy, and the palette is the first thing that says so.
+  tantrikRobe: 0xaba296,
+  tantrikRobeDark: 0x6e6558,
+  tantrikEye: 0xcdeaff,
+  tantrikSigil: 0xe4d9ff,
+
   outline: 0x0a0813,
 };
