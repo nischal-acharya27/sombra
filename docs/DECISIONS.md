@@ -1545,20 +1545,87 @@ shape to pre-change `main` at `d95ef55` — the same 4–5 already-deferred rows
 `leaves-remnant`, occasionally flaky `signed-rank`), zero new failures. No
 suite row moved because of these renames.
 
+The rename above was committed at `9e6293a`, closing out that handoff.
+
+## Gate 3 (Naraka): Kawach, Goru-Mukh, and a `Boss` base class
+
+Authored 2026-08-07, committed at `05a5fd7`, continuing straight from the
+rename above. Naraka is gate 3's realm — iron and red-black, per the locked
+table — carrying the campaign's first new archetype since gate 2's charger
+and its second boss.
+
+**`Boss` was extracted from `Guardian` before Goru-Mukh was written, not
+after.** This was already a standing decision (§ "Bosses subclass, they do
+not copy" above), owed the moment a second boss entered the build order —
+gates 3, 6, 8 and 10 are all boss-tier per `SPEC-CAMPAIGN.md`'s table, so
+Goru-Mukh was always going to be the test of whether that decision held.
+`Boss` carries what is genuinely shared — poise-based `takeHit` (hp, the
+enrage threshold, the death transition), hit-flash, `_windupTime()`, and the
+death-collapse physics behind an overridable `_dieAnimate(u)` hook.
+`Guardian extends Boss` kept its full state machine, attack set and pose
+table untouched — the extraction was verified behavior-preserving by reading
+gate 1's `DWAR-RAKSHAK` suite rows unchanged before and after (mash/dodge/
+mash+chaya/dodge+chaya still PASS, `ranged`/`ranged +chaya` still the same
+frozen FAIL). `GoruMukh extends Boss` is substantially shorter than
+`Guardian` as a result: three attacks (charge, slam, sweep — no volley; a
+melee judge doesn't need range, and the campaign already teaches one ranged
+boss in gate 1), its own rig (`buildGoruMukh` in `models.js`), its own pose
+table, all enraged windups clearing the 0.42s floor with room to spare
+(sweep is tightest at 0.484s, 64ms clear).
+
+**Kawach's armour is one number, not a second system.** `KAWACH.
+armorBreakLaunch = 13.0` — the launcher move's own `launch` value, not an
+independently-tuned threshold that could drift out of sync with it. Below
+that, `Kawach.takeHit` absorbs the hit entirely: no damage, no stagger, no
+interruption to whatever it was doing — chase, telegraph, and its `bash`
+attack all run through a shrugged-off hit exactly as if it hadn't landed. At
+or above it, the hit falls through to `Enemy`'s ordinary reaction, unabridged
+— armour that only partly breaks is not armour breaking. This is the first
+conditional-resistance hit-reaction in the combat system; nothing before it
+needed one; `Guardian`'s poise is unconditional (no reaction ever), which is
+a different problem with a different fix.
+
+**The introduction is sealed and solo, same shape as the crossing's
+charger.** Kawach's first encounter (`kawach-alone`) spawns nothing else —
+`gatecheck.js`'s `soloDebut` check makes that a build failure if broken
+rather than a house rule someone has to remember. Its second appearance
+(`the-queue`) mixes it with raakchyas, already taught in gate 1. Goru-Mukh's
+own encounter is, as with every other Warden, its own solo debut by
+construction.
+
+**One pre-existing `?sim` probe needed a fix, and it wasn't gate 3's bug.**
+`GATE TRANSITION`'s "and the crossing is walkable" row hardcoded
+`game.state === 'ended'` as proof gate 2 led somewhere — true only because
+gate 2 used to be the last gate. The moment `GATE_3` entered `GATES`, gate
+2's arch correctly led into gate 3 instead of ending the run, and the probe
+read that correct behaviour as a failure. Fixed to `game.gateIndex !== 1`
+— "the hunter left gate 2," not "the campaign ended" — which is what
+"walkable" was always supposed to mean and stays correct as more gates are
+added. This is the kind of thing the campaign's own build order warned
+about: a probe written against a one-gate or two-gate world can encode an
+assumption nobody meant to freeze.
+
+**Verification status.** `?sim` across all five recorded seeds, after the
+`GATE TRANSITION` fix: gate 3's Tier 1 rows all PASS (jump reserve steady at
+26%, matching gates 1–2's own figure), `telegraphs` PASS including all three
+new Kawach/Goru-Mukh tells, `solo debut` PASS. No suite row moved beyond the
+already-frozen deferred set (`ranged` boss, `ranged +chaya`, charger
+`recovery-window`, charger `leaves-remnant`, occasionally flaky
+`signed-rank`).
+
 ### Handoff: what the next session picks up
 
-Gates 3–10 have not been started. `CONTEXT.md`, `config.js`, `strings.js`,
-`shadow.js`, `enemies.js`, `game.js`, `player.js`, `models.js`, `palette.js`,
-`vfx.js`, `boss.js`, `level.js`, `touch.js`, `style.css`, `index.html`,
-`tools/sim.js`, `tools/gatecheck.js` and `tools/touchcheck.js` all carry
-**uncommitted** rename changes as of this entry — commit (or review then
-commit) them before starting gate 3, so gate 3's diff isn't tangled with the
-rename's.
+**Gate 3 has not been played by a human.** `SPEC-CAMPAIGN.md`'s checkpoint
+rule — play each new gate before starting the next one — is exactly the rule
+that gated gate 2 before gates 3–10 began, named explicitly in this file's
+own prior handoff as "the whole reason gates 3–10 weren't started before
+gate 2 was played." The bots clearing gate 3 in `?sim` is not that checkpoint
+satisfied; it is the Tier 1/telegraph floor the checkpoint sits on top of.
+Play gate 3 — on a phone, per the touch-budget checkpoint the same spec
+names — before authoring gate 4.
 
-Build order from here is otherwise exactly `SPEC-CAMPAIGN.md`'s own: author
-one gate at a time (geometry, its new archetype where the table calls for
-one, Warden config, story beats), run it through Tier 1 static checks, verify
-`?sim` clean across the five seeds, and — per that spec's own checkpoint
-logic for gate 2 — play each new gate before starting the next one, since
-that checkpoint is the whole reason gates 3–10 weren't started before gate 2
-was played. Gate 3 (Naraka / Kawach / Goru-Mukh) is next.
+Gates 4–10 are otherwise unstarted. Build order is unchanged from
+`SPEC-CAMPAIGN.md`: author one gate at a time, Tier 1 clean, `?sim` clean
+across the five seeds, played before the next one starts. Gate 4 (the hungry
+ghosts / preta-lok, the summoner archetype, The Unfilled) is next once gate
+3's playtest is done.
