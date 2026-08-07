@@ -428,3 +428,37 @@ where this project's first real touch-vs-keyboard gap has shown up, right on
 schedule, in the fight the checkpoint exists to protect against shipping
 unplayed.
 
+---
+
+# Spot-check — build `61a773b`, 2026-08-07
+
+A second phone attempt, after issue #17 turned the steer pad into a stick and
+SORGI back into a `down`+`heavy` chord (`DECISIONS.md` § "The steer control
+becomes a stick"), and after `/diagnosing-bugs` on the spot-check above found
+no mechanical timing problem in the Ferryman's punish or evasion windows —
+both tolerate far more switch/reaction delay than real touch input plausibly
+costs, and a full scripted evade-evade-punish sequence at 250 ms
+reaction / 200 ms switch cleared with zero damage taken. That diagnosis is
+still standing: nothing below contradicts it.
+
+> Played and the game runs well.
+
+Clean, unprompted clear — no repeat of the previous round's "very difficult"
+Ferryman report. Consistent with the diagnosis: the timing windows were never
+the bottleneck, and the geometry that changed since (buttons 13–24% bigger,
+SORGI's dedicated target gone) is the more likely thing that moved.
+
+**Two concrete asks for the next round, neither yet built:**
+
+1. **Buttons should be bigger still.** Enlarged once already in #17 into the
+   space SORGI's retired button freed; this round says that wasn't enough.
+2. **The steer should read as a joystick, not a rounded rectangle with
+   `◀`/`▶` glyphs.** The mechanic became stick-like in #17 (a `down` press
+   alongside left/right) but the shape stayed the one-axis slide pad's own —
+   text arrows on a slab. The ask is for it to *look* like the thing it now
+   behaves like: circular.
+
+**What this is not.** A report that anything is broken — the crossing cleared
+clean. It is sizing and shape polish on a control scheme that already works,
+filed for the next implementation pass rather than acted on here.
+
