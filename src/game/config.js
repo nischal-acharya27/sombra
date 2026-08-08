@@ -292,6 +292,51 @@ export const CHARGER = {
 };
 
 /**
+ * Kawach — Naraka's armoured grunt.
+ *
+ * The raakchyas comes to you, the charger plants and runs a lane; this one
+ * stands its ground and shrugs. Its threat is not a lane or a leap, it is
+ * that most of the move list does nothing to it — see `Kawach.takeHit` in
+ * `enemies.js`, and `armorBreakLaunch` below, which is the number that
+ * decides "nothing" from "everything".
+ */
+export const KAWACH = {
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hw: 0.66,
+  hh: 0.76,
+  speed: 2.6,
+  chaseRange: 26,
+  /** How close it walks in before it plants for a bash — a shield-bash needs no lane. */
+  stopAt: 1.7,
+  bash: {
+    range: 2.3,
+    // Comfortably clear of the 0.42 s floor `telegraphs()` in
+    // `tools/gatecheck.js` holds every tell to. Nothing forces this one tight
+    // the way the charger's lane math does — a planted, stationary swing has
+    // no distance to close, so the tell can afford to be generous and still
+    // teach "this one you cannot just walk through" on its own.
+    windup: 0.6,
+    active: 0.22,
+    recover: 1.15,
+    damage: 17,
+    knock: 10,
+    shake: 0.22,
+  },
+  cooldown: [0.9, 1.6],
+  /**
+   * The launcher's own `launch` value (see `ATTACKS.launcher` above), not a
+   * boolean. `Kawach.takeHit` in `enemies.js` compares an incoming hit's
+   * `launch` against this directly — matching the launcher's number exactly
+   * means "what breaks the armor" is answerable by reading one existing
+   * config entry rather than a second threshold that could quietly drift out
+   * of sync with it.
+   */
+  armorBreakLaunch: 13.0,
+  exp: 42,
+  contactDamage: 0,
+};
+
+/**
  * PUKAR — the extraction, the corpse window, and what rises from it.
  *
  * The ally runs its source archetype's own state machine (see `chayaOf` in
@@ -358,6 +403,11 @@ export const CHAYA = {
   /** The charger-raised ally's own lane tolerance and idle window. */
   laneHeight: CHARGER.laneHeight,
   cooldown: CHARGER.cooldown,
+
+  // The kawach-raised ally's own bash. Same relationship `pounce` and `charge`
+  // above have to their sources: the timings are the hostile kawach's own,
+  // already learned, but the damage is tuned down for a support ally's hit.
+  bash: { ...KAWACH.bash, damage: 7, knock: 4 },
 
   /**
    * Grace after being hit.
@@ -444,51 +494,6 @@ export const BHOOT_BATTI = {
   // coming and still have to deal with it.
   shoot: { interval: 2.5, windup: 0.66, speed: 15, damage: 11, life: 3 },
   exp: 22,
-  contactDamage: 0,
-};
-
-/**
- * Kawach — Naraka's armoured grunt.
- *
- * The raakchyas comes to you, the charger plants and runs a lane; this one
- * stands its ground and shrugs. Its threat is not a lane or a leap, it is
- * that most of the move list does nothing to it — see `Kawach.takeHit` in
- * `enemies.js`, and `armorBreakLaunch` below, which is the number that
- * decides "nothing" from "everything".
- */
-export const KAWACH = {
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
-  hw: 0.66,
-  hh: 0.76,
-  speed: 2.6,
-  chaseRange: 26,
-  /** How close it walks in before it plants for a bash — a shield-bash needs no lane. */
-  stopAt: 1.7,
-  bash: {
-    range: 2.3,
-    // Comfortably clear of the 0.42 s floor `telegraphs()` in
-    // `tools/gatecheck.js` holds every tell to. Nothing forces this one tight
-    // the way the charger's lane math does — a planted, stationary swing has
-    // no distance to close, so the tell can afford to be generous and still
-    // teach "this one you cannot just walk through" on its own.
-    windup: 0.6,
-    active: 0.22,
-    recover: 1.15,
-    damage: 17,
-    knock: 10,
-    shake: 0.22,
-  },
-  cooldown: [0.9, 1.6],
-  /**
-   * The launcher's own `launch` value (see `ATTACKS.launcher` above), not a
-   * boolean. `Kawach.takeHit` in `enemies.js` compares an incoming hit's
-   * `launch` against this directly — matching the launcher's number exactly
-   * means "what breaks the armor" is answerable by reading one existing
-   * config entry rather than a second threshold that could quietly drift out
-   * of sync with it.
-   */
-  armorBreakLaunch: 13.0,
-  exp: 42,
   contactDamage: 0,
 };
 

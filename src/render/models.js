@@ -1145,6 +1145,7 @@ export function buildChiranjivi() {
   const head = new THREE.Group();
   head.position.y = 1.2;
   torso.add(head);
+  n.head = head;
 
   const skull = part(0.48, 0.44, 0.52, P.devaPlateDark, { pivot: 'bottom', outline: 0.04 });
   head.add(skull);
@@ -1258,6 +1259,7 @@ export function buildMaunAnkur() {
   const head = new THREE.Group();
   head.position.y = 1.22;
   torso.add(head);
+  n.head = head;
 
   const skull = part(0.49, 0.45, 0.53, P.wheelPlateDark, { pivot: 'bottom', outline: 0.04 });
   head.add(skull);
