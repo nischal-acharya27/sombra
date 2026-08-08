@@ -2185,65 +2185,173 @@ item the playtest is likely to make concrete. Until then `?sim` is the only
 verification the campaign has had, and it does not stand in for a human
 finishing all ten gates in one sitting on the device the game ships to.
 
-## The owed phone playtest clears the campaign; the touch scheme gets a redesign, deferred to the next round
+## Backlog: playtest round 2 (2026-08-09), seven tickets for seven fresh sessions
 
-Settled 2026-08-09. The end-to-end phone playtest the handoff above named as
-next has now happened — all ten gates played through, on a phone, in one
-sitting, and the verdict is that the campaign holds together end to end.
-`?sim` is no longer the only verification the campaign has had.
+The end-to-end phone playtest the gate-10 handoff named as next has now
+happened — all ten gates played through, on a phone, in one sitting, and the
+verdict is that the campaign holds together end to end. `?sim` is no longer
+the only verification the campaign has had.
 
-**The playtest's finding is about feel, not reachability.** Nothing failed
-constraint 2 or came back unreachable — the complaint is that the steer
-knob doesn't serve the game well, not that it fails to. Four changes come
-out of it, all scoped to the next round rather than made now: this entry
-records the plan the next session implements, not a diff against this one.
+The playtest raised seven distinct complaints, recorded below as seven
+separate tickets rather than one entry, on request — each is scoped to be
+picked up and finished by a fresh session on its own, without needing the
+others done first, and without needing this preamble repeated. None of the
+seven is implemented yet; every one below is a plan, not a diff.
 
-1. **The steer control drops the knob for a four-way arrow pad**, read the
-   way a keyboard's arrow cluster is. `DECISIONS.md` § The steer control
-   becomes a stick chose a circular knob because a second phone playtest
-   (issue #23) asked for it to *read* as a joystick; this third one is the
-   correction — the game's movement is digital left/right (see § Deferred,
-   deliberately, "Gamepad": "movement is digital left/right, so a stick
-   offers no fidelity a key doesn't"), and a continuous-read knob was never
-   buying anything a four-way pad doesn't also give a thumb, more legibly.
-   `down` stays wired to PUKAR exactly as it is now — see that entry — the
-   pad just changes what a thumb touches to send `left`/`right`/`down`, not
-   what any of the three do.
+### Ticket: touch steer becomes a four-way arrow pad, not a knob
 
-2. **UP takes on entering a cleared gate's arch.** Today the arch is a
-   location trigger — walked into, not pressed — with no bound action of
-   its own. Whether routing that through UP counts as reusing `move`
-   (a direction, same as `left`/`right`/`down` already are) or is a new
-   verb the frozen-at-seven moveset (`docs/SPEC-CAMPAIGN.md` § Refused,
-   `touch.js`'s own "no new verb and no eighth control") would have to
-   answer for, is exactly the kind of question this file exists to settle
-   *before* the implementing session reaches for the keyboard side of the
-   change — flagged here rather than resolved, since resolving it is that
-   session's first job, not this entry's.
+Settled 2026-08-09. Nothing failed constraint 2 (jump reserve) or came back
+unreachable in the playtest — this complaint is about feel, not reachability.
+The steer knob doesn't serve the game well.
 
-3. **SLASH and JUMP trade positions in the action cluster.** SLASH is the
-   more frequently reached-for of the two — light attacks carry every combo,
-   a jump does not — so it moves to the slot nearer AAGO on the sweep `Where
-   each control sits` describes, and JUMP takes SLASH's old corner. The
-   sweep's ordering principle (nearest-to-furthest is most-to-least reached
-   for) does not change; only which verb sits where on it does.
+**The fix: drop the knob for a four-way arrow pad**, read the way a
+keyboard's arrow cluster is. `DECISIONS.md` § The steer control becomes a
+stick chose a circular knob because an earlier phone playtest (issue #23)
+asked for it to *read* as a joystick; this round is the correction — the
+game's movement is digital left/right (see § Deferred, deliberately,
+"Gamepad": "movement is digital left/right, so a stick offers no fidelity a
+key doesn't"), and a continuous-read knob was never buying anything a
+four-way pad doesn't also give a thumb, more legibly. `down` stays wired to
+PUKAR exactly as it is now — see that entry — the pad just changes what a
+thumb touches to send `left`/`right`/`down`, not what any of the three do.
 
-4. **STEP is renamed DASH and moves off the four-button sweep into its own
-   horizontal control above the cluster.** The rename is overdue rather than
-   new: the verb has been `dash` throughout the engine (`MOVESET`,
-   `player.js`, `engine/audio.js`'s `'dash'` case) since the control existed
-   — only `STRINGS.TOUCH_STEP`'s label ever said otherwise, a naming drift
-   this closes rather than a mechanic renamed. The reposition follows a
-   convention players bring in from twin-stick and joypad layouts — a
-   shoulder-style horizontal target above the face buttons, not one more
-   diagonal step of the sweep below it.
+**What this leaves for the implementing session.** `TOUCH_LAYOUT.steer` in
+`touch.js` is currently one circular axis-pair target (`_buildSteer`,
+`_placeKnob`); `tools/touchcheck.js` reads that shape directly, so its checks
+need to move to a four-target read before "no two targets overlap" and "all
+seven verbs reachable" mean anything against the new pad.
 
-**What this leaves for the implementing session.** `TOUCH_LAYOUT` in
-`touch.js` (the pad's descriptor, the two swapped button entries, DASH's new
-box), `STRINGS.TOUCH_STEP` → a DASH label, and `tools/touchcheck.js` — every
-check in it reads the current descriptor's shape (the steer as one axis-pair
-target, the sweep's five-button footprint), and a four-way pad plus a sixth
-independent target changes what "no two targets overlap" and "all seven
-verbs reachable" are checking against, not just where the boxes sit. Item 2
-above is a design question, not an implementation detail, and should be
-settled before the layout work starts rather than discovered mid-edit.
+### Ticket: UP enters a cleared gate's arch
+
+Settled 2026-08-09, from the same playtest as the ticket above. Today the
+arch is a location trigger — walked into, not pressed — with no bound action
+of its own.
+
+**The fix: UP takes on entering the arch once its gate is cleared.** Whether
+routing that through UP counts as reusing `move` (a direction, same as
+`left`/`right`/`down` already are) or is a new verb the frozen-at-seven
+moveset (`docs/SPEC-CAMPAIGN.md` § Refused, `touch.js`'s own "no new verb and
+no eighth control") would have to answer for, is exactly the kind of question
+this file exists to settle *before* the implementing session reaches for the
+keyboard side of the change. Flagged here rather than resolved — resolving it
+is that session's first job, not this entry's. Depends on the arrow-pad
+ticket above existing first, since UP is one of that pad's four targets.
+
+### Ticket: SLASH and JUMP trade positions in the touch action cluster
+
+Settled 2026-08-09, from the same playtest. SLASH is the more frequently
+reached-for of the two — light attacks carry every combo, a jump does not —
+so it should move to the slot nearer AAGO on the sweep `Where each control
+sits` describes, and JUMP should take SLASH's old corner. The sweep's
+ordering principle (nearest-to-furthest is most-to-least reached for) does
+not change; only which verb sits where on it does.
+
+**What this leaves for the implementing session.** Swap the `x`/`y` (and, if
+the footprint differs, `w`/`h`) of the `light` and `jump` entries in
+`TOUCH_LAYOUT.buttons` in `touch.js`. `tools/touchcheck.js`'s overlap and
+reachability checks read positions generically and should not need to change
+for this one alone — only for the pad and DASH-relocation tickets, which
+touch the descriptor's shape rather than just two entries' coordinates.
+
+### Ticket: STEP is renamed DASH and moves to its own control above the cluster
+
+Settled 2026-08-09, from the same playtest. The rename is overdue rather than
+new: the verb has been `dash` throughout the engine (`MOVESET`, `player.js`,
+`engine/audio.js`'s `'dash'` case) since the control existed — only
+`STRINGS.TOUCH_STEP`'s label ever said otherwise, a naming drift this closes
+rather than a mechanic renamed.
+
+**The fix: rename the label, and move the button off the four-button sweep
+into its own horizontal control above it.** The reposition follows a
+convention players bring in from twin-stick and joypad layouts — a
+shoulder-style horizontal target above the face buttons, not one more
+diagonal step of the sweep below it.
+
+**What this leaves for the implementing session.** `STRINGS.TOUCH_STEP` →
+a DASH label (rename the constant or just its value — either is a one-line
+change, `touch.js`'s reference to it is the only call site). A new box for
+`dash` in `TOUCH_LAYOUT.buttons`, sized and placed as a horizontal target
+rather than the current square one. `tools/touchcheck.js` needs updating
+alongside this — it currently reads DASH as one more square in the five-item
+sweep, and a horizontal shoulder target changes what its overlap math is
+checking.
+
+### Ticket: regular-enemy encounter windows stop freezing the game and stop describing the enemy
+
+Settled 2026-08-09, from the same playtest, a separate complaint from the
+touch scheme above: **the pause before every single enemy encounter breaks
+the pace, and describing what an enemy does is teaching the player something
+play already teaches.**
+
+**The mechanism being cut.** `Game._startEncounter` opens a full-screen
+`hud.window` for every encounter carrying an `intro` (`game.js` around
+`_startEncounter`), sized `SYS_WINDOW.encounter` (1700ms) or
+`SYS_WINDOW.encounterNote` (2600ms) when the intro carries a teaching `note`.
+Per "The System window pauses the fight it explains" above, this also sets
+`this.freeze` to the window's full duration — the whole simulation halts,
+hunter included, for up to 2.6 seconds per encounter, every encounter, every
+gate. Ten gates of grunt encounters is where "annoying" comes from.
+
+**The fix, for non-boss encounters only:** no freeze, no descriptive body
+text, no `note` — just the archetype's name (`Bhoot-batti`, `Raakchyas`,
+`Kawach`, `Tantrik`, `Charger`, …), shown briefly at top-center, non-blocking,
+the same non-blocking mechanism `hud.toast` already uses for
+`TOAST_AREA_CLEARED`, `TOAST_CHARGE`, and the rest — not the modal
+`hud.window`. The fight starts under it exactly as it currently starts under
+the window, except now the player can act through it.
+
+**Open question for the implementing session.** Some `intro.note` fields
+currently carry a one-time mechanic-teaching line (gate 1's `first-blood`,
+for instance) rather than pure flavor text — cutting the window cuts that
+teaching moment too, which is a real design tradeoff, not just a text
+trim. `docs/PLAYTEST.md` has three prior rounds of findings on exactly this
+window fighting the fight it opens over; worth rereading before deciding
+whether any teaching content survives in the toast or is dropped entirely
+per "the players will learn through playing."
+
+### Ticket: boss (Warden) intros keep only the name, lose the freeze and the flavor text
+
+Settled 2026-08-09, from the same playtest, split from the ticket above
+because the playtest's own ask was narrower here: **"maybe just name the main
+bosses when they appear."** Bosses stay an exception to "no dialogue" — only
+grunts lose their announcement outright.
+
+**The fix.** Boss encounters (`intro: { title: STRINGS.GATEx_..._TITLE, body:
+WARDEN.title }`, `SYS_WINDOW.bossIntro`, 2400ms, same freeze mechanism as the
+ticket above) drop `WARDEN.title`'s flavor body and the freeze, keeping only
+the name. Whether that name still opens as a (shorter, non-freezing)
+`hud.window`, or folds into the same lightweight top-center treatment the
+grunt ticket above gives regular enemies, is the implementing session's call
+— a boss's arrival plausibly still deserves more presence than a grunt's, and
+this entry deliberately does not pre-decide how much more.
+
+### Ticket: System windows drop to gate-clear only — cut the gate-enter realm-naming window and 'enter'-boundary story beats
+
+Settled 2026-08-09, from the same playtest. **"The system prompts take the
+whole display... those are not necessary. Maybe only show them when the
+stage/gate is clear, no more."**
+
+**What's cut.** Two things, both full-screen and both currently fire on gate
+*entry*: `Game.reset()` (`game.js` around line 326) opens `hud.window({
+title: STRINGS.SYS_TITLE, big: this.gate.name, duration:
+SYS_WINDOW.gateEnter })` naming the realm on arrival at every gate, and
+`_fireBeats('enter')` opens any of that gate's `enter`-boundary story beats
+(`BEATS`, `at: 'enter'`, per gate). Both go.
+
+**What survives, explicitly.** `_fireBeats('cleared')` is untouched — that is
+where gate 10's ending narration
+(`GATE10_BEAT_CLEARED_BODY`, the "release-the-chaya" close) and every other
+gate's closing beat live, and the playtest's own ask draws the line at
+exactly this boundary. The remnant-teach window (`_leaveCorpse`,
+`STRINGS.REMNANT_BIG`, one-time per save) and the enrage warning
+(`onEnrage`, `STRINGS.ENRAGE_BIG`) are a different category — neither fires
+on gate-enter — and are out of scope for this ticket; flagged here so the
+implementing session doesn't fold them in by assuming "cut the System
+windows" meant all of them.
+
+**Open question for the implementing session.** `game.js`'s own comment on
+the gate-enter window says its job is that "ten gates in, the hunter still
+knows where in the afterlife they are standing." The title screen's tag
+(`STRINGS.TITLE_TAG`, "GATE n — name") already names the gate before a run
+starts — whether that is enough on its own, or something smaller needs to
+replace the entry announcement, is worth deciding rather than assuming.
