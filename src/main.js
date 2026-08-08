@@ -56,6 +56,10 @@ const game = new Game(world, hud, audio, input, GATES, touch, save, persistSave)
 // gate 0 at this point regardless of the save.
 const resume = resumePoint(save, GATES);
 document.querySelector('#title .tag').textContent = STRINGS.TITLE_TAG(resume.gateIndex + 1, GATES[resume.gateIndex].name);
+// "New Game" only has anything to do once a save has moved past gate 1 —
+// `start` alone already covers a blank save, and showing a reset option for
+// nothing to reset would just be a second button that does the same thing.
+if (resume.gateIndex > 0) document.getElementById('new-game').classList.remove('hidden');
 
 // Every gate's group is in the scene by now, whether visible or not — `Game`
 // just built them all. Three.js otherwise compiles a material's shader
@@ -142,6 +146,14 @@ function startRun() {
 }
 
 document.getElementById('start').addEventListener('click', startRun);
+document.getElementById('new-game').addEventListener('click', () => {
+  // Same assignment `recordGateClear` and `markTaught` already use elsewhere
+  // in this file's call chain — `Game` holds the save as a plain mutable
+  // field, not a reference `reset()` re-reads from storage.
+  game.save = blankSave();
+  persistSave(game.save);
+  startRun();
+});
 document.getElementById('retry').addEventListener('click', startRun);
 document.getElementById('again').addEventListener('click', startRun);
 document.getElementById('resume').addEventListener('click', () => setPaused(false));

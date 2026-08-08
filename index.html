@@ -62,6 +62,12 @@
       <p class="tag">Level 1 &mdash; Hollow of the Kneeling Stone</p>
     </div>
     <button id="start" class="cta">ENTER THE GATE</button>
+    <!-- Only shown once a save has advanced past gate 1 — `main.js` unhides
+         it. Resets the save and re-enters at gate 1, since `start` alone
+         always resumes at the furthest gate reached and there was otherwise
+         no way back to the beginning of the campaign short of clearing
+         `localStorage` by hand. -->
+    <button id="new-game" class="cta secondary hidden">NEW GAME</button>
     <div class="controls-hint">
       <div><kbd>A</kbd><kbd>D</kbd> move</div>
       <div><kbd>Space</kbd> jump / double jump</div>
