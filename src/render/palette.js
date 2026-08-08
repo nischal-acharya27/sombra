@@ -111,5 +111,17 @@ export const P = {
   devaGold: 0xf2cf7a,
   devaWing: 0xeee3ff,
 
+  // The Wheel — Bhavachakra, and per `docs/SPEC-CAMPAIGN.md` "every palette
+  // bleeding": not a tenth register but the nine before it un-sorted, so
+  // `wheelPlate`/`wheelPlateDark` sample Naraka's iron and Manav-lok's brass
+  // in the same material rather than choosing between them. `wheelCore` is
+  // Maun-Ankur's own core and the realm's crystal accent, the same trick
+  // every prior boss's core plays against its gate — grown from the
+  // Kneeling Stone's dead violet eye rather than matching any single realm.
+  wheelPlate: 0x6a4a5c,
+  wheelPlateDark: 0x2e1f38,
+  wheelCore: 0xc25cff,
+  wheelBloom: 0xff9a5c,
+
   outline: 0x0a0813,
 };

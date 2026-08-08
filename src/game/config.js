@@ -798,6 +798,42 @@ export const BAKAYA = {
   contactDamage: 0,
 };
 
+/**
+ * Maun-Ankur — What Grew In The Stillness, the Wheel's Warden and the
+ * campaign's fourth and final boss per `docs/SPEC-CAMPAIGN.md`'s table
+ * (gates 3, 6, 8, 10). Bespoke numbers and its own rig (`buildMaunAnkur` in
+ * `models.js`), the same relationship the Chiranjivi has to the Hakim rather
+ * than an elevated grunt archetype — gate 10 introduces no new grunt, and
+ * this Warden closes the campaign the way the other three Guardian-class
+ * fights closed theirs.
+ *
+ * Same three-part kit as the Goru-Mukh, the Hakim and the Chiranjivi
+ * (charge, slam, sweep) — the campaign's one ranged boss attack stays the
+ * Guardian's alone, and a fourth boss earns its escalation on numbers, the
+ * same way `CHIRANJIVI` earned its step up from `HAKIM`, not on a new tell
+ * the hunter has never had to read. Its sweep enraged clears the 0.42 s
+ * reaction floor `telegraphs()` in `tools/gatecheck.js` holds every tell to
+ * by 60 ms (0.60 × 0.80 = 0.480 s), the same margin the campaign's other
+ * melee bosses hold theirs by.
+ */
+export const MAUN_ANKUR = {
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hw: 1.7,
+  hh: 2.05,
+  speed: 3.7,
+  exp: 600,
+  contactDamage: 0,
+  enrageAt: 0.5,
+  enrageSpeedMul: 1.3,
+  enrageWindupMul: 0.8,
+  attacks: {
+    charge: { windup: 0.72, speed: 19.5, dur: 0.8, recover: 0.9, damage: 25, knock: 14, shake: 0.3 },
+    slam: { windup: 0.68, rise: 0.34, fall: 0.24, recover: 1.0, damage: 28, radius: 6.0, knock: 16, shake: 0.58 },
+    sweep: { windup: 0.60, active: 0.30, recover: 0.8, damage: 21, reach: 5.5, knock: 12, shake: 0.28 },
+  },
+  cooldown: [0.8, 1.5],
+};
+
 /** Style ranks. `decay` is meter lost per second while not attacking. */
 export const STYLE = {
   ranks: [

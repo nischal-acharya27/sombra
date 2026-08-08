@@ -2095,3 +2095,92 @@ up, the gates closing. Build order per the dropped-checkpoint amendment:
 author it, Tier 1 clean, `?sim` clean across the five recorded seeds — and
 this is the gate the owed end-to-end playtest, on a phone, finally becomes
 possible after, since all ten will exist.
+
+## Gate 10 (The Wheel — Bhavachakra): Maun-Ankur authored, the campaign's fourth and final boss
+
+Authored 2026-08-08, continuing straight from the handoff above — no
+playtest checkpoint owed before this one, same standing amendment.
+
+**A bespoke `Boss` subclass and rig, the same relationship `Chiranjivi` has
+to the `Hakim`, not a grunt elevation.** Gate 10 introduces no new
+archetype per `docs/SPEC-CAMPAIGN.md`'s table and its Warden is boss-tier —
+the fourth and last of the four Guardian-class fights the table names at
+gates 3, 6, 8 and 10. `MaunAnkur extends Boss` in `src/game/boss.js`,
+reusing the proven plant/flare/`charge`-`slam`-`sweep` shape every prior
+bespoke boss has used (the campaign's one ranged boss attack stays the
+Guardian's alone) with its own numbers — stepped up from `CHIRANJIVI`'s the
+same way those stepped up from `HAKIM`'s — its own rig (`buildMaunAnkur` in
+`models.js`, a broken ring at the shoulders in place of the Chiranjivi's
+wings, a crown of tangled growth in place of its crown of light) and its
+own palette (`wheelPlate`/`wheelCore`/`wheelBloom` in `render/palette.js`).
+Its sweep enraged clears the 0.42 s reaction floor by the same 60 ms margin
+every other melee boss's does (0.60 × 0.80 = 0.480 s).
+
+**The realm's palette is "every palette bleeding," read literally: the nine
+registers before it un-sorted into one sky, not a tenth chosen to stand
+apart from them.** `REALM.sky` mixes a violet zenith against an ember
+horizon, `ridges` and `stone` sit between Naraka's iron and Yama-sabha's
+near-black rather than owning either — the Wheel is where the other nine
+realms lead, not one more place among them, and the palette is the first
+thing that says so, the same way gate 8's echo of gate 1's violet was.
+
+**No new archetype, so density is authored the same way gates 6, 7, 8 and
+9's was: recombining what earlier gates already taught, in two grunt
+encounters, not three — gate 7 still holds the claim to the campaign's
+densest pre-Warden fight and gate 10 does not contest it.** The Rim
+(raakchyas × 2, bhoot-batti × 1 — gate 1's own pair) → the Spokes (charger
+× 1, kawach × 1, tantrik × 1, raakchyas × 1 — every remaining archetype the
+campaign has taught, the same four-body shape gate 9's Nine Thrones used) →
+Maun-Ankur's chamber, the same three-encounter shape and segment geometry
+gates 6, 8 and 9 all reused rather than re-risking authoring error on
+numbers already proven correct by five seeds of Tier 1 rows apiece.
+
+**`tools/gatecheck.js`'s telegraph table did not know about the new
+archetype, and the suite caught it immediately.** `every archetype has a
+tell` failed on the first run — `nothing listed for maunAnkur` — because
+`TELLS` in `gatecheck.js` is a hand-maintained list of every boss and grunt
+kit, and adding a fourth bespoke boss to `boss.js`/`config.js`/`game.js`
+does not update it by itself; the check exists precisely so a boss authored
+without a corresponding tell entry cannot pass silently. Fixed by importing
+`MAUN_ANKUR` into `gatecheck.js` and mapping its `attacks` the same way
+`CHIRANJIVI`'s already are — one four-line addition, and the row went green
+on every seed after.
+
+**What this deliberately leaves open: the release-the-chaya ending is
+carried by `GATE10_BEAT_CLEARED_BODY` alone, not by a new input.** User
+story 6 in `docs/SPEC-CAMPAIGN.md` asks for "one deliberate input —
+releasing the shadow — so that the campaign closes on an action rather than
+a cutscene." This session did not build that input. Every prior gate's
+narrative hinge — gate 4's sympathy, gate 6's wrongness, gate 9's Yama —
+shipped as text against an unchanged system, and the handoff above scoped
+this session to "author it, Tier 1 clean, `?sim` clean," not to a new
+mechanic; inventing one now, un-reviewed, on the campaign's last gate risked
+exactly the kind of authoring error this file's whole "measure, don't
+theorise" habit exists to catch. The cleared beat narrates the release in
+one line instead. Whether the ending gets an actual bound input — and what
+it would be, given the moveset is frozen at seven per `docs/SPEC-CAMPAIGN.md`'s
+own refusal list — is a decision for a session that can sit with it, not a
+byproduct of authoring the gate around it.
+
+**Verification status.** `?sim` across all five recorded seeds (headless
+Chrome, `--use-angle=swiftshader-webgl`): gate 10's Tier 1 rows all PASS
+(jump reserve 26%, matching every prior gate's own figure; 8 spawns clear;
+4/4 platforms reachable; 3 encounter locks sealed; `enemy types` resolves
+raakchyas/bhootBatti/charger/kawach/tantrik/warden → maunAnkur; `solo debut`
+reports `maunAnkur in maun-ankur`; `story beats` clean on all five seeds).
+Maun-Ankur's three telegraphs (charge 0.576s, slam 0.544s, sweep 0.480s
+enraged) all clear the 250 ms reaction floor with 0.230–0.326s to spare,
+the same margins `CHIRANJIVI`'s own carry. No suite row moved beyond the
+already-frozen deferred set (`ranged` boss, `ranged +chaya`, charger
+`recovery-window`, charger `leaves-remnant`, occasionally flaky
+`signed-rank` — all the documented HP-hack regressions, untouched by this
+gate).
+
+### Handoff: what the next session picks up
+
+All ten gates now exist. The owed end-to-end playtest — on a phone, per the
+dropped-checkpoint amendment's own condition for finally doing it — is next,
+and the release-the-chaya ending input scoped out above is the other open
+item the playtest is likely to make concrete. Until then `?sim` is the only
+verification the campaign has had, and it does not stand in for a human
+finishing all ten gates in one sitting on the device the game ships to.

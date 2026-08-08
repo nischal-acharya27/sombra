@@ -220,6 +220,24 @@ export const STRINGS = {
   GATE9_BEAT_CLEARED_BIG: 'JUDGMENT: NONE RENDERED',
   GATE9_BEAT_CLEARED_BODY: 'He did not move. Only what he left undone did.',
 
+  // -- gate 10: Bhavachakra --------------------------------------------------
+  GATE10_NAME: 'Bhavachakra',
+  GATE10_WARDEN_TITLE: 'MAUN-ANKUR',
+  GATE10_RIM_TITLE: 'THREAT DETECTED',
+  GATE10_RIM_BODY: 'Raakchyas × 2  ·  Bhoot-Batti × 1',
+  GATE10_SPOKES_TITLE: 'THREAT DETECTED',
+  GATE10_SPOKES_BODY: 'Charger × 1  ·  Kawach × 1  ·  Tantrik × 1  ·  Raakchyas × 1',
+  GATE10_MAUNANKUR_TITLE: 'GATE BOSS',
+  GATE10_BEAT_ENTER_TITLE: 'THE SYSTEM',
+  GATE10_BEAT_ENTER_BIG: 'THE WHEEL HAS STOPPED',
+  GATE10_BEAT_ENTER_BODY: 'Nine gates walked. One wheel left, and it will not move.',
+  // Breaks from "THE SYSTEM" the same way gates 6 and 9 did at their own
+  // hinge moment — the campaign's last cleared beat is the chaya's, not a
+  // report about it.
+  GATE10_BEAT_CLEARED_TITLE: 'MAUN-ANKUR',
+  GATE10_BEAT_CLEARED_BIG: 'THE CHAYA LETS GO',
+  GATE10_BEAT_CLEARED_BODY: 'Nine gates were enough. It does not need a tenth.',
+
   // -- title screen -------------------------------------------------------
   /** `n` is 1-based; `name` is the resumed gate's own name. */
   TITLE_TAG: (n, name) => `GATE ${n} — ${name}`,

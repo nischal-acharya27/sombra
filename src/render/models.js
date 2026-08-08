@@ -1227,3 +1227,118 @@ export function buildChiranjivi() {
   root.userData.nodes = n;
   return root;
 }
+
+export function buildMaunAnkur() {
+  const root = new THREE.Group();
+  const n = {};
+
+  const hips = new THREE.Group();
+  hips.position.y = 1.74;
+  root.add(hips);
+  n.hips = hips;
+
+  const torso = part(0.92, 1.22, 1.08, P.wheelPlate, { pivot: 'bottom', outline: 0.05 });
+  hips.add(torso);
+  n.torso = torso;
+
+  // What Grew In The Stillness's core — the same "an attack is announced
+  // before it lands" vocabulary every prior boss's core or seal taught, read
+  // off the accumulation the empty ninth throne left behind.
+  const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.31, 1), glowMaterial({ color: P.wheelCore }));
+  core.position.set(0.49, 0.78, 0);
+  torso.add(core);
+  n.core = core;
+
+  const coreGlow = decal(0.94, 0.94, P.wheelCore, { opacity: 0.4 });
+  coreGlow.position.set(0.50, 0.78, 0);
+  coreGlow.rotation.y = Math.PI / 2;
+  torso.add(coreGlow);
+  n.coreGlow = coreGlow;
+
+  const head = new THREE.Group();
+  head.position.y = 1.22;
+  torso.add(head);
+
+  const skull = part(0.49, 0.45, 0.53, P.wheelPlateDark, { pivot: 'bottom', outline: 0.04 });
+  head.add(skull);
+
+  // A crown of tangled growth in place of the Hakim's headdress and the
+  // Chiranjivi's crown of light — this Warden is what nine gates of unjudged
+  // backlog grew into left alone, not a rank or an office.
+  const crown = part(0.38, 0.44, 0.36, P.wheelBloom, { pivot: 'bottom', outline: 0.03 });
+  crown.position.y = 0.44;
+  head.add(crown);
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const aura = decal(0.09, 0.07, P.wheelCore);
+    aura.position.set(0.29, 0.08, side * 0.14);
+    aura.rotation.y = Math.PI / 2;
+    head.add(aura);
+    n['aura' + key] = aura;
+  }
+
+  // A broken ring at the shoulders in place of the Chiranjivi's wings — the
+  // Wheel itself, seized rather than turning, the silhouette this Warden
+  // reads as from a distance.
+  for (const side of [-1, 1]) {
+    const spoke = part(0.09, 0.64, 0.52, P.wheelPlateDark, { pivot: 'bottom', outline: 0.03 });
+    spoke.position.set(-0.15, 0.30, side * 0.52);
+    spoke.rotation.z = side * 0.3;
+    head.add(spoke);
+  }
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const shoulder = new THREE.Group();
+    shoulder.position.set(0, 1.02, side * 0.66);
+    torso.add(shoulder);
+    n['shoulder' + key] = shoulder;
+
+    const pauldron = part(0.53, 0.37, 0.45, P.wheelPlate, { outline: 0.04 });
+    pauldron.position.y = 0.06;
+    shoulder.add(pauldron);
+
+    const upper = part(0.32, 0.63, 0.32, P.wheelPlateDark, { pivot: 'top', outline: 0.032 });
+    upper.position.y = -0.12;
+    shoulder.add(upper);
+
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.73;
+    shoulder.add(elbow);
+    n['elbow' + key] = elbow;
+
+    const fore = part(0.38, 0.61, 0.38, P.wheelPlate, { pivot: 'top', outline: 0.032 });
+    elbow.add(fore);
+
+    const fist = part(0.48, 0.43, 0.48, P.wheelPlateDark, { pivot: 'top', outline: 0.036 });
+    fist.position.y = -0.61;
+    elbow.add(fist);
+  }
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const hip = new THREE.Group();
+    hip.position.set(0, 0, side * 0.34);
+    hips.add(hip);
+    n['hip' + key] = hip;
+
+    const thigh = part(0.38, 0.87, 0.42, P.wheelPlateDark, { pivot: 'top', outline: 0.034 });
+    hip.add(thigh);
+
+    const knee = new THREE.Group();
+    knee.position.y = -0.87;
+    hip.add(knee);
+    n['knee' + key] = knee;
+
+    const shin = part(0.34, 0.79, 0.36, P.wheelPlate, { pivot: 'top', outline: 0.032 });
+    knee.add(shin);
+
+    const foot = part(0.62, 0.20, 0.46, P.wheelPlateDark, { pivot: 'top', outline: 0.03 });
+    foot.position.set(0.10, -0.79, 0);
+    knee.add(foot);
+  }
+
+  root.userData.nodes = n;
+  return root;
+}
