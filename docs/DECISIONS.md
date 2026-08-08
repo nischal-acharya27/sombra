@@ -2013,3 +2013,85 @@ fought as "what his absence made rather than against him," per
 amendment: author one gate at a time, Tier 1 clean, `?sim` clean across the
 five recorded seeds, no playtest between — the campaign is played end to
 end, on a phone, only once all ten gates exist.
+
+## Gate 9 (Yama-sabha): Bakaya authored, a second elevation of the summoner line
+
+Authored 2026-08-08, continuing straight from the handoff above — no
+playtest checkpoint owed before this one, same standing amendment.
+
+**An existing archetype, elevated a second time, exactly as `VYAGHRI` is to
+`KEVAT`.** Gate 9 introduces no new archetype per
+`docs/SPEC-CAMPAIGN.md`'s table, and its Warden is not boss-tier — gates 3,
+6, 8 and 10 hold the four Guardian-class fights, and 9 is not one of them.
+`ATRIPTA` began the summoner-elevation line at gate 4; `BAKAYA` in
+`src/game/config.js` is its second entry, not a new line, the same relation
+`VYAGHRI` has to `KEVAT` on the charger line. The fit is the spec's own
+language for this Warden: "The Backlog — the accumulated unjudged given
+shape — so the fight is against what his absence made rather than against
+him." A summoner that raises more than it did last time *is* a backlog,
+mechanically as well as narratively, so the signature addition lands on
+`summon.burst` rather than `charge.chain`: `ATRIPTA`'s 2 becomes 3, one more
+unjudged soul raised per cast than the hunter has answered before.
+`summon.windup` moves by two hundredths of a second, the same shape
+`ATRIPTA`'s own move off `TANTRIK` used — no new telegraph, because there is
+nothing left to teach, only more of what gate 4 already did. `archetype:
+'tantrik'` in the gate 9 descriptor names the same class Atripta's does;
+`Tantrik`'s constructor already takes `cfg` as a parameter, so no code
+changed in `enemies.js` or `game.js` to seat a second elevation, the same
+"configuration, not code" point `KEVAT`'s and `VYAGHRI`'s own entries in
+this file already made.
+
+**Density is authored as two grunt encounters, not three — gate 7 already
+holds the claim to the campaign's densest pre-Warden fight, and gate 9 does
+not contest it.** The Antechamber (raakchyas ×2, bhoot-batti ×1 — gate 1's
+own pair, met on new ground, the same opener gates 6 and 8 used) → the Nine
+Thrones (charger ×1, kawach ×1, tantrik ×1, raakchyas ×1 — every remaining
+archetype the campaign has taught, one per throne, four bodies rather than
+the Melee's six) → Bakaya's chamber, sealed the same way every prior
+encounter lock has been.
+
+**Palette is monochrome and violet, per the table, and the violet is a
+deliberate callback rather than a boss-core doubling.** Gates 3, 6 and 8 tie
+`crystal` to their bespoke boss's own core color; Bakaya is a grunt
+elevation with no core to match, so gate 9 spends the accent differently —
+`crystal: 0x9d5cff` is gate 1's own violet, unchanged, tying Yama-sabha back
+to the one dead violet eye the Kneeling Stone has carried since gate 1. Yama
+himself is not an entity in the level — nothing in the hunter's moveset can
+target him — so his presence is carried entirely by `GATE9_BEAT_ENTER_BODY`,
+the same "a line, not a system" approach gate 6's wrongness and gate 4's
+sympathy already used.
+
+**The word-budget check caught a real miss on the first pass, the same class
+of miss gate 7's entry in this file already recorded.** The `enter` beat's
+body was authored as two clauses — "He watches the hunter cross the hall and
+does not rise. He does not stop them either." — which read fine alone but
+put the beat at 20 words against `storyBeats()`'s 16-word glance ceiling
+once `big` (`NINE THRONES EMPTY`, 3 words) was added in. Trimmed to "He
+watches the hunter cross the hall. He does not rise.", which keeps the one
+idea the beat needs — present, not fighting — and drops the second clause
+rather than shortening both.
+
+**Verification status.** `?sim` across all five recorded seeds (headless
+Chrome, `--use-angle=swiftshader-webgl`): gate 9's Tier 1 rows all PASS
+(jump reserve 26%, matching every prior gate's own figure; 8 spawns clear;
+4/4 platforms reachable; 3 encounter locks sealed; `enemy types` resolves
+raakchyas/bhootBatti/charger/kawach/tantrik/warden → tantrik; `solo debut`
+correctly reports `nothing new here`; `story beats` clean on all five seeds
+after the trim above). No suite row moved beyond the already-frozen
+deferred set (`ranged` boss, `ranged +chaya`, charger `recovery-window`,
+charger `leaves-remnant`, occasionally flaky `signed-rank` — all the
+documented HP-hack regressions, untouched by this gate). No `enemies.js`,
+`boss.js`, `models.js` or `palette.js` change was needed: the Warden reuses
+the Tantrik's existing class and rig, exactly as `KEVAT`, `VYAGHRI` and
+`AMAR_YODDHA` reused the Charger's.
+
+### Handoff: what the next session picks up
+
+Gate 10 is the only unstarted gate left. Gate 10 (the Wheel — Bhavachakra,
+every palette bleeding, Warden **What Grew In The Stillness** — Maun-Ankur,
+boss-tier, the fourth and last of the Guardian-class fights) closes the
+campaign: releasing the chaya per user story 6, Yama taking the office back
+up, the gates closing. Build order per the dropped-checkpoint amendment:
+author it, Tier 1 clean, `?sim` clean across the five recorded seeds — and
+this is the gate the owed end-to-end playtest, on a phone, finally becomes
+possible after, since all ten will exist.

@@ -203,6 +203,23 @@ export const STRINGS = {
   GATE8_BEAT_CLEARED_BIG: 'A LIGHT GOES OUT',
   GATE8_BEAT_CLEARED_BODY: 'Even heaven ends. This one simply stopped pretending otherwise.',
 
+  // -- gate 9: Yama-sabha ---------------------------------------------------
+  GATE9_NAME: 'Yama-sabha',
+  GATE9_WARDEN_TITLE: 'BAKAYA',
+  GATE9_ANTECHAMBER_TITLE: 'THREAT DETECTED',
+  GATE9_ANTECHAMBER_BODY: 'Raakchyas × 2  ·  Bhoot-Batti × 1',
+  GATE9_THRONES_TITLE: 'THREAT DETECTED',
+  GATE9_THRONES_BODY: 'Charger × 1  ·  Kawach × 1  ·  Tantrik × 1  ·  Raakchyas × 1',
+  GATE9_BAKAYA_TITLE: 'GATE WARDEN',
+  // Breaks from every prior gate's "THE SYSTEM" enter framing on purpose —
+  // see the comment in `gate9.js` — the same way gate 6's cleared beat did.
+  GATE9_BEAT_ENTER_TITLE: 'YAMA',
+  GATE9_BEAT_ENTER_BIG: 'NINE THRONES EMPTY',
+  GATE9_BEAT_ENTER_BODY: 'He watches the hunter cross the hall. He does not rise.',
+  GATE9_BEAT_CLEARED_TITLE: 'THE SYSTEM',
+  GATE9_BEAT_CLEARED_BIG: 'JUDGMENT: NONE RENDERED',
+  GATE9_BEAT_CLEARED_BODY: 'He did not move. Only what he left undone did.',
+
   // -- title screen -------------------------------------------------------
   /** `n` is 1-based; `name` is the resumed gate's own name. */
   TITLE_TAG: (n, name) => `GATE ${n} — ${name}`,

@@ -761,6 +761,43 @@ export const CHIRANJIVI = {
   cooldown: [0.85, 1.6],
 };
 
+/**
+ * Bakaya — the Backlog, Yama-sabha's Warden.
+ *
+ * An existing archetype, elevated a second time, exactly as `VYAGHRI` is to
+ * `KEVAT` — gate 9 introduces no new archetype per `docs/SPEC-CAMPAIGN.md`'s
+ * table, and `ATRIPTA` is the summoner-elevation line's first entry, not its
+ * only one. The fit is the spec's own: "The Backlog — the accumulated
+ * unjudged given shape — so the fight is against what his absence made rather
+ * than against him." A summoner that never stops raising more than it did
+ * last time *is* a backlog, mechanically as well as narratively — the same
+ * escalation shape `charge.chain` already carries across `KEVAT` → `VYAGHRI`
+ * → `AMAR_YODDHA`, continued on `summon.burst` instead: `ATRIPTA`'s 2 becomes
+ * 3, one more unjudged soul raised per cast than the hunter has ever had to
+ * answer at once. `summon.windup` moves by two hundredths of a second, same
+ * as `ATRIPTA`'s own move off `TANTRIK` — no new telegraph, because there is
+ * nothing left to teach, only more of what gate 4 already did.
+ */
+export const BAKAYA = {
+  ...TANTRIK,
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hw: 0.6,
+  hh: 0.86,
+  speed: 2.0,
+  keepDistance: 7,
+  summon: {
+    ...TANTRIK.summon,
+    windup: 0.68,
+    recover: 1.5,
+    burst: 3,
+  },
+  cooldown: [1.2, 1.8],
+  /** Live raakchyas this Bakaya tolerates before it stops casting again. */
+  maxLiving: 5,
+  exp: 560,
+  contactDamage: 0,
+};
+
 /** Style ranks. `decay` is meter lost per second while not attacking. */
 export const STYLE = {
   ranks: [
