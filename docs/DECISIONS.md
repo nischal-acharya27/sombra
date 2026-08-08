@@ -2184,3 +2184,66 @@ and the release-the-chaya ending input scoped out above is the other open
 item the playtest is likely to make concrete. Until then `?sim` is the only
 verification the campaign has had, and it does not stand in for a human
 finishing all ten gates in one sitting on the device the game ships to.
+
+## The owed phone playtest clears the campaign; the touch scheme gets a redesign, deferred to the next round
+
+Settled 2026-08-09. The end-to-end phone playtest the handoff above named as
+next has now happened — all ten gates played through, on a phone, in one
+sitting, and the verdict is that the campaign holds together end to end.
+`?sim` is no longer the only verification the campaign has had.
+
+**The playtest's finding is about feel, not reachability.** Nothing failed
+constraint 2 or came back unreachable — the complaint is that the steer
+knob doesn't serve the game well, not that it fails to. Four changes come
+out of it, all scoped to the next round rather than made now: this entry
+records the plan the next session implements, not a diff against this one.
+
+1. **The steer control drops the knob for a four-way arrow pad**, read the
+   way a keyboard's arrow cluster is. `DECISIONS.md` § The steer control
+   becomes a stick chose a circular knob because a second phone playtest
+   (issue #23) asked for it to *read* as a joystick; this third one is the
+   correction — the game's movement is digital left/right (see § Deferred,
+   deliberately, "Gamepad": "movement is digital left/right, so a stick
+   offers no fidelity a key doesn't"), and a continuous-read knob was never
+   buying anything a four-way pad doesn't also give a thumb, more legibly.
+   `down` stays wired to PUKAR exactly as it is now — see that entry — the
+   pad just changes what a thumb touches to send `left`/`right`/`down`, not
+   what any of the three do.
+
+2. **UP takes on entering a cleared gate's arch.** Today the arch is a
+   location trigger — walked into, not pressed — with no bound action of
+   its own. Whether routing that through UP counts as reusing `move`
+   (a direction, same as `left`/`right`/`down` already are) or is a new
+   verb the frozen-at-seven moveset (`docs/SPEC-CAMPAIGN.md` § Refused,
+   `touch.js`'s own "no new verb and no eighth control") would have to
+   answer for, is exactly the kind of question this file exists to settle
+   *before* the implementing session reaches for the keyboard side of the
+   change — flagged here rather than resolved, since resolving it is that
+   session's first job, not this entry's.
+
+3. **SLASH and JUMP trade positions in the action cluster.** SLASH is the
+   more frequently reached-for of the two — light attacks carry every combo,
+   a jump does not — so it moves to the slot nearer AAGO on the sweep `Where
+   each control sits` describes, and JUMP takes SLASH's old corner. The
+   sweep's ordering principle (nearest-to-furthest is most-to-least reached
+   for) does not change; only which verb sits where on it does.
+
+4. **STEP is renamed DASH and moves off the four-button sweep into its own
+   horizontal control above the cluster.** The rename is overdue rather than
+   new: the verb has been `dash` throughout the engine (`MOVESET`,
+   `player.js`, `engine/audio.js`'s `'dash'` case) since the control existed
+   — only `STRINGS.TOUCH_STEP`'s label ever said otherwise, a naming drift
+   this closes rather than a mechanic renamed. The reposition follows a
+   convention players bring in from twin-stick and joypad layouts — a
+   shoulder-style horizontal target above the face buttons, not one more
+   diagonal step of the sweep below it.
+
+**What this leaves for the implementing session.** `TOUCH_LAYOUT` in
+`touch.js` (the pad's descriptor, the two swapped button entries, DASH's new
+box), `STRINGS.TOUCH_STEP` → a DASH label, and `tools/touchcheck.js` — every
+check in it reads the current descriptor's shape (the steer as one axis-pair
+target, the sweep's five-button footprint), and a four-way pad plus a sixth
+independent target changes what "no two targets overlap" and "all seven
+verbs reachable" are checking against, not just where the boxes sit. Item 2
+above is a design question, not an implementation detail, and should be
+settled before the layout work starts rather than discovered mid-edit.
