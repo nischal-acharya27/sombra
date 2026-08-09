@@ -2516,3 +2516,95 @@ knows where in the afterlife they are standing." The title screen's tag
 (`STRINGS.TITLE_TAG`, "GATE n — name") already names the gate before a run
 starts — whether that is enough on its own, or something smaller needs to
 replace the entry announcement, is worth deciding rather than assuming.
+
+## Backlog: playtest round 3 (2026-08-09), two tickets for two fresh sessions
+
+The round-2 backlog's five tickets all landed, and the phone playtest that
+followed reported the campaign's first full clear on a phone — `PLAYTEST.md`
+§ Spot-check, build `b49a808`. Two complaints came back, both about the touch
+layout's geometry rather than reachability or timing, filed as two separate
+tickets on the same request round 2's seven were: scoped for a fresh session
+apiece, neither implemented yet.
+
+### Ticket: the arrow pad becomes symmetric, and grows to AAGO's size
+
+**Implemented 2026-08-09.** Looked at on `?touch` in a desktop browser (a
+real phone was not to hand) with the four pad targets' `getBoundingClientRect`
+read back against each other: the cross was already pixel-exact symmetric —
+LEFT/RIGHT and UP/DOWN shared a common centre to sub-pixel precision, in
+every viewport, confirming the arithmetic this entry already suspected.
+What was not symmetric, once zoomed on, was the ink inside each button: the
+four targets carried Unicode arrows (`◀▶▼▲`) as text, and a font is free to
+centre one glyph's visual weight differently from another's inside the same
+box — the "font/glyph centring" this entry flagged as a candidate cause. Now
+`.pad-arrow` (`style.css`) is one CSS triangle, `clip-path: polygon(50% 0%,
+100% 100%, 0% 100%)`, rotated 90°/180°/270° per direction — the same shape
+turned four ways rather than four separate glyphs, so there is nothing left
+for a font to disagree with itself about. `touch.js`'s pad targets carry
+`dir` instead of `glyph` and `_buildButton` renders `<i class="pad-arrow
+dir-${c.dir}">` for anything with a `dir`, in place of the old `<b
+class="pad-glyph">`.
+
+**The size.** `PAD_SIZE = 1.0` is gone; `PAD_W` and `PAD_H` replace it.
+`PAD_H = 1.44` reaches AAGO's own height (the `magic` entry in
+`TOUCH_LAYOUT.buttons`) exactly, nothing below the pad being tight enough at
+any supported viewport to stop it. `PAD_W` cannot reach AAGO's own width —
+LEFT and RIGHT sit side by side, so the pad's horizontal reach is *two*
+widths, and two widths of AAGO's `1.38` (2.76 units, 126.96px of the 130.92px
+`tools/touchcheck.js` measures between the screen edge and AAGO at the
+narrowest supported viewport, 360×800 portrait) leaves under 4px total for
+both the pad's own margin from the bezel and the gap between LEFT and RIGHT
+— which the suite caught outright the first time this was tried, red on
+`360×800 right sits on magic`. `PAD_W = 1.2` is the largest width that still
+leaves a deliberate 10px of clearance there rather than a margin that thin;
+`PAD_X0 = 0.1` (down from the pad's old implicit `0.25`) spends part of the
+saved room recovering it. Verified with `?sim` across all five recorded
+seeds: TOUCH LAYOUT is 0 FAIL on each — the narrowest viewport now reports
+`10px clear down the middle` rather than colliding — and the only red rows
+anywhere are the pre-existing, already-frozen ones (signed-rank on some
+seeds, `ranged` boss, charger `recovery-window`/`remnant`), unchanged by
+this ticket.
+
+Settled 2026-08-09, from the round-3 playtest. **"The arrow buttons are not
+symmetric. Make them symmetric, and enlarge them. Make them the size of the
+AAGO button."**
+
+**Current state (at the time this was settled).** `TOUCH_LAYOUT.pad.targets`
+(`touch.js`) placed LEFT and RIGHT side by side and DOWN/UP centred in the
+gap between them, each target `PAD_SIZE` square (`PAD_SIZE = 1.0`, `PAD_GAP =
+0.12`). The cross was mathematically centred — DOWN and UP sit on the
+midpoint of the LEFT/RIGHT pair — so whatever read as asymmetric on a real
+handset was flagged as a question for the implementing session to settle by
+looking at it on a phone, not something this entry could diagnose from the
+descriptor's numbers alone. It turned out to be exactly that: see
+"Implemented", above.
+
+### Ticket: the action-button cluster becomes symmetric under DASH
+
+Settled 2026-08-09, from the same playtest. **"The layout of the attack
+buttons should be symmetric below the DASH button as well."**
+
+**Current state.** `TOUCH_LAYOUT.buttons`' four action entries — JUMP
+(`x: 0.36, y: 0.36, w: 1.62, h: 1.58`), SLASH (`x: 2.04, y: 0.50, w: 1.44,
+h: 1.56`), RISE (`x: 0.54, y: 2.04, w: 1.50, h: 1.50`), AAGO (`x: 3.60,
+y: 0.96, w: 1.38, h: 1.44`) — sit on the diagonal sweep `Where each control
+sits` describes: nearest-to-furthest from the resting thumb is
+most-to-least reached for, per verb. DASH sits above all four as its own bar,
+`x: 0.90, y: 3.70, w: 3.50, h: 1.00`, spanning roughly the same width the
+sweep's four boxes together occupy.
+
+**The fix.** Rearrange the four action buttons into a layout that reads as
+symmetric under the DASH bar — a 2×2 block centred on DASH's own span is the
+likely shape, though the implementing session should check it against DASH's
+midpoint (`0.90` to `4.40`, centre `2.65`) rather than eyeballing it.
+
+**What this leaves for the implementing session.** This is a real tension
+with the sweep's own ordering principle — nearest-to-furthest by how often a
+hand reaches for the verb, the reasoning behind the round-2 SLASH/JUMP swap —
+and a symmetric 2×2 grid gives every verb the same distance from the resting
+thumb. Whether the sweep's reach-frequency ordering still matters once the
+positions are symmetric (e.g. by making the two nearer slots the two most-
+reached-for verbs) or is superseded by the symmetry ask is worth deciding
+explicitly rather than assumed either way. `tools/touchcheck.js`'s checks
+read `buttons` positions generically and should not need to change for a
+rearrangement alone.

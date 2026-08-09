@@ -617,12 +617,23 @@ kbd {
 
 /* The arrow pad's four targets are `.touch-btn`s like any other — see
    DECISIONS.md § Backlog: playtest round 2, "touch steer becomes a four-way
-   arrow pad, not a knob". `.pad-glyph` only fixes the arrow's size, since a
-   single character doesn't need the shrink-to-fit sizing text labels get. */
-.pad-glyph {
-  font-size: calc(var(--b) * 0.5);
-  line-height: 1;
+   arrow pad, not a knob". Round 3's playtest read the pad as asymmetric;
+   DECISIONS.md § Backlog: playtest round 3 traced it to the four Unicode
+   arrows (◀▶▼▲), whose glyph ink a font is free to centre differently per
+   character. `.pad-arrow` is one triangle, pointing up, rotated per
+   direction — the same shape turned four ways can't disagree with itself
+   the way four separate glyphs could. */
+.pad-arrow {
+  width: calc(var(--b) * 0.34);
+  height: calc(var(--b) * 0.34);
+  background: currentColor;
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+  filter: drop-shadow(0 1px 2px #000);
+  pointer-events: none;
 }
+.pad-arrow.dir-down { transform: rotate(180deg); }
+.pad-arrow.dir-left { transform: rotate(-90deg); }
+.pad-arrow.dir-right { transform: rotate(90deg); }
 
 /* The keyboard legend on the title screen is a list of keys the device does
    not have. The buttons are labelled; nothing replaces it. */

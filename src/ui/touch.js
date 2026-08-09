@@ -102,11 +102,40 @@ export const UNIT = { min: 46, vw: 12, vh: 13.5, max: 70 };
 /** What a tap must be worth, and the two spans it has to cover. */
 export const JUMP_HOLD = { rise: RISE, buffer: BUFFER, need: RISE + BUFFER };
 
-/** The size of one direction button in the arrow pad, in units. */
-export const PAD_SIZE = 1.0;
+/**
+ * The size of one direction button in the arrow pad, in units.
+ *
+ * `DECISIONS.md` § Backlog: playtest round 3 asks for the `1.0` square this
+ * used to be to grow to AAGO's own footprint — the `magic` entry in
+ * `buttons`, below, at `w: 1.38, h: 1.44`. The height gets there exactly:
+ * nothing below the pad constrains how tall it can be. The width cannot:
+ * LEFT and RIGHT sit side by side (the two-column cross the previous ticket
+ * chose specifically to fit the narrowest supported viewport, 360×800
+ * portrait), so the pad's reach is *two* widths wide, and two widths of
+ * `1.38` alone (2.76 units, 126.96px of the 130.92px `tools/touchcheck.js`
+ * measures between the screen edge and AAGO at that viewport) leaves under
+ * 4px total for both the pad's own margin from the bezel and the gap
+ * between LEFT and RIGHT — not a number, a collision `touchcheck.js`'s fit
+ * check catches outright (`right sits on magic`). `1.2` is the largest
+ * width that still leaves a deliberate, round 10px of daylight there,
+ * rather than the razor-thin clearance a value nearer `1.38` would leave
+ * standing.
+ */
+export const PAD_W = 1.2;
+export const PAD_H = 1.44;
 
 /** The gap between adjacent direction buttons, in units. */
 export const PAD_GAP = 0.12;
+
+/**
+ * Where the whole pad is anchored, in units from the screen's own edges.
+ *
+ * `PAD_X0` shrank from `0.25` to make room for the wider pad above without
+ * touching AAGO's own position — see `PAD_W`. `PAD_Y0` is untouched: nothing
+ * above the pad is tight enough at any supported viewport to need it.
+ */
+export const PAD_X0 = 0.1;
+export const PAD_Y0 = 0.35;
 
 /**
  * Where each control sits.
@@ -185,10 +214,10 @@ export const TOUCH_LAYOUT = {
     side: 'left',
     down: 'down',
     targets: [
-      { dir: 'left', action: 'left', glyph: '◀', x: 0.25, y: 0.35 + PAD_SIZE + PAD_GAP, w: PAD_SIZE, h: PAD_SIZE },
-      { dir: 'right', action: 'right', glyph: '▶', x: 0.25 + PAD_SIZE + PAD_GAP, y: 0.35 + PAD_SIZE + PAD_GAP, w: PAD_SIZE, h: PAD_SIZE },
-      { dir: 'down', action: 'down', glyph: '▼', x: 0.25 + (PAD_SIZE + PAD_GAP) / 2, y: 0.35, w: PAD_SIZE, h: PAD_SIZE },
-      { dir: 'up', action: 'up', glyph: '▲', x: 0.25 + (PAD_SIZE + PAD_GAP) / 2, y: 0.35 + 2 * (PAD_SIZE + PAD_GAP), w: PAD_SIZE, h: PAD_SIZE },
+      { dir: 'left', action: 'left', x: PAD_X0, y: PAD_Y0 + PAD_H + PAD_GAP, w: PAD_W, h: PAD_H },
+      { dir: 'right', action: 'right', x: PAD_X0 + PAD_W + PAD_GAP, y: PAD_Y0 + PAD_H + PAD_GAP, w: PAD_W, h: PAD_H },
+      { dir: 'down', action: 'down', x: PAD_X0 + (PAD_W + PAD_GAP) / 2, y: PAD_Y0, w: PAD_W, h: PAD_H },
+      { dir: 'up', action: 'up', x: PAD_X0 + (PAD_W + PAD_GAP) / 2, y: PAD_Y0 + 2 * (PAD_H + PAD_GAP), w: PAD_W, h: PAD_H },
     ],
   },
   buttons: [
@@ -306,11 +335,15 @@ export class TouchControls {
     // own `border-radius: 50%` would stretch a box this much wider than tall
     // into a lens rather than a bar.
     el.className = `touch-target touch-btn tone-${c.tone}${c.verb === 'dash' ? ' shoulder' : ''}`;
-    // A pad target carries a `glyph` (one arrow character) instead of a
-    // `label`, and is drawn at a fixed size rather than shrunk to fit — an
-    // arrow is one character at every size.
-    el.innerHTML = c.glyph
-      ? `<b class="pad-glyph">${c.glyph}</b>`
+    // A pad target carries a `dir` instead of a `label`. It is drawn as one
+    // CSS triangle rotated per direction rather than a Unicode arrow
+    // character — a phone playtest (`DECISIONS.md` § Backlog: playtest round
+    // 3) read the four-way pad as asymmetric, and a font's glyph for ▲ has no
+    // guarantee of sitting as centred in its box as its rotated twin ▼ does.
+    // Four rotations of one shape can't disagree with each other the way four
+    // separate glyphs can.
+    el.innerHTML = c.dir
+      ? `<i class="pad-arrow dir-${c.dir}"></i>`
       : // One size for every label that fits at it, and only the ones that do
         // not shrink — six buttons in three different type sizes reads as an
         // accident. `AAGO` is the only name the layout carries that has to give.

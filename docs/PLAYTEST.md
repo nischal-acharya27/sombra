@@ -462,3 +462,32 @@ SORGI's dedicated target gone) is the more likely thing that moved.
 clean. It is sizing and shape polish on a control scheme that already works,
 filed for the next implementation pass rather than acted on here.
 
+---
+
+# Spot-check — build `b49a808`, 2026-08-09
+
+A third phone attempt, after the round-2 backlog's five tickets (arrow pad,
+UP-enters-arch, SLASH/JUMP swap, DASH split onto its own control, System
+windows cut to gate-clear only) all landed. **The campaign was completed —
+first reported full clear on a phone.**
+
+**Two concrete asks for the next round, neither yet built:**
+
+1. **The arrow pad buttons are not symmetric.** The four-way pad
+   (`TOUCH_LAYOUT.pad.targets` in `touch.js`) reads as uneven on a real
+   handset; the ask is to make the four targets symmetric, and to enlarge
+   them — specifically to the size of the AAGO button (`TOUCH_LAYOUT.buttons`,
+   the `magic` entry, currently `w: 1.38, h: 1.44`), up from the pad's own
+   `PAD_SIZE = 1.0`.
+2. **The action-button cluster should be symmetric under DASH.** JUMP,
+   SLASH, RISE and AAGO currently sit on the diagonal sweep `Where each
+   control sits` describes (nearest-to-furthest by how often a hand reaches
+   for the verb); the ask is for that cluster to read as a symmetric block
+   centred below the DASH bar instead.
+
+**What this is not.** A report that anything is broken — the campaign
+cleared end to end on a phone for the first time. It is sizing and layout
+polish on a control scheme that already works, filed for the next
+implementation pass rather than acted on here. Filed as `DECISIONS.md` §
+Backlog: playtest round 3 and issues #28, #29.
+
