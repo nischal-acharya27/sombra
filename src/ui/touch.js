@@ -115,8 +115,17 @@ export const PAD_GAP = 0.12;
  * bottom, both in units, so the two clusters stay pinned under the two thumbs
  * at any width. The five buttons sweep up and to the left from where a right
  * thumb rests, and **the order along that sweep is how often a hand reaches for
- * the move**: SLASH biggest and nearest, then JUMP and RISE, then STEP, then
+ * the move**: JUMP biggest and nearest, then SLASH and RISE, then STEP, then
  * AAGO furthest. PUKAR is not on this sweep — see the pad descriptor below.
+ *
+ * SLASH and JUMP traded slots from an earlier layout — `DECISIONS.md` §
+ * Backlog: playtest round 2, "SLASH and JUMP trade positions in the touch
+ * action cluster". Light attacks carry every combo and a jump does not, so
+ * the playtest called SLASH the more frequently reached-for of the two —
+ * that verdict moved SLASH to the slot nearer AAGO and gave JUMP the corner
+ * SLASH used to hold. The sweep's own ordering principle, nearest-to-furthest
+ * is most-to-least reached for, did not change; only which verb sits where
+ * on it did.
  *
  * STEP outranks AAGO there for the reason `player.js` tests dash before
  * everything else — it is the defensive option, and a player mashing it under
@@ -176,7 +185,7 @@ export const TOUCH_LAYOUT = {
     ],
   },
   buttons: [
-    { verb: 'light', action: 'light', label: STRINGS.TOUCH_SLASH, side: 'right', x: 0.36, y: 0.36, w: 1.62, h: 1.58, tone: 'cyan' },
+    { verb: 'light', action: 'light', label: STRINGS.TOUCH_SLASH, side: 'right', x: 2.04, y: 0.50, w: 1.44, h: 1.56, tone: 'cyan' },
     /**
      * `sustain` is the one place the touch scheme is not a transcription of
      * the keyboard, and it is here because measuring said it had to be.
@@ -203,7 +212,7 @@ export const TOUCH_LAYOUT = {
      * arc — and a gate that did would be authoring against an input half the
      * players do not have.
      */
-    { verb: 'jump', action: 'jump', label: STRINGS.TOUCH_JUMP, side: 'right', x: 2.04, y: 0.50, w: 1.44, h: 1.56, tone: 'plain', sustain: TAP_WORTH },
+    { verb: 'jump', action: 'jump', label: STRINGS.TOUCH_JUMP, side: 'right', x: 0.36, y: 0.36, w: 1.62, h: 1.58, tone: 'plain', sustain: TAP_WORTH },
     { verb: 'heavy', action: 'heavy', label: STRINGS.TOUCH_RISE, side: 'right', x: 0.54, y: 2.04, w: 1.50, h: 1.50, tone: 'cyan' },
     { verb: 'dash', action: 'dash', label: STRINGS.TOUCH_STEP, side: 'right', x: 2.16, y: 2.34, w: 1.44, h: 1.44, tone: 'plain' },
     { verb: 'magic', action: 'magic', label: STRINGS.TOUCH_MAGIC, side: 'right', x: 3.60, y: 0.96, w: 1.38, h: 1.44, tone: 'blue' },

@@ -2279,6 +2279,18 @@ ticket above existing first, since UP is one of that pad's four targets.
 
 ### Ticket: SLASH and JUMP trade positions in the touch action cluster
 
+**Implemented 2026-08-09.** The `light` and `jump` entries in
+`TOUCH_LAYOUT.buttons` (`touch.js`) traded their `x`/`y`/`w`/`h` wholesale —
+JUMP now sits in the corner SLASH used to hold (nearest the resting thumb,
+biggest footprint) and SLASH sits where JUMP was, one slot nearer AAGO on
+the sweep. Nothing else about either entry — `verb`, `action`, `label`,
+`tone`, JUMP's `sustain` — changed, and neither did `tools/touchcheck.js`:
+its overlap and reachability checks read positions generically, exactly as
+this ticket predicted. Verified with `?sim` across all five recorded seeds:
+TOUCH LAYOUT is 0 FAIL on each, and the only red rows anywhere are the
+pre-existing, already-frozen ones (signed-rank on some seeds, `ranged`
+boss, charger `recovery-window`/`remnant`), unchanged by this ticket.
+
 Settled 2026-08-09, from the same playtest. SLASH is the more frequently
 reached-for of the two — light attacks carry every combo, a jump does not —
 so it should move to the slot nearer AAGO on the sweep `Where each control
