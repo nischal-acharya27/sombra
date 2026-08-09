@@ -2379,6 +2379,32 @@ this entry deliberately does not pre-decide how much more.
 
 ### Ticket: System windows drop to gate-clear only — cut the gate-enter realm-naming window and 'enter'-boundary story beats
 
+**Implemented 2026-08-09.** `_enterGate` (`game.js`) no longer opens
+`hud.window({ title: STRINGS.SYS_TITLE, big: this.gate.name, duration:
+SYS_WINDOW.gateEnter })` on arrival and no longer calls `_fireBeats('enter')`
+— both full-screen, both used to fire on every gate entry, both gone.
+`SYS_WINDOW.gateEnter` (`config.js`) is deleted with its last caller.
+`_fireBeats('cleared')` is untouched: it still fires from the same two call
+sites it always did (the Kevat falling, gate 10's ending narration), and the
+remnant-teach and enrage windows are untouched too, exactly as "what survives"
+below said they should be. The open question below is answered by leaving it
+answered: the title screen's tag already names the gate before a run starts,
+and nothing was added to replace the entry announcement — a smaller
+replacement is a fresh decision this ticket declines to make unasked.
+Every gate's `enter` beat (`BEATS`, `at: 'enter'`) is still defined — gate
+2's arrival glitch among them — for `_fireBeats`'s `'cleared'` half to share
+the same function and word-budget check with; `tools/gatecheck.js`'s `story
+beats` probe still accepts `'enter'` as a boundary `_fireBeats` recognises,
+because it still is one, just one nothing calls any more. `tools/sim.js`'s
+`storyBeats` probe changed with it: the row that used to assert "the entry
+beat fires on a real arrival, unforced" now asserts the opposite — gate 2's
+glitch beat is defined but does not fire on arrival — since asserting the
+old behaviour would have been asserting the bug this ticket exists to fix.
+Verified with `?sim` across all five recorded seeds: the only red rows on
+any of them are the pre-existing, already-frozen ones (signed-rank on some
+seeds, `ranged` boss, charger `recovery-window`/`remnant`), unchanged by
+this ticket.
+
 Settled 2026-08-09, from the same playtest. **"The system prompts take the
 whole display... those are not necessary. Maybe only show them when the
 stage/gate is clear, no more."**

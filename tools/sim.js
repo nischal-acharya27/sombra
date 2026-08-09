@@ -1538,8 +1538,10 @@ function storyBeats(game, input) {
   // --- a real walk: both encounters, the Warden, nothing forced ---
   hardStart(game);
   game._enterGate(1);
-  const entryBeat = game.storyBeats[game.storyBeats.length - 1];
-  say('the entry beat fires on a real arrival, unforced', entryBeat?.at === 'enter' && entryBeat?.opened === true);
+  say(
+    "the gate-2 glitch beat is defined but doesn't fire on arrival — 'enter' is cut",
+    !game.storyBeats.some((b) => b.at === 'enter')
+  );
   const run = walkGate(game, input, { maxSeconds: 120, readTells: true });
   say('the crossing still clears with the beats wired in', run.ok, `state ${game.state}, ${run.time}s`);
   say('the closing beat fired once the Kevat fell', game.storyBeats.some((b) => b.at === 'cleared' && b.opened));

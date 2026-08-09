@@ -302,17 +302,15 @@ export class Game {
     this.hud.setStyle(0);
     this.hud.objective(STRINGS.OBJ_CLEAR_GATE);
 
-    // The System names the realm, every time, so that ten gates in the hunter
-    // still knows where in the afterlife they are standing. Any `enter` beat
-    // the gate carries opens right after — `#windows` is built to stack a
-    // second window rather than queue one behind a real-time delay, which
-    // matters here: `hud.window`'s promise resolves off a wall-clock
-    // `setTimeout`, not off the fixed-step `dt` the rest of the game — and the
-    // suite steps `dt` synchronously, so a beat chained onto that promise
-    // would fire in real seconds no scripted run could fast-forward past.
-    this.audio.play('systemOpen');
-    this.hud.window({ title: STRINGS.SYS_TITLE, big: this.gate.name, duration: SYS_WINDOW.gateEnter });
-    this._fireBeats('enter');
+    // The System used to name the realm on every arrival and open the gate's
+    // `enter` beat right behind it — both full-screen, both on entry. The
+    // playtest's own ask (`docs/DECISIONS.md` § System windows drop to
+    // gate-clear only) draws the line at clear: the title screen's tag
+    // already names the gate before a run starts, so nothing replaces this.
+    // `cleared` beats are untouched — `_fireBeats('cleared')` still fires at
+    // the Kevat and gate 10's ending narration still plays. `enter` beats
+    // stay defined per gate for `cleared`'s sibling code to share, but
+    // nothing calls `_fireBeats('enter')` any more.
 
     // A gate with no Warden has nothing to beat, so its way out is open from
     // the moment the hunter arrives. The crossing is the first of those, and
