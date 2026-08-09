@@ -2200,6 +2200,24 @@ seven is implemented yet; every one below is a plan, not a diff.
 
 ### Ticket: touch steer becomes a four-way arrow pad, not a knob
 
+**Implemented 2026-08-09.** `TOUCH_LAYOUT.steer` is gone; `TOUCH_LAYOUT.pad`
+carries four discrete targets (`left`/`right`/`down`/`up`), each a plain
+`.touch-btn` built the same way SLASH or JUMP is. `down` still fires PUKAR's
+route exactly as before. The four targets read as a cross — LEFT and RIGHT
+side by side, DOWN below and UP above centred in the gap between them —
+rather than the more literal three-wide inverted-T a keyboard's cluster
+draws: at the narrowest tested viewport (360×800 portrait) a three-wide row
+does not leave 44px targets room to clear the action-button cluster on the
+other side of the screen (worked out to a negative clearance), and the
+two-column cross does, with 22px to spare. `tools/touchcheck.js`'s coverage,
+chord and fit checks now read `pad.targets` instead of one circular box; the
+`steer is round` check and its issue-#23 justification are gone with the
+circle. UP fires the `up` action `engine/input.js` has bound since it
+existed but nothing has ever consumed — it does nothing yet, on purpose, for
+the next ticket to wire. Verified with `?sim` across all five recorded
+seeds: the TOUCH LAYOUT block is 0 FAIL on each, including the narrowest
+viewport's cluster-clearance row.
+
 Settled 2026-08-09. Nothing failed constraint 2 (jump reserve) or came back
 unreachable in the playtest — this complaint is about feel, not reachability.
 The steer knob doesn't serve the game well.

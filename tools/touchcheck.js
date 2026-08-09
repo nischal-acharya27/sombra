@@ -67,6 +67,9 @@ function boxAt(c, b, vw) {
 
 const overlaps = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
 
+/** The four directions a keyboard's arrow cluster has, and the pad reads. */
+const PAD_DIRS = ['left', 'right', 'down', 'up'];
+
 /**
  * Whether every verb has exactly one control and no control is a chord.
  *
@@ -77,15 +80,20 @@ const overlaps = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a
 function coverage(layout) {
   const seen = new Map();
   const stray = [];
-  for (const c of controlsOf(layout)) {
-    if (!MOVESET.includes(c.verb)) stray.push(c.verb);
-    seen.set(c.verb, (seen.get(c.verb) ?? 0) + 1);
+  for (const b of layout.buttons) {
+    if (!MOVESET.includes(b.verb)) stray.push(b.verb);
+    seen.set(b.verb, (seen.get(b.verb) ?? 0) + 1);
   }
+  // The pad is one verb — `move` — no matter how many discrete targets it
+  // takes to cover left/right/down/up; a layout missing one of the four is a
+  // layout with no control for `move`, not four separate missing verbs.
+  const dirs = layout.pad.targets.map((t) => t.dir);
+  if (PAD_DIRS.every((d) => dirs.includes(d))) seen.set('move', (seen.get('move') ?? 0) + 1);
   // PUKAR has no target of its own — `DECISIONS.md` § The steer control
-  // becomes a stick reads it off the steer's `down` state instead. Credit it
+  // becomes a stick reads it off the pad's `down` state instead. Credit it
   // the same way a real control would be credited, so a layout that forgets
   // `down` still shows up here as a verb with nothing behind it.
-  if (typeof layout.steer.down === 'string') seen.set('pukar', (seen.get('pukar') ?? 0) + 1);
+  if (typeof layout.pad.down === 'string') seen.set('pukar', (seen.get('pukar') ?? 0) + 1);
   return {
     missing: MOVESET.filter((v) => !seen.has(v)),
     stray,
@@ -99,36 +107,25 @@ function coverage(layout) {
 /**
  * Whether any control asks for more than one action at a time.
  *
- * A button carries one action, spelled as one string. The axis carries three —
- * `neg`/`pos` and now `down` — and asserts each as one well-formed action, one
- * point of contact: `_setDir` releases the old horizontal action before it
- * presses the new one, and `down` is read independently of it, the same way a
- * keyboard holds a movement key and `S` together without either being a
- * second target. What this check forbids is a *button* needing two fingers,
- * or any single field on the steer resolving to more than one action.
+ * A button carries one action, spelled as one string — every pad target is a
+ * button by this measure now, the same as SLASH or JUMP, since the arrow pad
+ * dropped the axis-plus-deadzone read for four discrete presses. `down` is
+ * checked once more on the side: it is PUKAR's whole route (held on the pad,
+ * pressed against RISE), so a layout where it resolves to more than one
+ * action is still a chord hiding behind a single target, the same failure
+ * this check has always forbidden.
  */
 function chords(layout) {
   const bad = [];
   for (const b of layout.buttons) {
     if (typeof b.action !== 'string') bad.push(`${b.verb} fires ${JSON.stringify(b.action)}`);
   }
-  const s = layout.steer;
-  if (typeof s.neg !== 'string' || typeof s.pos !== 'string') bad.push(`${s.verb} is not one axis`);
-  if (s.down !== undefined && typeof s.down !== 'string') bad.push(`${s.verb}'s down fires ${JSON.stringify(s.down)}`);
+  for (const t of layout.pad.targets) {
+    if (typeof t.action !== 'string') bad.push(`${t.dir} fires ${JSON.stringify(t.action)}`);
+  }
+  const p = layout.pad;
+  if (p.down !== undefined && typeof p.down !== 'string') bad.push(`the pad's down fires ${JSON.stringify(p.down)}`);
   return { bad, ok: bad.length === 0 };
-}
-
-/**
- * Whether the steer's box is a square, which is what lets `touch.js` render
- * it as a circle rather than an ellipse — see `DECISIONS.md` § The steer
- * control becomes a stick and issue #23. `TouchControls` reads `w`/`h` for
- * hit-testing either way, so an unequal box would not break input, only the
- * shape the budget asked for; this is the arithmetic proxy for that ask, the
- * same way `chords` is the proxy for "one target, one action."
- */
-function round(layout) {
-  const s = layout.steer;
-  return { ok: s.w === s.h, detail: `${s.w} × ${s.h}` };
 }
 
 /**
@@ -189,9 +186,6 @@ export function checkLayout(layout = TOUCH_LAYOUT) {
   const ch = chords(layout);
   out.push(row('no chord', ch.ok, ch.bad.join('; ') || 'every control is one target, one action'));
 
-  const rd = round(layout);
-  out.push(row('steer is round', rd.ok, rd.detail));
-
   // Constraint 2, from the other end.
   //
   // `gatecheck.js` asserts that every crossing keeps a quarter of the arc in
@@ -243,7 +237,7 @@ export function checkLayout(layout = TOUCH_LAYOUT) {
 function broken(mutate) {
   const layout = {
     ...TOUCH_LAYOUT,
-    steer: { ...TOUCH_LAYOUT.steer },
+    pad: { ...TOUCH_LAYOUT.pad, targets: TOUCH_LAYOUT.pad.targets.map((t) => ({ ...t })) },
     buttons: TOUCH_LAYOUT.buttons.map((b) => ({ ...b })),
   };
   mutate(layout, layout.buttons);
@@ -251,6 +245,7 @@ function broken(mutate) {
 }
 
 const byVerb = (buttons, verb) => buttons.find((b) => b.verb === verb);
+const byDir = (targets, dir) => targets.find((t) => t.dir === dir);
 
 /**
  * One deliberately broken layout per failure each check exists to catch.
@@ -263,18 +258,16 @@ const byVerb = (buttons, verb) => buttons.find((b) => b.verb === verb);
  * exists. `a verb with no control` is the eighth-button problem arriving from
  * the other direction — a moveset frozen at seven is only worth anything if all
  * seven are actually on the screen; for PUKAR specifically that means the
- * steer's `down`, since it has no button of its own. `a button that needs two
- * fingers` and `the stick fires two actions from one field` are both
+ * pad's `down`, since it has no button of its own. `a button that needs two
+ * fingers` and `the pad fires two actions from one field` are both
  * constraint 1 — a single point of contact must resolve to one well-formed
- * action. `the base stops being a circle` is issue #23's own failure mode:
- * nothing about input breaks if the steer's box goes rectangular again, only
- * the shape the second phone playtest asked for.
+ * action.
  */
 const CONTROLS = [
   {
     check: 'seven verbs',
     why: 'a verb with no control',
-    layout: broken((l) => delete l.steer.down),
+    layout: broken((l) => delete l.pad.down),
   },
   {
     check: 'seven verbs',
@@ -291,13 +284,8 @@ const CONTROLS = [
   },
   {
     check: 'no chord',
-    why: "the stick's down fires two actions",
-    layout: broken((l) => (l.steer.down = ['down', 'extra'])),
-  },
-  {
-    check: 'steer is round',
-    why: 'the base stops being a circle',
-    layout: broken((l) => (l.steer.h = l.steer.w + 0.5)),
+    why: "the pad's down fires two actions",
+    layout: broken((l) => (l.pad.down = ['down', 'extra'])),
   },
   {
     check: 'a tap is a whole jump',
@@ -330,7 +318,7 @@ const CONTROLS = [
     // failure that only appears on one of the four — which is the point of
     // checking four rather than the one on the desk.
     why: 'the two clusters meeting in the middle',
-    layout: broken((l) => (l.steer.w = 3.8)),
+    layout: broken((l) => (byDir(l.pad.targets, 'right').w += 3)),
   },
 ];
 

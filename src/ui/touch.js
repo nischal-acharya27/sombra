@@ -13,12 +13,12 @@
 //
 // Constraint 2 is `tools/gatecheck.js`'s and has nothing to do with this file.
 // Constraint 1 is reversed here for one case, by `DECISIONS.md` § The steer
-// control becomes a stick: the first phone playtest found a held direction on
-// a stick is not the chord the constraint was written against, since the
-// thumb steering is already resting on it. PUKAR is that one case — hold down
-// on the stick, press RISE — so the steer descriptor below carries a third
-// action alongside its left/right pair, and there is no dedicated PUKAR
-// target any more. Constraint 3 is a property of what a gate *asks for*
+// control becomes a stick: the first phone playtest found a held direction is
+// not the chord the constraint was written against, since the thumb steering
+// is already resting on it. PUKAR is that one case — hold DOWN, press RISE —
+// so the pad descriptor below still carries `down` as PUKAR's whole route,
+// and there is no dedicated PUKAR target of its own. Constraint 3 is a
+// property of what a gate *asks for*
 // rather than of what the screen offers, so nothing here can check it — the
 // layout below simply never needs two buttons pressed together, and the phone
 // playtest is the instrument that says whether that survives contact.
@@ -102,17 +102,11 @@ export const UNIT = { min: 46, vw: 12, vh: 13.5, max: 70 };
 /** What a tap must be worth, and the two spans it has to cover. */
 export const JUMP_HOLD = { rise: RISE, buffer: BUFFER, need: RISE + BUFFER };
 
-/**
- * The steer's knob, as a fraction of the base circle's own diameter.
- *
- * One source for both `_buildSteer` (sizes the element) and `_placeKnob`
- * (slides it), so the two cannot drift out of sync the way a size in
- * `style.css` and a travel distance in this file otherwise would. `travel`
- * has to keep the knob's edge inside the base at full deflection: a knob of
- * `size` centred `travel` away from the middle reaches `travel + size / 2`
- * from centre, which must stay under the base's own radius of 50.
- */
-export const KNOB = { size: 44, travel: 26 }; // 26 + 44 / 2 = 48 < 50
+/** The size of one direction button in the arrow pad, in units. */
+export const PAD_SIZE = 1.0;
+
+/** The gap between adjacent direction buttons, in units. */
+export const PAD_GAP = 0.12;
 
 /**
  * Where each control sits.
@@ -122,8 +116,7 @@ export const KNOB = { size: 44, travel: 26 }; // 26 + 44 / 2 = 48 < 50
  * at any width. The five buttons sweep up and to the left from where a right
  * thumb rests, and **the order along that sweep is how often a hand reaches for
  * the move**: SLASH biggest and nearest, then JUMP and RISE, then STEP, then
- * AAGO furthest. PUKAR is not on this sweep — see the steer descriptor
- * below.
+ * AAGO furthest. PUKAR is not on this sweep — see the pad descriptor below.
  *
  * STEP outranks AAGO there for the reason `player.js` tests dash before
  * everything else — it is the defensive option, and a player mashing it under
@@ -144,42 +137,43 @@ export const KNOB = { size: 44, travel: 26 }; // 26 + 44 / 2 = 48 < 50
 export const TOUCH_LAYOUT = {
   unit: UNIT,
   /**
-   * A stick, not three buttons. A thumb rests on it and both the horizontal
-   * direction and a press toward the bottom edge follow, which separate
-   * targets cannot do without a gap between them that eats input mid-slide.
+   * Four buttons, not a stick — `DECISIONS.md` § Backlog: playtest round 2,
+   * "touch steer becomes a four-way arrow pad, not a knob". Read the way a
+   * keyboard's arrow cluster is: a cross, LEFT and RIGHT flanking a middle
+   * column that carries DOWN below them and UP above, each target a discrete
+   * press rather than a point slid across a base.
    *
-   * `deadzone` gates left/right the same way it always did: inside it the
-   * hunter stands still, so stopping does not require lifting off.
-   * `downDeadzone` gates `down` the same way, independently — a thumb can
-   * hold left or right and down at once, exactly like a keyboard holding
-   * `A`/`D` and `S` together, because they are different fingers' worth of
-   * travel on the same stick rather than a second target to reach for.
+   * The cross is two columns wide rather than three deliberately: LEFT and
+   * RIGHT sit side by side, and UP/DOWN are centred in the gap between them
+   * instead of taking a third column of their own. A three-column row (LEFT,
+   * DOWN, RIGHT, UP stacked above DOWN) is the more literal read of a
+   * keyboard's arrow cluster, but at the narrowest portrait viewport
+   * `tools/touchcheck.js` tests it does not leave 44px targets room to sit
+   * clear of the action-button cluster on the other side of the screen — the
+   * two-column cross does, with the same four discrete presses.
    *
-   * `down` is `DECISIONS.md` § The steer control becomes a stick: held here,
+   * `down` is still `DECISIONS.md` § The steer control becomes a stick: held,
    * it is read by `player.js` exactly as the keyboard's `S`/`ArrowDown` is —
    * see `engine/input.js`'s `down` binding — so PUKAR needs no route of its
-   * own any more.
+   * own. Nothing about that chord changes here; only the shape of what a
+   * thumb touches to hold it does.
    *
-   * `w` and `h` are equal — a second phone playtest (issue #23) asked for the
-   * shape to read as a circular joystick rather than the one-axis slide pad's
-   * rectangle. Nothing about the read above changes: horizontal direction and
-   * `down` stay two independent thresholds off the same point of contact, not
-   * a combined vector, so a round base does not imply diagonal movement the
-   * game still doesn't have. `_buildSteer` draws the circle and the knob that
-   * moves inside it; this descriptor only fixes the box it's read against.
+   * `up` fires the `up` action `engine/input.js` has bound to `KeyW`/`ArrowUp`
+   * since the input module existed — gameplay has never consumed it, on
+   * keyboard or here, so this button changes nothing yet. It exists now so
+   * the next ticket ("UP enters a cleared gate's arch") has a target to wire
+   * rather than a control to invent.
    */
-  steer: {
+  pad: {
     verb: 'move',
     side: 'left',
-    x: 0.25,
-    y: 0.35,
-    w: 1.8,
-    h: 1.8,
-    neg: 'left',
-    pos: 'right',
     down: 'down',
-    deadzone: 0.18,
-    downDeadzone: 0.35,
+    targets: [
+      { dir: 'left', action: 'left', glyph: '◀', x: 0.25, y: 0.35 + PAD_SIZE + PAD_GAP, w: PAD_SIZE, h: PAD_SIZE },
+      { dir: 'right', action: 'right', glyph: '▶', x: 0.25 + PAD_SIZE + PAD_GAP, y: 0.35 + PAD_SIZE + PAD_GAP, w: PAD_SIZE, h: PAD_SIZE },
+      { dir: 'down', action: 'down', glyph: '▼', x: 0.25 + (PAD_SIZE + PAD_GAP) / 2, y: 0.35, w: PAD_SIZE, h: PAD_SIZE },
+      { dir: 'up', action: 'up', glyph: '▲', x: 0.25 + (PAD_SIZE + PAD_GAP) / 2, y: 0.35 + 2 * (PAD_SIZE + PAD_GAP), w: PAD_SIZE, h: PAD_SIZE },
+    ],
   },
   buttons: [
     { verb: 'light', action: 'light', label: STRINGS.TOUCH_SLASH, side: 'right', x: 0.36, y: 0.36, w: 1.62, h: 1.58, tone: 'cyan' },
@@ -216,8 +210,11 @@ export const TOUCH_LAYOUT = {
   ],
 };
 
-/** Every control in the layout, axis first. */
-export const controlsOf = (layout = TOUCH_LAYOUT) => [layout.steer, ...layout.buttons];
+/** Every control in the layout, pad targets first, each as one box. */
+export const controlsOf = (layout = TOUCH_LAYOUT) => [
+  ...layout.pad.targets.map((t) => ({ ...t, verb: t.dir, side: layout.pad.side })),
+  ...layout.buttons,
+];
 
 /** The `--b` expression. One unit, clamped by both axes — see `UNIT`. */
 export const unitCss = (u = UNIT) => `clamp(${u.min}px, min(${u.vw}vw, ${u.vh}vh), ${u.max}px)`;
@@ -256,16 +253,13 @@ export class TouchControls {
     this.root = root;
     this.layout = layout;
     this.visible = false;
-    this.dir = 0;
-    this.pressingDown = false;
-    this.steerPointer = null;
     this.heldBy = new Map(); // pointerId -> {action, el}
 
     // On the document rather than on `#touch`, because the HUD needs it too:
     // the objective line and the boss bar sit along the bottom of the frame and
     // have to be lifted clear of a cluster that only exists on a phone.
     document.documentElement.style.setProperty('--b', unitCss(layout.unit));
-    this._buildSteer(layout.steer);
+    for (const t of layout.pad.targets) this._buildButton({ ...t, side: layout.pad.side, tone: 'plain' });
     for (const b of layout.buttons) this._buildButton(b);
 
     // A thumb still down when the window goes away never sends its pointerup,
@@ -285,58 +279,18 @@ export class TouchControls {
     el.style.height = u(c.h);
   }
 
-  _buildSteer(c) {
-    const el = document.createElement('div');
-    el.className = 'touch-target touch-steer';
-    // A knob rather than glyphs — see the descriptor's `w`/`h` note on why the
-    // base is now a circle. `_placeKnob` slides it toward whichever edge is
-    // held, which is the only thing that has to say "left" or "down" now.
-    el.innerHTML = '<div class="knob"></div>';
-    this._place(el, c);
-    this.root.appendChild(el);
-    this.steer = el;
-    this.knob = el.querySelector('.knob');
-    this.knob.style.width = this.knob.style.height = `${KNOB.size}%`;
-
-    // Horizontal and vertical read off the same point of contact
-    // independently, the way a real stick's two axes do — a thumb can hold a
-    // direction and `down` together without that being two targets.
-    const read = (e) => {
-      const r = el.getBoundingClientRect();
-      const u = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
-      this._setDir(u > c.deadzone ? 1 : u < -c.deadzone ? -1 : 0);
-      if (c.down) {
-        const v = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
-        this._setDown(v > c.downDeadzone);
-      }
-    };
-    el.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      this.steerPointer = e.pointerId;
-      el.setPointerCapture(e.pointerId);
-      read(e);
-    });
-    el.addEventListener('pointermove', (e) => {
-      if (e.pointerId === this.steerPointer) read(e);
-    });
-    const up = (e) => {
-      if (e.pointerId !== this.steerPointer) return;
-      this.steerPointer = null;
-      this._setDir(0);
-      this._setDown(false);
-    };
-    el.addEventListener('pointerup', up);
-    el.addEventListener('pointercancel', up);
-  }
-
   _buildButton(c) {
     const el = document.createElement('div');
     el.className = `touch-target touch-btn tone-${c.tone}`;
-    // One size for every label that fits at it, and only the ones that do not
-    // shrink — six buttons in three different type sizes reads as an accident.
-    // `AAGO` is the only name the layout carries that has to give.
-    const fs = Math.min(0.19, 0.95 / c.label.length).toFixed(3);
-    el.innerHTML = `<b style="font-size:calc(var(--b) * ${fs})">${c.label}</b>`;
+    // A pad target carries a `glyph` (one arrow character) instead of a
+    // `label`, and is drawn at a fixed size rather than shrunk to fit — an
+    // arrow is one character at every size.
+    el.innerHTML = c.glyph
+      ? `<b class="pad-glyph">${c.glyph}</b>`
+      : // One size for every label that fits at it, and only the ones that do
+        // not shrink — six buttons in three different type sizes reads as an
+        // accident. `AAGO` is the only name the layout carries that has to give.
+        `<b style="font-size:calc(var(--b) * ${Math.min(0.19, 0.95 / c.label.length).toFixed(3)})">${c.label}</b>`;
     this._place(el, c);
     this.root.appendChild(el);
 
@@ -366,61 +320,8 @@ export class TouchControls {
     el.addEventListener('pointercancel', up);
   }
 
-  /**
-   * The axis, as one of three states.
-   *
-   * Only the change is sent on, because `actionDown` refills the buffer: a
-   * direction re-asserted every pointermove would keep `left` permanently
-   * fresh in it, and the buffer's whole job is to expire.
-   */
-  _setDir(dir) {
-    if (dir === this.dir) return;
-    const c = this.layout.steer;
-    const was = this.dir === -1 ? c.neg : this.dir === 1 ? c.pos : null;
-    const now = dir === -1 ? c.neg : dir === 1 ? c.pos : null;
-    this.dir = dir;
-    if (was) this.input.actionUp(was);
-    if (now) this.input.actionDown(now);
-    this.steer.classList.toggle('l', dir === -1);
-    this.steer.classList.toggle('r', dir === 1);
-    this._placeKnob();
-  }
-
-  /**
-   * The stick's third state, independent of `_setDir`'s two.
-   *
-   * `player.js` reads `down` exactly as it reads the keyboard's `S` /
-   * `ArrowDown` — see `engine/input.js` — so this is the whole touch route
-   * for PUKAR. Nothing here knows that; it just holds a direction the same
-   * way the keyboard does.
-   */
-  _setDown(on) {
-    if (on === this.pressingDown) return;
-    this.pressingDown = on;
-    const action = this.layout.steer.down;
-    if (!action) return;
-    if (on) this.input.actionDown(action);
-    else this.input.actionUp(action);
-    this.steer.classList.toggle('d', on);
-    this._placeKnob();
-  }
-
-  /**
-   * Slides the knob toward whichever edge `dir`/`pressingDown` currently
-   * hold, independently on each axis — the same two independent reads
-   * `_setDir`/`_setDown` already make, drawn rather than computed twice.
-   * `KNOB.travel` is a visual travel distance, not an input threshold.
-   */
-  _placeKnob() {
-    const x = this.dir * KNOB.travel;
-    const y = this.pressingDown ? KNOB.travel : 0;
-    this.knob.style.transform = `translate(calc(-50% + ${x}%), calc(-50% + ${y}%))`;
-  }
-
   /** Let go of everything — pausing, dying, or losing the window. */
   releaseAll() {
-    this._setDir(0);
-    this._setDown(false);
     for (const [, held] of this.heldBy) {
       held.el.classList.remove('on');
       // `now`: a sustained jump must not outlive the pause that interrupted it.
@@ -428,7 +329,6 @@ export class TouchControls {
     }
     this.heldBy.clear();
     for (const b of this.layout.buttons) if (b.sustain) this.input.actionUp(b.action, true);
-    this.steerPointer = null;
   }
 
   setVisible(on) {

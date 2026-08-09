@@ -611,60 +611,13 @@ kbd {
   box-shadow: 0 0 26px rgba(157, 92, 255, 0.55), inset 0 0 22px rgba(157, 92, 255, 0.25);
 }
 
-/* One target, not three. A thumb rests on it: sliding gives the direction,
-   pressing toward the bottom edge gives PUKAR's `down` — see DECISIONS.md
-   § The steer control becomes a stick. Separate targets would need gaps
-   between them that eat input mid-slide, same as the two-button pad this
-   replaced. Round rather than a rectangle — issue #23 — because the control
-   already behaves like a joystick and its shape should say so. */
-.touch-steer {
-  /* `.touch-target` already sets `position: absolute`, which is also what
-     gives the absolutely-positioned `.knob` something to anchor against —
-     restating it here as `relative` would fight that rule instead. `w`/`h`
-     are equal in the descriptor, so this is a true circle, not an ellipse. */
-  border-radius: 50%;
-  overflow: hidden;
-}
-/* The stick's knob — see `touch.js`'s `_placeKnob` — slides toward whichever
-   edge is held, on the two independent axes `_setDir`/`_setDown` already
-   read. It carries no label: direction is legible from position alone the
-   way a real thumbstick's is, which text glyphs never were.
-
-   Width and height are set inline by `_buildSteer` from `KNOB.size` rather
-   than restated here, so the knob's own size and `_placeKnob`'s travel
-   distance share one source of truth — see `KNOB`'s doc comment for why
-   that pairing has to hold. */
-.touch-steer .knob {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  border-radius: 50%;
-  background: rgba(159, 196, 221, 0.22);
-  border: 1px solid rgba(159, 196, 221, 0.5);
-  box-shadow: 0 0 12px rgba(6, 12, 26, 0.45);
-  transform: translate(-50%, -50%);
-  transition: transform 0.08s ease-out, background 0.08s, border-color 0.08s, box-shadow 0.08s;
-  pointer-events: none;
-}
-.touch-steer.l .knob,
-.touch-steer.r .knob {
-  background: rgba(36, 88, 142, 0.6);
-  border-color: var(--cyan);
-  box-shadow: 0 0 18px rgba(95, 216, 255, 0.5);
-}
-.touch-steer.d .knob {
-  border-color: var(--violet);
-  box-shadow: 0 0 18px rgba(157, 92, 255, 0.5);
-}
-/* Held left/down together — PUKAR's chord — reads as both at once: the cyan
-   fill of a direction under the violet ring `down` alone would draw, so the
-   glow that means "pressed toward PUKAR" isn't lost under the glow that means
-   "steering". */
-.touch-steer.l.d .knob,
-.touch-steer.r.d .knob {
-  background: rgba(36, 88, 142, 0.6);
-  border-color: var(--violet);
-  box-shadow: 0 0 18px rgba(95, 216, 255, 0.4), 0 0 18px rgba(157, 92, 255, 0.5);
+/* The arrow pad's four targets are `.touch-btn`s like any other — see
+   DECISIONS.md § Backlog: playtest round 2, "touch steer becomes a four-way
+   arrow pad, not a knob". `.pad-glyph` only fixes the arrow's size, since a
+   single character doesn't need the shrink-to-fit sizing text labels get. */
+.pad-glyph {
+  font-size: calc(var(--b) * 0.5);
+  line-height: 1;
 }
 
 /* The keyboard legend on the title screen is a list of keys the device does
