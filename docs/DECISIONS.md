@@ -2307,6 +2307,30 @@ touch the descriptor's shape rather than just two entries' coordinates.
 
 ### Ticket: STEP is renamed DASH and moves to its own control above the cluster
 
+**Implemented 2026-08-09.** `STRINGS.TOUCH_STEP` is now `STRINGS.TOUCH_DASH`
+('DASH'), `touch.js`'s one call site updated with it. `TOUCH_LAYOUT.buttons`
+drops `dash` from the four-item sweep (JUMP, SLASH, RISE, AAGO now — the
+"five buttons sweep" comment above the descriptor is rewritten to match) and
+adds it back as its own entry: `x: 0.90, y: 3.70, w: 3.50, h: 1.00`, wide
+rather than square, sitting above RISE — the sweep's own tallest box, top
+edge at unit 3.54 — with room to clear it. `tools/touchcheck.js` needed no
+change: `boxAt`'s overlap and fit math was already shape-agnostic, reading
+`w`/`h` independently rather than assuming a square, so a wider, shorter box
+is just a different box to the same arithmetic. What *did* need attending to
+was outside the descriptor: `.touch-btn`'s `border-radius: 50%` turns a
+square into a circle but a 3.5×1.0 box into a lens, not the rectangular
+shoulder-button read the ticket asked for — `_buildButton` (`touch.js`) now
+adds a `shoulder` class for `verb === 'dash'` and `style.css` gives it
+`border-radius: calc(var(--b) * 0.3)` instead. Verified with `?sim` across
+all five recorded seeds: every row, including `TOUCH LAYOUT`'s four fit
+checks and its narrowest-portrait "22px clear down the middle" (unchanged —
+still governed by AAGO's reach into the cluster, same as before this ticket,
+since DASH's new box does not reach as far left as AAGO already did),
+matches the prior ticket's own verification run exactly; the only red rows
+anywhere are the same pre-existing, already-frozen categories (signed-rank
+on four of the five seeds, `ranged` boss, charger
+`recovery-window`/`remnant`).
+
 Settled 2026-08-09, from the same playtest. The rename is overdue rather than
 new: the verb has been `dash` throughout the engine (`MOVESET`, `player.js`,
 `engine/audio.js`'s `'dash'` case) since the control existed — only

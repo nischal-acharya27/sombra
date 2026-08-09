@@ -78,7 +78,7 @@ export const STRINGS = {
   TOUCH_SLASH: 'SLASH',
   TOUCH_JUMP: 'JUMP',
   TOUCH_RISE: 'RISE',
-  TOUCH_STEP: 'STEP',
+  TOUCH_DASH: 'DASH',
   TOUCH_MAGIC: 'AAGO',
 
   // -- gate 1: Hollow of the Kneeling Stone ------------------------------------

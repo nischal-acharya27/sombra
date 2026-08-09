@@ -113,10 +113,11 @@ export const PAD_GAP = 0.12;
  *
  * `x` is measured from the control's own edge of the screen and `y` from the
  * bottom, both in units, so the two clusters stay pinned under the two thumbs
- * at any width. The five buttons sweep up and to the left from where a right
- * thumb rests, and **the order along that sweep is how often a hand reaches for
- * the move**: JUMP biggest and nearest, then SLASH and RISE, then STEP, then
- * AAGO furthest. PUKAR is not on this sweep — see the pad descriptor below.
+ * at any width. The four buttons in `buttons` below the DASH bar sweep up and
+ * to the left from where a right thumb rests, and **the order along that
+ * sweep is how often a hand reaches for the move**: JUMP biggest and nearest,
+ * then SLASH and RISE, then AAGO furthest. PUKAR is not on this sweep — see
+ * the pad descriptor below.
  *
  * SLASH and JUMP traded slots from an earlier layout — `DECISIONS.md` §
  * Backlog: playtest round 2, "SLASH and JUMP trade positions in the touch
@@ -127,10 +128,16 @@ export const PAD_GAP = 0.12;
  * is most-to-least reached for, did not change; only which verb sits where
  * on it did.
  *
- * STEP outranks AAGO there for the reason `player.js` tests dash before
- * everything else — it is the defensive option, and a player mashing it under
- * pressure means it. AAGO costs 16 MP and has a cooldown, so it is never the
- * move a panicking thumb wants.
+ * DASH is off the sweep entirely — `DECISIONS.md` § Backlog: playtest round
+ * 2, "STEP is renamed DASH and moves to its own control above the cluster".
+ * It reads as a shoulder button, the way a controller's L1/R1 sits above the
+ * face buttons rather than joining their diamond, a convention players
+ * already bring in from twin-stick and joypad layouts. Its own control
+ * exists because `player.js` tests dash before everything else — it is the
+ * defensive option, and a player mashing it under pressure means it —
+ * so it earns a target neither the sweep's ordering nor a diagonal step
+ * further into the four-button diamond expresses as directly as its own bar
+ * above all of them does.
  *
  * Both clusters hug the bottom corners, and that is not decoration: the camera
  * frames the hunter around the centre of the screen with the horizon high, so
@@ -214,8 +221,12 @@ export const TOUCH_LAYOUT = {
      */
     { verb: 'jump', action: 'jump', label: STRINGS.TOUCH_JUMP, side: 'right', x: 0.36, y: 0.36, w: 1.62, h: 1.58, tone: 'plain', sustain: TAP_WORTH },
     { verb: 'heavy', action: 'heavy', label: STRINGS.TOUCH_RISE, side: 'right', x: 0.54, y: 2.04, w: 1.50, h: 1.50, tone: 'cyan' },
-    { verb: 'dash', action: 'dash', label: STRINGS.TOUCH_STEP, side: 'right', x: 2.16, y: 2.34, w: 1.44, h: 1.44, tone: 'plain' },
     { verb: 'magic', action: 'magic', label: STRINGS.TOUCH_MAGIC, side: 'right', x: 3.60, y: 0.96, w: 1.38, h: 1.44, tone: 'blue' },
+    // The shoulder bar — off the sweep above, above all four of it. Wide
+    // rather than square, the way a controller's L1/R1 reads, and high
+    // enough above RISE (the sweep's own tallest box, top edge at 3.54) to
+    // clear it rather than graze it.
+    { verb: 'dash', action: 'dash', label: STRINGS.TOUCH_DASH, side: 'right', x: 0.90, y: 3.70, w: 3.50, h: 1.00, tone: 'plain' },
   ],
 };
 
@@ -290,7 +301,11 @@ export class TouchControls {
 
   _buildButton(c) {
     const el = document.createElement('div');
-    el.className = `touch-target touch-btn tone-${c.tone}`;
+    // DASH is the one button that is not a circle: a shoulder bar reads as a
+    // rounded rectangle, the way a controller's L1/R1 does, and `.touch-btn`'s
+    // own `border-radius: 50%` would stretch a box this much wider than tall
+    // into a lens rather than a bar.
+    el.className = `touch-target touch-btn tone-${c.tone}${c.verb === 'dash' ? ' shoulder' : ''}`;
     // A pad target carries a `glyph` (one arrow character) instead of a
     // `label`, and is drawn at a fixed size rather than shrunk to fit — an
     // arrow is one character at every size.

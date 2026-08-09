@@ -586,6 +586,9 @@ kbd {
   place-items: center;
   color: #cfe6f5;
 }
+/* DASH's shoulder bar — a rounded rectangle rather than the round face
+   buttons below it, the way a controller's L1/R1 reads against its diamond. */
+.touch-btn.shoulder { border-radius: calc(var(--b) * 0.3); }
 .touch-btn b {
   font-weight: 700;
   letter-spacing: 0.1em;
