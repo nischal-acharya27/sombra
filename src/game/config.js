@@ -871,10 +871,6 @@ export const STYLE = {
  * instead of a literal.
  */
 export const SYS_WINDOW = {
-  /** An encounter's intro with no teaching note. */
-  encounter: 1700,
-  /** An encounter's intro that carries a teaching note — a little longer to read. */
-  encounterNote: 2600,
   /** A boss's intro. */
   bossIntro: 2400,
   /** The first-remnant teaching line: the longest window in the game. */

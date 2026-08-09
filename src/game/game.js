@@ -819,9 +819,9 @@ export class Game {
     for (const s of e.spawns) {
       this.pendingSpawns.push({ ...s, encounter: e.id, t: s.delay });
     }
-    if (e.intro) {
+    if (e.intro && e.boss) {
       this.audio.play('systemOpen');
-      const duration = e.boss ? SYS_WINDOW.bossIntro : e.intro.note ? SYS_WINDOW.encounterNote : SYS_WINDOW.encounter;
+      const duration = SYS_WINDOW.bossIntro;
       // A teaching line rides inside the intro rather than following it, and
       // buys a little extra time on screen when there is one to read.
       this.hud.window({
@@ -835,6 +835,16 @@ export class Game {
       // pauses for the window's life — see docs/DECISIONS.md, "The System
       // window pauses the fight it explains".
       this.freeze = Math.max(this.freeze, duration / 1000);
+    } else if (e.intro) {
+      // A grunt encounter gets the archetype's name and nothing else — no
+      // freeze, no flavor title, no teaching note. `e.intro.body` is already
+      // just the archetype list (`'Raakchyas × 3'`), so the toast reuses it
+      // verbatim rather than needing its own copy. Non-blocking: the same
+      // `hud.toast` mechanism `TOAST_AREA_CLEARED` and `TOAST_CHARGE` use,
+      // not the modal `hud.window` — the fight starts under it and the
+      // player can act through it, exactly the freedom "no passive contact
+      // damage" already promises them while they read.
+      this.hud.toast(e.intro.body);
     }
     if (e.boss) {
       this.hud.objective('');

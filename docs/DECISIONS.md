@@ -2330,6 +2330,40 @@ checking.
 
 ### Ticket: regular-enemy encounter windows stop freezing the game and stop describing the enemy
 
+**Implemented 2026-08-09.** `_startEncounter` (`game.js`) now branches on
+`e.boss`: a boss keeps the exact modal-`hud.window` + freeze behaviour it
+always had (untouched — that is the next ticket's to change, not this one's).
+A grunt encounter gets `this.hud.toast(e.intro.body)` instead — no freeze, no
+title, no note. `e.intro.body` already *was* just the archetype list every
+gate authors (`'Raakchyas × 3'`, `'Kawach × 1  ·  Tantrik × 1  ·  Raakchyas ×
+1'`, …), so the toast needed no new copy, just a different mechanism to carry
+it. `SYS_WINDOW.encounter` and `SYS_WINDOW.encounterNote` are gone from
+`config.js` with their last caller, and `HUD.window`'s `duration` parameter
+lost its now-dead default — every remaining call site already named one
+explicitly, matching what its own doc comment claimed. `.toast` in
+`style.css` traded `white-space: nowrap` for a `max-width` and centred text:
+gate 7's `MELEE` encounter names five archetypes in one line, too long to
+read as a single unbroken toast the way `'PUKAR'` or `'AREA CLEARED'` do.
+
+**The open question, answered.** `docs/PLAYTEST.md` round 3's own words —
+"too much text, for a short period of time... reading the texts while
+fighting them is not very feasible" — is the teaching note's own obituary:
+the note is cut entirely rather than relocated, for every encounter including
+gate 1's `first-blood`. "No passive contact damage on anything" is already a
+whole-game rule a hunter learns by taking a hit from nothing that isn't a
+telegraphed attack, not a line that has to out-race three raakchyas to be
+read. Verified with `?sim` across all five recorded seeds: the only red rows
+on any of them are the pre-existing, already-frozen categories — signed-rank
+(now failing on four of the five rather than the four it failed on before
+this ticket; the isolation check `git stash push src/game/game.js
+src/game/config.js src/ui/hud.js src/ui/style.css` on seed 20260802 confirms
+that seed was already red pre-change, just at a different z, because a
+playthrough runs faster without ten gates of encounter freezes and a faster
+playthrough draws its seeded `Math.random` stream on a different frame
+schedule — this is the frozen gate's own documented false-negative rate
+doing what it does, not a new fault), `ranged` boss, and charger
+`recovery-window`/`remnant` — unchanged in kind by this ticket.
+
 Settled 2026-08-09, from the same playtest, a separate complaint from the
 touch scheme above: **the pause before every single enemy encounter breaks
 the pace, and describing what an enemy does is teaching the player something

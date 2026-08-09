@@ -4,7 +4,7 @@
 // Leveling pastiche that should look like a UI and not like the world, and
 // text stays crisp at any resolution without a single texture.
 
-import { STYLE, SYS_WINDOW } from '../game/config.js';
+import { STYLE } from '../game/config.js';
 import { clamp } from '../engine/mathx.js';
 import { STRINGS } from './strings.js';
 
@@ -143,7 +143,7 @@ export class HUD {
    * than the game failing to render — see `.sys-window.glitch` in the CSS.
    * Returns a promise that resolves when it closes, so callers can sequence.
    */
-  window({ title, big, body, lines, glitch = false, duration = SYS_WINDOW.encounter }) {
+  window({ title, big, body, lines, glitch = false, duration }) {
     const el = document.createElement('div');
     el.className = glitch ? 'sys-window glitch' : 'sys-window';
 

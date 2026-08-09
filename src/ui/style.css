@@ -404,7 +404,8 @@ html, body {
   padding: 8px 20px;
   font-size: 13px;
   letter-spacing: 0.2em;
-  white-space: nowrap;
+  max-width: 86vw;
+  text-align: center;
   box-shadow: 0 0 26px rgba(50, 160, 220, 0.3);
   animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
