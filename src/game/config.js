@@ -871,8 +871,12 @@ export const STYLE = {
  * instead of a literal.
  */
 export const SYS_WINDOW = {
-  /** A boss's intro. */
-  bossIntro: 2400,
+  /**
+   * A Warden's name, on arrival. Shorter than the old freezing `bossIntro`
+   * (2400ms) it replaces — nothing to read here but one word, and nothing
+   * halts the fight to give it more time than that.
+   */
+  bossName: 1600,
   /** The first-remnant teaching line: the longest window in the game. */
   remnantTeach: 3400,
   /** The Guardian's enrage warning. */

@@ -2397,6 +2397,31 @@ per "the players will learn through playing."
 
 ### Ticket: boss (Warden) intros keep only the name, lose the freeze and the flavor text
 
+**Implemented 2026-08-09.** `_startEncounter`'s boss branch (`game.js`) opens
+a `hud.window` still — the "shorter, non-freezing window" half of the open
+question below, kept rather than folded into the grunt ticket's toast,
+because a Warden's arrival is a once-per-gate beat and the modal card's
+extra presence costs nothing a freeze isn't also costing. But it carries only
+`e.intro.body` (`WARDEN.title`, the Warden's actual name — `DWAR-RAKSHAK`,
+`KEVAT`, `MAUN-ANKUR`, …) as the window's own title, dropping `e.intro.title`
+(the flavor label, "GATE BOSS"/"GATE WARDEN", identical on eight of the ten
+gates and so naming nothing the player didn't already know from the boss bar
+appearing) and dropping the freeze entirely — no `this.freeze` write in the
+boss branch any more. `SYS_WINDOW.bossIntro` (2400ms, frozen) is replaced by
+`SYS_WINDOW.bossName` (1600ms, `config.js`) — shorter because a single word
+needs less time on screen than a title-plus-name pair did, and unfrozen
+because nothing pauses to read one word. `e.intro.title` and the ten
+`GATEx_..._TITLE` strings it reads are left in place, unused, matching how
+the grunt ticket above already left `intro.title`/`intro.note` defined but
+unread rather than stripping every gate file — the same call this session
+made there, made again here for consistency rather than re-litigated.
+Verified with `?sim` across all five recorded seeds: every row — including
+the per-seed signed-rank statistic, which shifted between the grunt ticket
+and this one not at all — matches the grunt ticket's own verification run
+exactly; the only red rows anywhere are the same pre-existing, already-frozen
+categories (signed-rank on four of the five seeds, `ranged` boss, charger
+`recovery-window`/`remnant`).
+
 Settled 2026-08-09, from the same playtest, split from the ticket above
 because the playtest's own ask was narrower here: **"maybe just name the main
 bosses when they appear."** Bosses stay an exception to "no dialogue" — only

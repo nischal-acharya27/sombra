@@ -820,21 +820,15 @@ export class Game {
       this.pendingSpawns.push({ ...s, encounter: e.id, t: s.delay });
     }
     if (e.intro && e.boss) {
+      // Bosses stay an exception to "no dialogue" — a Warden still gets a
+      // System window a grunt does not — but only the name survives: the
+      // flavor label (`e.intro.title`, "GATE BOSS"/"GATE WARDEN", the same
+      // two words on most gates) and the freeze both go the way the grunt
+      // ticket above sent theirs. `e.intro.body` is `WARDEN.title` — the
+      // Warden's actual name, e.g. `DWAR-RAKSHAK` — so it becomes the
+      // window's own title rather than a line underneath one.
       this.audio.play('systemOpen');
-      const duration = SYS_WINDOW.bossIntro;
-      // A teaching line rides inside the intro rather than following it, and
-      // buys a little extra time on screen when there is one to read.
-      this.hud.window({
-        title: e.intro.title,
-        big: e.intro.body,
-        body: e.intro.note,
-        duration,
-      });
-      // The window is timer-driven and outlasts the delay on the spawns it
-      // announces, so the fight starts underneath it unless the sim itself
-      // pauses for the window's life — see docs/DECISIONS.md, "The System
-      // window pauses the fight it explains".
-      this.freeze = Math.max(this.freeze, duration / 1000);
+      this.hud.window({ title: e.intro.body, duration: SYS_WINDOW.bossName });
     } else if (e.intro) {
       // A grunt encounter gets the archetype's name and nothing else — no
       // freeze, no flavor title, no teaching note. `e.intro.body` is already
