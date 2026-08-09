@@ -8,7 +8,7 @@
 // and winnability* can, and both are easy to break while tuning. Every bot
 // below has caught a real bug at least once.
 
-import { PLAYER, ATTACKS, CHAYA, CHARGER } from '../src/game/config.js';
+import { PLAYER, ATTACKS, CHAYA, CHARGER, GATE_ARCH } from '../src/game/config.js';
 import { ChargerChaya } from '../src/game/shadow.js';
 import { buildShard } from '../src/render/models.js';
 import { checkGates, controls, crossing, telegraphs } from './gatecheck.js';
@@ -1108,11 +1108,14 @@ function transition(game, input) {
     p.vy = 0;
   };
 
-  // Walk into it. This row is about whether the arch takes you at all.
+  // Walk up to it and press UP. This row is about whether the arch takes you
+  // at all — walking into it is no longer enough on its own, see
+  // docs/DECISIONS.md "UP enters a cleared gate's arch".
   atTheArch(5);
   bot.hold('right', true);
   let frames = 0;
   while (game.gateIndex === 0 && frames < 600) {
+    if (Math.abs(p.x - from.exitX) <= GATE_ARCH.reach) bot.press('up');
     bot.step();
     frames++;
   }
@@ -1142,6 +1145,7 @@ function transition(game, input) {
     finish.hold('right', true);
     let extra = 0;
     while (game.state === 'cleared' && extra < 600) {
+      if (Math.abs(p.x - game.gate.exitX) <= GATE_ARCH.reach) finish.press('up');
       finish.step();
       extra++;
     }
@@ -1173,6 +1177,7 @@ function transition(game, input) {
   bot.hold('left', true);
   let back = 0;
   while (game.gateIndex === 0 && back < 600) {
+    if (Math.abs(p.x - from.exitX) <= GATE_ARCH.reach) bot.press('up');
     bot.step();
     back++;
   }
@@ -1189,11 +1194,11 @@ function transition(game, input) {
   // dust, dust is particles, and particles draw — the first version of this row
   // counted seventy frames of walking and read 28, all of it boots. A row that
   // can go red because the footfall landed on the transition frame is measuring
-  // the footfall. So: stand outside the arch, step into it, and count that
-  // single update.
+  // the footfall. So: stand inside the arch, buffer UP, and count the single
+  // update that consumes it.
   atTheArch(4);
-  bot.step(); // arms it — the arch does not take you on the frame it lights
   p.x = from.exitX;
+  bot.press('up');
   const cost = countDraws(() => bot.step());
   say(
     'and the frame that crosses over costs nothing',
@@ -1260,7 +1265,7 @@ function freshness(game) {
   );
   say(
     'every arch in the campaign is dark',
-    levels.every((l) => l.portal.material.opacity === 0) && !game.wayOpen && !game.exitArmed,
+    levels.every((l) => l.portal.material.opacity === 0) && !game.wayOpen,
     game.wayOpen ? 'the way is still open' : 'shut'
   );
   say(

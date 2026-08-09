@@ -151,19 +151,8 @@ export class Game {
     // run being over, which now happens at the last gate's arch rather than a
     // few seconds after the last Warden falls.
     this.state = 'idle';
-    /** The arch is lit and walking into it goes somewhere. */
+    /** The arch is lit and pressing UP inside it goes somewhere. */
     this.wayOpen = false;
-    /**
-     * ...and the hunter has stood outside it since it lit.
-     *
-     * The arch takes you when you *walk into* it, and this is the half of that
-     * which says you have to have been outside first. Without it, a Warden
-     * dying while the hunter happens to be standing in the doorway would open
-     * the way and take them through in the same frame — no walk, no choice,
-     * and in the suite a playthrough that carries straight on into the next
-     * gate and reports the wrong gate's numbers.
-     */
-    this.exitArmed = false;
     this.freeze = 0;
     this.t = 0;
     this.runTime = 0;
@@ -273,7 +262,6 @@ export class Game {
     this.encounters = this.gate.encounters.map((e) => ({ ...e, started: false, cleared: false, alive: 0 }));
     this.activeEncounter = null;
     this.wayOpen = false;
-    this.exitArmed = false;
     this.state = 'playing';
 
     this.player.reset(this.gate.spawnX, 0.2);
@@ -455,10 +443,13 @@ export class Game {
     // A place, not a threshold — approached from either side, because a Warden
     // can die with the hunter standing beyond the arch and a line you can only
     // cross rightwards would strand them there. See `GATE_ARCH` in config.
+    //
+    // UP takes you through, rather than the arch taking you the moment you
+    // walk into it — `pressed()` last, per the rule, so a buffered UP that
+    // also nudges some other check never gets eaten silently.
     if (this.wayOpen) {
       const inside = Math.abs(this.player.x - this.gate.exitX) <= GATE_ARCH.reach;
-      if (!inside) this.exitArmed = true;
-      else if (this.exitArmed) this._stepThrough();
+      if (inside && this.input.pressed('up')) this._stepThrough();
     }
   }
 
@@ -1129,7 +1120,6 @@ export class Game {
    */
   _openTheWay() {
     this.wayOpen = true;
-    this.exitArmed = false;
     this.level.openExit();
     this.audio.play('gateOpen');
     this.hud.objective(this._nextGate() ? STRINGS.OBJ_STEP_THROUGH : STRINGS.OBJ_LEAVE_GATE);

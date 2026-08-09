@@ -2241,6 +2241,28 @@ seven verbs reachable" mean anything against the new pad.
 
 ### Ticket: UP enters a cleared gate's arch
 
+**Implemented 2026-08-09.** Resolved the open question below by reusing
+`up`, not adding an eighth control: `Game.update`'s arch check
+(`game.js`, near the end of `update`) now reads `inside &&
+this.input.pressed('up')` instead of arming on exit and firing on
+re-entry — `pressed()` last, per the input-condition rule, so a buffered UP
+that also does something else on the same frame is never silently eaten.
+`up` was already bound on the keyboard (`engine/input.js`) and already
+fires from the arrow pad's `up` target since the previous ticket; nothing
+in `input.js` or `touch.js` changed. `exitArmed` — the field and comment
+explaining why a Warden dying in the doorway needed an "outside since it
+lit" latch — is gone entirely: a press-gated crossing can't fire on the
+frame the arch lights, so the latch had nothing left to guard against.
+`tools/sim.js`'s `transition` probe now presses `up` (via `Bot.press`,
+which lands in the input buffer the same way a tap or keypress does)
+whenever the hunter is in `GATE_ARCH.reach` of the exit, on both the
+walk-up and cost-measurement rows, and the `exitArmed` half of the
+"every arch in the campaign is dark" replay check is gone with the
+field. Verified with `?sim` across all five recorded seeds: GATE
+TRANSITION is 0 FAIL on each; the only red rows are the pre-existing,
+already-frozen ones (signed-rank on some seeds, `ranged` boss, charger
+`recovery-window`/`remnant`), unchanged by this ticket.
+
 Settled 2026-08-09, from the same playtest as the ticket above. Today the
 arch is a location trigger — walked into, not pressed — with no bound action
 of its own.
