@@ -2608,3 +2608,57 @@ reached-for verbs) or is superseded by the symmetry ask is worth deciding
 explicitly rather than assumed either way. `tools/touchcheck.js`'s checks
 read `buttons` positions generically and should not need to change for a
 rearrangement alone.
+
+## Backlog: pre-Android-port round (2026-08-10), one ticket, one packaging plan
+
+The round-3 backlog above landed (`c80076f`, `9aeed20`) and the touch layout
+is 0 FAIL across all four claimed viewports. Two things came out of the
+conversation that decided to package the game for the Play Store: one real
+gameplay gap the packaging surfaced, filed as a ticket below, and the
+packaging plan itself, recorded here because it was decided but explicitly
+**not yet started** — the user wants more changes in first, and floated a
+grilling session to scope them before touching Android at all.
+
+### Ticket: a defeated boss should hold, not carry the player straight on
+
+Not yet implemented. The ask, verbatim: after defeating a boss, give the
+player time to breathe, and resume only once they press resume / advance to
+the next gate — rather than whatever currently follows a boss kill
+automatically. What state machine currently owns the post-boss beat, whether
+"time to breathe" means a HUD prompt gating input or a literal pause, and
+what "resume" resolves to (same gate's aftermath vs. the next gate's arch)
+are all open — this entry only records the ask, not a design. Candidate for
+`/grill-with-docs` before implementation, per the user's own suggestion,
+rather than assumed here.
+
+### The Android packaging plan
+
+Decided, not built. The target is the Play Store; the chosen path is a
+**TWA (Trusted Web Activity)**, not Capacitor — a TWA wraps the game's
+existing hosted URL in a thin Android shell and asks nothing of this repo's
+build (or lack of one); Capacitor bundles the web assets into the native
+project and typically drags in an npm toolchain, which is exactly what this
+project has refused since its first line. SOMBRA is already live at
+<https://nischal-acharya27.github.io/sombra/> (`sombra-github-pages` memory),
+so the wrapper needs no new hosting.
+
+Steps, in order, only the first two of which touch this repo:
+
+1. Add `manifest.json` at the repo root (name, icons, `display: "standalone"`,
+   `start_url`) and link it from `index.html` — the one prerequisite the
+   game itself needs to be installable at all.
+2. Once PWABuilder (pwabuilder.com) issues a package name and SHA256
+   fingerprint, host `.well-known/assetlinks.json` on Pages so the wrapped
+   app opens full-screen instead of as a bare browser tab.
+3. Run the game's hosted URL through PWABuilder to generate the signed
+   `.aab` — outside this repo, no Node/npm added to it.
+4. Play Console: $25 one-time account, upload the `.aab`, write a privacy
+   policy page (mandatory even though the game only touches `localStorage`),
+   fill the store listing, start on Internal Testing before Production.
+5. Ad SDK, if wanted — `docs/SPEC-CAMPAIGN.md` lists it as in scope but
+   unbuilt; it belongs in the Android wrapper project, not the game's code,
+   and is undecided.
+
+**Sequencing.** The user wants the boss-recovery ticket (and whatever else
+the grilling session surfaces) landed before step 1 starts — this section
+exists so the plan survives to that point rather than being re-derived.

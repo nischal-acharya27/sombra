@@ -622,7 +622,16 @@ kbd {
    arrows (◀▶▼▲), whose glyph ink a font is free to centre differently per
    character. `.pad-arrow` is one triangle, pointing up, rotated per
    direction — the same shape turned four ways can't disagree with itself
-   the way four separate glyphs could. */
+   the way four separate glyphs could.
+
+   A full circle (`.touch-btn`'s own 50%) inscribed in a square hit-box gives
+   up its corners, and the pad's four hit-boxes only touch at their corners
+   (`PAD_GAP`, `touch.js`) to keep the cross frame square — so two diagonal
+   circles read as far apart even though their hit-boxes barely are. Rounding
+   the pad's targets instead of circling them keeps the same hit-box math
+   `tools/touchcheck.js` checks for overlap, while closing most of that
+   dead corner space visually. */
+.touch-btn:has(.pad-arrow) { border-radius: calc(var(--b) * 0.08); }
 .pad-arrow {
   width: calc(var(--b) * 0.34);
   height: calc(var(--b) * 0.34);

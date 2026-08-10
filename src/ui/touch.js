@@ -158,10 +158,10 @@ export const PAD_Y0 = 0.35;
  * DASH bar (`ARM_Y0` up to DASH's own `y: 3.70`), where the pad only answers
  * to the screen's edge and has the whole height below it to spend.
  */
-export const ARM_SIZE = 1.1;
+export const ARM_SIZE = 1.21;
 
 /** The empty space each face button sits off centre, in units. */
-export const ARM_GAP = 0.02;
+export const ARM_GAP = 0.01;
 
 /** Centre-to-centre distance from the diamond's middle to each button. */
 export const ARM_REACH = ARM_SIZE + ARM_GAP;
@@ -173,7 +173,7 @@ export const ARM_REACH = ARM_SIZE + ARM_GAP;
  * corner a right thumb rests in, same as JUMP did in the old sweep. `ARM_Y0`
  * is JUMP's margin from the bottom edge.
  */
-export const ARM_X0 = 0.3;
+export const ARM_X0 = 0.05;
 export const ARM_Y0 = 0.25;
 
 /**
@@ -295,10 +295,11 @@ export const TOUCH_LAYOUT = {
     // The shoulder bar — off the diamond above, above all four of it. Wide
     // rather than square, the way a controller's L1/R1 reads, its own span
     // matching the diamond's exactly so it reads as sitting over it rather
-    // than beside it, and high enough above AAGO (the diamond's own top
-    // vertex, top edge at ARM_Y0 + 2 * ARM_REACH + ARM_SIZE) to clear it
-    // rather than graze it.
-    { verb: 'dash', action: 'dash', label: STRINGS.TOUCH_DASH, side: 'right', x: ARM_X0, y: 3.70, w: 2 * ARM_REACH + ARM_SIZE, h: 1.00, tone: 'plain' },
+    // than beside it, and its own `y` derived from AAGO's top edge (the
+    // diamond's own top vertex, `ARM_Y0 + 2 * ARM_REACH + ARM_SIZE`) plus a
+    // fixed 0.11-unit clearance, so a further resize of the diamond can't
+    // silently leave this a stale literal that used to clear it.
+    { verb: 'dash', action: 'dash', label: STRINGS.TOUCH_DASH, side: 'right', x: ARM_X0, y: ARM_Y0 + 2 * ARM_REACH + ARM_SIZE + 0.11, w: 2 * ARM_REACH + ARM_SIZE, h: 1.00, tone: 'plain' },
   ],
 };
 
