@@ -2651,6 +2651,25 @@ calls `restResume()` once it sees `game.resting`, the one place the suite's
 own bot has to click through the prompt to keep testing the walk it was
 already testing.
 
+Follow-up from a `/code-review` of this work (fixed point `95221b8`, against
+issue #30): the fix above is correct for #30 as literally scoped — one
+story-beat window, one RESUME prompt — but `_fireBeats` loops over *every*
+beat matching `at: 'cleared'` while `HUD.storyWindow()` tracks only the last
+one opened, so a gate with two `'cleared'` beats would orphan the first with
+no timer and no way to dismiss it. No gate defines two today, so this is
+latent. It also means the original ask's "one-by-one, NEXT to advance"
+phrasing was never actually built — only the single-message case was. Filed
+as #32, with a `/grill-with-docs` flagged before implementation since the
+queue/paging design has more than one honest shape. Two minor code-review
+smells (duplicated markup between `HUD.storyWindow()` and `HUD.window()`;
+`Game.restResume()` reaching into two separately-named HUD fields) filed
+together as #33.
+
+Also worth a note and not its own ticket: commit `67c0017`, in the same
+range, folded in an unrelated change — `Enter` now restarts from the death
+screen, not just the title screen. Harmless and arguably a fair UX fix, but
+scope creep against issue #30, which said nothing about the death screen.
+
 ### The Android packaging plan
 
 Decided, not built. The target is the Play Store; the chosen path is a

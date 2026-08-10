@@ -339,18 +339,46 @@ export class Game {
    * logging the refusal rather than the window. `tools/sim.js` reads
    * `this.storyBeats` to prove both halves: that a live encounter is refused,
    * and that a real playthrough never asks it to.
+   *
+   * `Game` owns the queue of beats waiting to be shown; `HUD` only ever
+   * renders one at a time. `onDrained` fires once the queue is empty — for a
+   * single-beat gate (today's only shape) that happens synchronously, in this
+   * same call, exactly like the old one-shot behaviour.
    */
-  _fireBeats(at) {
+  _fireBeats(at, onDrained) {
     const beats = this.gate.beats;
-    if (!beats) return;
-    for (const b of beats) {
-      if (b.at !== at) continue;
-      const liveEncounter = !!this.activeEncounter;
-      this.storyBeats.push({ gate: this.gate.id, at, liveEncounter, opened: !liveEncounter });
-      if (liveEncounter) continue;
-      this.audio.play('systemOpen');
-      this.hud.storyWindow({ title: b.title, big: b.big, body: b.body, glitch: b.glitch });
+    const queue = [];
+    if (beats) {
+      for (const b of beats) {
+        if (b.at !== at) continue;
+        const liveEncounter = !!this.activeEncounter;
+        this.storyBeats.push({ gate: this.gate.id, at, liveEncounter, opened: !liveEncounter });
+        if (!liveEncounter) queue.push(b);
+      }
     }
+    this._showBeatQueue(queue, onDrained);
+  }
+
+  /** Shows the next queued beat, or calls `onDrained` once none are left. */
+  _showBeatQueue(queue, onDrained) {
+    const b = queue.shift();
+    if (!b) {
+      onDrained?.();
+      return;
+    }
+    this.audio.play('systemOpen');
+    const isLast = queue.length === 0;
+    this.hud.storyWindow({
+      title: b.title,
+      big: b.big,
+      body: b.body,
+      glitch: b.glitch,
+      onNext: isLast ? undefined : () => this._showBeatQueue(queue, onDrained),
+    });
+    // The last beat behaves exactly like today's only beat: no NEXT button,
+    // and whatever comes after the queue (bossRestPrompt) lands in the same
+    // tick rather than waiting on a click that will never come.
+    if (isLast) onDrained?.();
   }
 
   /** Loop asks this: 0 freezes the simulation for hitstop. */
@@ -881,13 +909,15 @@ export class Game {
       this.hud.boss(false);
       this.audio.setIntensity(0);
       this.cam.zoom(15);
-      this._fireBeats('cleared');
-      // Hold here rather than lighting the arch straight away — the RESUME
-      // prompt lands directly under whatever `_fireBeats` just opened (or
-      // stands alone with the Warden's name, on a gate with no beat), so the
-      // hunter reads it before the way out even opens. See `restResume`.
+      // Hold here rather than lighting the arch straight away. `_fireBeats`
+      // pages through every queued 'cleared' beat first (or none, on a gate
+      // with no beat), and only once that queue is drained does the RESUME
+      // prompt land directly under whatever it last opened — so the hunter
+      // reads every beat before the way out even opens. See `restResume`.
       this.resting = true;
-      this.hud.bossRestPrompt(this.gate.warden.title, () => this.restResume());
+      this._fireBeats('cleared', () => {
+        this.hud.bossRestPrompt(this.gate.warden.title, () => this.restResume());
+      });
     } else if (e.lock) {
       this.hud.objective(STRINGS.OBJ_CLEAR_GATE);
       this.hud.toast(STRINGS.TOAST_AREA_CLEARED, 'gold');
@@ -1152,8 +1182,7 @@ export class Game {
   restResume() {
     if (!this.resting) return;
     this.resting = false;
-    this.hud.hideBossRestPrompt();
-    this.hud.hideStoryWindow();
+    this.hud.hideRestPrompts();
     this._openTheWay();
   }
 

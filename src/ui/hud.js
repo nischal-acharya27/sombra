@@ -137,13 +137,8 @@ export class HUD {
     }, 1900);
   }
 
-  /**
-   * A System window. `lines` renders as a stat table; `body` as a paragraph.
-   * `glitch` marks the window as the System failing to report cleanly, rather
-   * than the game failing to render — see `.sys-window.glitch` in the CSS.
-   * Returns a promise that resolves when it closes, so callers can sequence.
-   */
-  window({ title, big, body, lines, glitch = false, duration }) {
+  /** Builds a `.sys-window` element from `{title, big, body, lines, glitch}`; does not attach it. */
+  _buildWindowEl({ title, big, body, lines, glitch = false }) {
     const el = document.createElement('div');
     el.className = glitch ? 'sys-window glitch' : 'sys-window';
 
@@ -156,6 +151,17 @@ export class HUD {
       html += '</ul>';
     }
     el.innerHTML = html;
+    return el;
+  }
+
+  /**
+   * A System window. `lines` renders as a stat table; `body` as a paragraph.
+   * `glitch` marks the window as the System failing to report cleanly, rather
+   * than the game failing to render — see `.sys-window.glitch` in the CSS.
+   * Returns a promise that resolves when it closes, so callers can sequence.
+   */
+  window({ title, big, body, lines, glitch = false, duration }) {
+    const el = this._buildWindowEl({ title, big, body, lines, glitch });
     this.el.windows.appendChild(el);
 
     return new Promise((resolve) => {
@@ -176,14 +182,24 @@ export class HUD {
    * caught. It stays up until `hideStoryWindow` closes it, which
    * `Game.restResume` does the moment the hunter accepts the RESUME prompt
    * `bossRestPrompt` lands right underneath it.
+   *
+   * `HUD` shows one beat at a time; `Game` owns the queue behind it. Self-
+   * clearing here (rather than only at each call site) is what keeps a second
+   * beat from orphaning the first in `#windows` — the bug this queue exists
+   * to fix. `onNext`, if given, renders a NEXT button that hands control back
+   * to `Game` to show the next queued beat.
    */
-  storyWindow({ title, big, body, glitch = false }) {
-    const el = document.createElement('div');
-    el.className = glitch ? 'sys-window glitch' : 'sys-window';
-    let html = `<h3>${title}</h3><div class="divider"></div>`;
-    if (big) html += `<div class="big">${big}</div>`;
-    if (body) html += `<p>${body}</p>`;
-    el.innerHTML = html;
+  storyWindow({ title, big, body, glitch = false, onNext }) {
+    this.hideStoryWindow();
+    const el = this._buildWindowEl({ title, big, body, glitch });
+    if (onNext) {
+      el.classList.add('paging');
+      const btn = document.createElement('button');
+      btn.className = 'cta';
+      btn.textContent = 'NEXT';
+      btn.addEventListener('click', onNext);
+      el.appendChild(btn);
+    }
     this.el.windows.appendChild(el);
     this._storyWindowEl = el;
   }
@@ -224,6 +240,12 @@ export class HUD {
   hideBossRestPrompt() {
     this._bossRestEl?.remove();
     this._bossRestEl = null;
+  }
+
+  /** Tears down the boss-rest beat: the RESUME prompt and the story window under it. */
+  hideRestPrompts() {
+    this.hideBossRestPrompt();
+    this.hideStoryWindow();
   }
 
   clearStats(rows) {

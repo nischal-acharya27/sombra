@@ -347,6 +347,9 @@ html, body {
  * grid column, rather than fighting it for centre screen. */
 .boss-rest { pointer-events: auto; margin-top: 14px; }
 .boss-rest .cta { margin-top: 4px; }
+/* A paged story-beat window's NEXT button needs the same click-through as
+ * `.boss-rest` above — see the note on `#windows` above `pointer-events: none`. */
+.sys-window.paging { pointer-events: auto; }
 /* The System reporting that it has no record of a place, rather than the
  * game failing to render one — a stutter in the window's own opacity, not in
  * the frame around it. Only `opacity`/`transform` move, same as `sysIn` next
