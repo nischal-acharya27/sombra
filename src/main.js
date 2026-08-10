@@ -138,7 +138,7 @@ function startRun() {
   hud.screen('title', false);
   hud.screen('death', false);
   hud.screen('clear', false);
-  hud.screen('boss-rest', false);
+  hud.hideBossRestPrompt();
   // Restarting from the pause menu left this overlay up: the gate really did
   // reset, you just could not see it happen.
   hud.screen('pause', false);
@@ -158,14 +158,13 @@ document.getElementById('new-game').addEventListener('click', () => {
 document.getElementById('retry').addEventListener('click', startRun);
 document.getElementById('again').addEventListener('click', startRun);
 document.getElementById('resume').addEventListener('click', () => setPaused(false));
-document.getElementById('boss-rest-resume').addEventListener('click', () => game.restResume());
-document.getElementById('boss-rest-next').addEventListener('click', () => game.restAdvance());
 
 function setPaused(on) {
   // `cleared` is still a live gate — the Warden is down and the hunter is
   // walking to the arch — so it pauses like any other part of the run.
-  // The boss-rest screen already holds everything still on its own terms;
-  // stacking the pause menu over it would just be two overlays fighting.
+  // The boss-rest prompt already holds everything still on its own terms;
+  // stacking the pause menu over it would just be two things fighting for
+  // the same message.
   if ((game.state !== 'playing' && game.state !== 'cleared') || game.resting) return;
   paused = on;
   hud.screen('pause', on);

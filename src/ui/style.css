@@ -340,6 +340,13 @@ html, body {
    * `filter` here without measuring. See `docs/DECISIONS.md`. */
 }
 .sys-window.out { animation: sysOut 0.24s ease-in forwards; }
+/* Unlike every other `.sys-window`, this one holds until clicked rather than
+ * timing itself out, so it needs the clicks `#windows` otherwise blocks —
+ * see the note on `#windows` above `pointer-events: none`. Stacks directly
+ * below whatever `_fireBeats('cleared')` opened, via DOM order in the same
+ * grid column, rather than fighting it for centre screen. */
+.boss-rest { pointer-events: auto; margin-top: 14px; }
+.boss-rest .cta { margin-top: 4px; }
 /* The System reporting that it has no record of a place, rather than the
  * game failing to render one — a stutter in the window's own opacity, not in
  * the frame around it. Only `opacity`/`transform` move, same as `sysIn` next

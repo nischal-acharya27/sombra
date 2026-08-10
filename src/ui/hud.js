@@ -174,10 +174,29 @@ export class HUD {
     if (el) el.classList.toggle('hidden', !on);
   }
 
-  /** The boss-rest screen's two lines of dynamic text: the fallen Warden's name and what advancing means from here. */
-  bossRest(name, hasNext) {
-    $('boss-rest-name').textContent = name;
-    $('boss-rest-next').textContent = hasNext ? STRINGS.BOSSREST_NEXT : STRINGS.BOSSREST_LEAVE;
+  /**
+   * The RESUME prompt a fallen Warden holds the hunter on. Appended to
+   * `#windows` — the same container `window()` uses — so it lands directly
+   * below whatever `_fireBeats('cleared')` just opened there, rather than
+   * fighting it for the screen. `onResume` is `Game.restResume`; `hud.js`
+   * does not know `Game`, so the caller hands over what a click should do.
+   */
+  bossRestPrompt(name, onResume) {
+    const el = document.createElement('div');
+    el.className = 'sys-window boss-rest';
+    el.innerHTML = `<h3>${name}</h3><div class="divider"></div>`;
+    const btn = document.createElement('button');
+    btn.className = 'cta';
+    btn.textContent = 'RESUME';
+    btn.addEventListener('click', onResume);
+    el.appendChild(btn);
+    this.el.windows.appendChild(el);
+    this._bossRestEl = el;
+  }
+
+  hideBossRestPrompt() {
+    this._bossRestEl?.remove();
+    this._bossRestEl = null;
   }
 
   clearStats(rows) {

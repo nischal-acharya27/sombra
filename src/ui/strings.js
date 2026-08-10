@@ -24,10 +24,6 @@ export const STRINGS = {
   OBJ_STEP_THROUGH: 'STEP THROUGH THE GATE',
   OBJ_LEAVE_GATE: 'LEAVE THE GATE',
 
-  // -- boss-rest screen ---------------------------------------------------
-  BOSSREST_NEXT: 'NEXT GATE',
-  BOSSREST_LEAVE: 'LEAVE THE GATE',
-
   // -- toasts -------------------------------------------------------------
   TOAST_CHAYA_LOST: 'CHAYA LOST',
   TOAST_AREA_CLEARED: 'AREA CLEARED',

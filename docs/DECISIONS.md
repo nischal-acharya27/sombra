@@ -2633,14 +2633,23 @@ it always meant. `_clearEncounter`'s Warden branch sets `resting = true`
 instead of calling `_openTheWay()`, and `update()` gains a one-line early
 return while `resting` holds — a literal pause, not just an input gate,
 since nothing should still take damage or tick down while the hunter is
-reading the boss's name. A full-screen `#boss-rest` overlay (same pattern
-as `#pause`/`#death`/`#clear`) names the fallen Warden and offers two
-buttons: RESUME (`Game.restResume()` — lights the arch, same walk-and-press-UP
-as any other clear) and NEXT GATE / LEAVE THE GATE (`Game.restAdvance()` —
-opens the way and steps through in the same call, for whoever does not want
-the walk). `tools/sim.js`'s `transition()` now calls `restResume()` once it
-sees `game.resting`, the one place the suite's own bot has to click through
-the new screen to keep testing the walk it was already testing.
+reading the boss's name.
+
+The first attempt at this put up a full-screen overlay — dark background,
+"WARDEN FELLED", two buttons — the same moment `_fireBeats('cleared')` opens
+its own system window (gate 3's Goru-Mukh, "ONE FEWER IN LINE"), and the two
+fought each other for the screen. The whole point was to protect a message
+the hunter was already being shown, not add a second one on top of it. Fixed
+by dropping the overlay for a small `.sys-window`-styled prompt —
+`hud.bossRestPrompt(name, onResume)` — appended into `#windows` right after
+`_fireBeats`, so it lands in the same grid column, directly below whatever
+beat just opened (or stands alone with the Warden's name, on a gate with no
+beat, per the original ask that every kill get some acknowledgement). One
+button, RESUME (`Game.restResume()`); the NEXT-GATE skip was cut rather than
+fixed — the walk was never the problem. `tools/sim.js`'s `transition()`
+calls `restResume()` once it sees `game.resting`, the one place the suite's
+own bot has to click through the prompt to keep testing the walk it was
+already testing.
 
 ### The Android packaging plan
 
