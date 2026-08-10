@@ -178,7 +178,7 @@ addEventListener('keydown', (e) => {
     if (game.state === 'playing' || game.state === 'cleared') setPaused(!paused);
   }
   if (e.code === 'KeyR' && (paused || game.state === 'dead')) startRun();
-  if (e.code === 'Enter' && game.state === 'idle') startRun();
+  if (e.code === 'Enter' && (game.state === 'idle' || game.state === 'dead')) startRun();
 });
 
 // `?sim` runs the scripted verification suite instead of the game. It steps

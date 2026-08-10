@@ -349,7 +349,7 @@ export class Game {
       this.storyBeats.push({ gate: this.gate.id, at, liveEncounter, opened: !liveEncounter });
       if (liveEncounter) continue;
       this.audio.play('systemOpen');
-      this.hud.window({ title: b.title, big: b.big, body: b.body, glitch: b.glitch, duration: SYS_WINDOW.storyBeat });
+      this.hud.storyWindow({ title: b.title, big: b.big, body: b.body, glitch: b.glitch });
     }
   }
 
@@ -1153,6 +1153,7 @@ export class Game {
     if (!this.resting) return;
     this.resting = false;
     this.hud.hideBossRestPrompt();
+    this.hud.hideStoryWindow();
     this._openTheWay();
   }
 

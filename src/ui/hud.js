@@ -169,6 +169,33 @@ export class HUD {
     });
   }
 
+  /**
+   * The story-beat window a gate boundary opens. Unlike `window()` this never
+   * times itself out — a fixed-duration fade cut the text off mid-sentence for
+   * anyone who reads slower than the timer, which is what a player report
+   * caught. It stays up until `hideStoryWindow` closes it, which
+   * `Game.restResume` does the moment the hunter accepts the RESUME prompt
+   * `bossRestPrompt` lands right underneath it.
+   */
+  storyWindow({ title, big, body, glitch = false }) {
+    const el = document.createElement('div');
+    el.className = glitch ? 'sys-window glitch' : 'sys-window';
+    let html = `<h3>${title}</h3><div class="divider"></div>`;
+    if (big) html += `<div class="big">${big}</div>`;
+    if (body) html += `<p>${body}</p>`;
+    el.innerHTML = html;
+    this.el.windows.appendChild(el);
+    this._storyWindowEl = el;
+  }
+
+  hideStoryWindow() {
+    const el = this._storyWindowEl;
+    if (!el) return;
+    this._storyWindowEl = null;
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 260);
+  }
+
   screen(id, on) {
     const el = $(id);
     if (el) el.classList.toggle('hidden', !on);
