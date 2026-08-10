@@ -153,6 +153,14 @@ export class Game {
     this.state = 'idle';
     /** The arch is lit and pressing UP inside it goes somewhere. */
     this.wayOpen = false;
+    /**
+     * A Warden just fell and the hunter is holding on the boss-rest screen,
+     * waiting on `restResume`/`restAdvance` — not a `state` of its own
+     * because `state` stays `'cleared'` throughout (every existing reader of
+     * `state === 'cleared'`, in `tools/sim.js` and here, keeps meaning
+     * exactly what it always meant); this only gates `update()`.
+     */
+    this.resting = false;
     this.freeze = 0;
     this.t = 0;
     this.runTime = 0;
@@ -262,6 +270,7 @@ export class Game {
     this.encounters = this.gate.encounters.map((e) => ({ ...e, started: false, cleared: false, alive: 0 }));
     this.activeEncounter = null;
     this.wayOpen = false;
+    this.resting = false;
     this.state = 'playing';
 
     this.player.reset(this.gate.spawnX, 0.2);
@@ -366,6 +375,9 @@ export class Game {
     // the hunter still has to walk to it — the gate's exit is a place you go
     // to, not a screen that arrives.
     if (this.state !== 'playing' && this.state !== 'cleared') return;
+    // Held on the boss-rest screen: nothing simulates until the hunter picks
+    // `restResume` or `restAdvance`, the breathing room the ticket asked for.
+    if (this.resting) return;
     this.t += dt;
     this.runTime += dt;
 
@@ -869,8 +881,13 @@ export class Game {
       this.hud.boss(false);
       this.audio.setIntensity(0);
       this.cam.zoom(15);
-      this._openTheWay();
       this._fireBeats('cleared');
+      // Hold here rather than lighting the arch straight away — the hunter
+      // gets a moment on the Warden's name before the way out even opens.
+      // See `restResume`/`restAdvance`.
+      this.resting = true;
+      this.hud.bossRest(this.gate.warden.title, !!this._nextGate());
+      this.hud.screen('boss-rest', true);
     } else if (e.lock) {
       this.hud.objective(STRINGS.OBJ_CLEAR_GATE);
       this.hud.toast(STRINGS.TOAST_AREA_CLEARED, 'gold');
@@ -1125,6 +1142,30 @@ export class Game {
     this.level.openExit();
     this.audio.play('gateOpen');
     this.hud.objective(this._nextGate() ? STRINGS.OBJ_STEP_THROUGH : STRINGS.OBJ_LEAVE_GATE);
+  }
+
+  /**
+   * The hunter picks RESUME on the boss-rest screen: back to playing this
+   * gate, the way any other gate clear works — the arch lights and the walk
+   * to it is still a walk.
+   */
+  restResume() {
+    if (!this.resting) return;
+    this.resting = false;
+    this.hud.screen('boss-rest', false);
+    this._openTheWay();
+  }
+
+  /**
+   * The hunter picks NEXT GATE (or LEAVE THE GATE, on the last one) on the
+   * boss-rest screen: skip the walk to the arch and go straight through it.
+   */
+  restAdvance() {
+    if (!this.resting) return;
+    this.resting = false;
+    this.hud.screen('boss-rest', false);
+    this._openTheWay();
+    this._stepThrough();
   }
 
   /** Into the next gate, or out of the campaign. */

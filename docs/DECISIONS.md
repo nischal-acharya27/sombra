@@ -2621,15 +2621,26 @@ grilling session to scope them before touching Android at all.
 
 ### Ticket: a defeated boss should hold, not carry the player straight on
 
-Not yet implemented. The ask, verbatim: after defeating a boss, give the
-player time to breathe, and resume only once they press resume / advance to
-the next gate — rather than whatever currently follows a boss kill
-automatically. What state machine currently owns the post-boss beat, whether
-"time to breathe" means a HUD prompt gating input or a literal pause, and
-what "resume" resolves to (same gate's aftermath vs. the next gate's arch)
-are all open — this entry only records the ask, not a design. Candidate for
-`/grill-with-docs` before implementation, per the user's own suggestion,
-rather than assumed here.
+Implemented directly, without the `/grill-with-docs` session this entry
+originally flagged as a candidate — the user asked for the build outright
+and the design questions below turned out to have one answer each rather
+than genuine alternatives worth grilling over.
+
+Resolved: `Game` gets a `resting` boolean, not a new `state` value — `state`
+stays `'cleared'` throughout, so every existing reader of
+`state === 'cleared'` (`tools/sim.js` included) keeps meaning exactly what
+it always meant. `_clearEncounter`'s Warden branch sets `resting = true`
+instead of calling `_openTheWay()`, and `update()` gains a one-line early
+return while `resting` holds — a literal pause, not just an input gate,
+since nothing should still take damage or tick down while the hunter is
+reading the boss's name. A full-screen `#boss-rest` overlay (same pattern
+as `#pause`/`#death`/`#clear`) names the fallen Warden and offers two
+buttons: RESUME (`Game.restResume()` — lights the arch, same walk-and-press-UP
+as any other clear) and NEXT GATE / LEAVE THE GATE (`Game.restAdvance()` —
+opens the way and steps through in the same call, for whoever does not want
+the walk). `tools/sim.js`'s `transition()` now calls `restResume()` once it
+sees `game.resting`, the one place the suite's own bot has to click through
+the new screen to keep testing the walk it was already testing.
 
 ### The Android packaging plan
 

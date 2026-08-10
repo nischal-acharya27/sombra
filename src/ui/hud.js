@@ -174,6 +174,12 @@ export class HUD {
     if (el) el.classList.toggle('hidden', !on);
   }
 
+  /** The boss-rest screen's two lines of dynamic text: the fallen Warden's name and what advancing means from here. */
+  bossRest(name, hasNext) {
+    $('boss-rest-name').textContent = name;
+    $('boss-rest-next').textContent = hasNext ? STRINGS.BOSSREST_NEXT : STRINGS.BOSSREST_LEAVE;
+  }
+
   clearStats(rows) {
     const el = $('clear-stats');
     el.innerHTML = rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');

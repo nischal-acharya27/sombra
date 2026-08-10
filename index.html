@@ -84,6 +84,16 @@
     <div class="controls-hint"><div><kbd>Esc</kbd> resume</div><div><kbd>R</kbd> restart gate</div></div>
   </div>
 
+  <!-- Shown the moment a Warden falls, before the arch even lights — held
+       open until the hunter picks one of the two buttons. See
+       `Game.resting`/`restResume`/`restAdvance` in src/game/game.js. -->
+  <div id="boss-rest" class="screen hidden">
+    <h2 class="win">WARDEN FELLED</h2>
+    <p id="boss-rest-name" class="tag"></p>
+    <button id="boss-rest-resume" class="cta">RESUME</button>
+    <button id="boss-rest-next" class="cta secondary">NEXT GATE</button>
+  </div>
+
   <div id="death" class="screen hidden">
     <h2 class="fail">YOU HAVE DIED</h2>
     <p class="tag">The gate does not remember you.</p>

@@ -1141,6 +1141,11 @@ function transition(game, input) {
   // it finishes the walk itself: hold right until the arch takes the hunter
   // through, same as the first check above did from a standing start.
   if (game.state === 'cleared') {
+    // The Kevat's death now holds on the boss-rest screen rather than
+    // lighting the arch outright — see `Game.resting`. RESUME is the choice
+    // that keeps this row's claim (the arch takes a walking hunter) intact;
+    // NEXT GATE would skip the very walk being measured.
+    if (game.resting) game.restResume();
     const finish = new Bot(game, input);
     finish.hold('right', true);
     let extra = 0;
