@@ -118,11 +118,18 @@ export const JUMP_HOLD = { rise: RISE, buffer: BUFFER, need: RISE + BUFFER };
  * four-way pad actually has on a controller: LEFT and RIGHT no longer touch —
  * there is empty space at the centre exactly the width of the gap above and
  * below UP and DOWN, so the cross is symmetric on both axes at once.
+ *
+ * `1.32` is a further 10% past AAGO's own `1.2` — a follow-up ask once the
+ * symmetric shape above shipped. `ARM_SIZE` grew the same 10%, and both
+ * `PAD_GAP`/`ARM_GAP` had to shrink to fit: at 360×800, the narrowest
+ * supported viewport, the two clusters were already only ~10px apart before
+ * either grew, and a straight 20% ask (rather than 10%) does not fit there at
+ * all — even packed edge to edge with zero gap the two clusters overlap.
  */
-export const PAD_SIZE = 1.2;
+export const PAD_SIZE = 1.32;
 
 /** The empty space each direction button sits off centre, in units. */
-export const PAD_GAP = 0.15;
+export const PAD_GAP = 0.02;
 
 /** Centre-to-centre distance from the pad's middle to each target. */
 export const PAD_REACH = PAD_SIZE + PAD_GAP;
@@ -133,8 +140,10 @@ export const PAD_REACH = PAD_SIZE + PAD_GAP;
  * `PAD_X0` is LEFT's own margin from the bezel; `PAD_Y0` is DOWN's. Nothing
  * above or left of the pad is tight enough at any supported viewport to
  * need either shrunk further — `tools/touchcheck.js`'s fit check still
- * leaves ~10px of daylight before AAGO at the narrowest supported viewport,
- * 360×800 portrait, same as the previous layout did.
+ * leaves a few px of daylight before AAGO at the narrowest supported
+ * viewport, 360×800 portrait, though `PAD_GAP`/`ARM_GAP` had to shrink
+ * to buy that room back once `PAD_SIZE`/`ARM_SIZE` grew a further 10%
+ * past AAGO's own footprint.
  */
 export const PAD_X0 = 0.1;
 export const PAD_Y0 = 0.35;
@@ -149,10 +158,10 @@ export const PAD_Y0 = 0.35;
  * DASH bar (`ARM_Y0` up to DASH's own `y: 3.70`), where the pad only answers
  * to the screen's edge and has the whole height below it to spend.
  */
-export const ARM_SIZE = 1.0;
+export const ARM_SIZE = 1.1;
 
 /** The empty space each face button sits off centre, in units. */
-export const ARM_GAP = 0.15;
+export const ARM_GAP = 0.02;
 
 /** Centre-to-centre distance from the diamond's middle to each button. */
 export const ARM_REACH = ARM_SIZE + ARM_GAP;
@@ -208,8 +217,9 @@ export const ARM_Y0 = 0.25;
  * How much room is left *between* the clusters depends on the screen, and the
  * honest figure is reported by the suite rather than claimed here. In landscape
  * — the orientation the game is for — it is most of the width. At the narrowest
- * portrait the layout supports it, the two clusters still leave ~10px clear
- * down the middle; what would save it if they didn't is that they are still
+ * portrait the layout supports it, the two clusters leave only a handful of px
+ * clear down the middle now that both grew past AAGO's own footprint — see
+ * `PAD_SIZE`; what would save it if they touched is that they are still
  * below the hunter, and that they are translucent.
  */
 export const TOUCH_LAYOUT = {
