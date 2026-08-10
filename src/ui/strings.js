@@ -252,6 +252,30 @@ export const STRINGS = {
   INTRO_GOAL_BIG: 'THE WAY DOWN',
   INTRO_GOAL_BODY: 'Six realms stand between this gate and the Wheel. At the end of them: Yama, who stopped judging.',
 
+  // -- the training hall: gated practice, one verb at a time (issue #35) ----
+  TUTORIAL_NAME: 'the Proving Ground',
+  TUTORIAL_INTRO_BIG: 'PROVING GROUND',
+  TUTORIAL_INTRO_BODY: 'Every hunter is tested here before a gate opens for them. Do as the System asks.',
+  TUTORIAL_DONE_BIG: 'LICENSED',
+  TUTORIAL_DONE_BODY: 'The gate will not test you again.',
+  TUTORIAL_OBJ_LEAVE: 'STEP OUT',
+
+  TUTORIAL_MOVE_BIG: 'MOVE',
+  TUTORIAL_MOVE_KEY: 'A and D.',
+  TUTORIAL_MOVE_TOUCH: 'The stick.',
+  TUTORIAL_JUMP_BIG: 'JUMP',
+  /** `ctrl` is the resolved key name or touch button label. */
+  TUTORIAL_JUMP_BODY: (ctrl) => `${ctrl}. Again in the air to double jump.`,
+  TUTORIAL_DASH_BIG: 'SHADOW STEP',
+  TUTORIAL_DASH_BODY: (ctrl) => `${ctrl}.`,
+  TUTORIAL_SLASH_BIG: 'SLASH',
+  TUTORIAL_SLASH_BODY: (ctrl) => `${ctrl}.`,
+  TUTORIAL_RISE_BIG: 'ASCENSÃO',
+  TUTORIAL_RISE_BODY: (ctrl) => `${ctrl}, on the ground.`,
+  TUTORIAL_AAGO_BIG: 'AAGO',
+  TUTORIAL_AAGO_BODY: (ctrl) => `${ctrl}. Costs MP.`,
+  TUTORIAL_PUKAR_BIG: 'PUKAR',
+
   // -- title screen -------------------------------------------------------
   /** `n` is 1-based; `name` is the resumed gate's own name. */
   TITLE_TAG: (n, name) => `GATE ${n} — ${name}`,

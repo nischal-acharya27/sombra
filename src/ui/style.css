@@ -425,6 +425,19 @@ html, body {
 @keyframes toastIn { from { opacity: 0; transform: translateX(-26px); } to { opacity: 1; transform: none; } }
 @keyframes toastOut { to { opacity: 0; transform: translateY(-14px); } }
 
+/* ---------- The training hall's SKIP control ---------- */
+
+/* Fixed rather than laid out with the HUD: it has to survive every prompt the
+   hall shows, including the very first one, and a HUD element positioned
+   among the vitals bars would fight `#windows` for the same corner of the
+   screen those already occupy. See `main.js`'s `enterTutorial`. */
+#tutorial-skip {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 6;
+}
+
 /* ---------- Full screens ---------- */
 
 .screen {

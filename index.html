@@ -54,6 +54,11 @@
   <div id="windows"></div>
   <div id="toasts"></div>
 
+  <!-- The training hall's own control, shown only while it is open — see
+       `main.js`'s `enterTutorial`. Available from the very first prompt, per
+       issue #35: anyone who just wants to fight can leave immediately. -->
+  <button id="tutorial-skip" class="cta secondary hidden">SKIP</button>
+
   <div id="title" class="screen">
     <div class="title-art">
       <div class="sub">D&#8209;RANK GATE</div>
@@ -71,6 +76,9 @@
     <!-- Always shown, unlike `new-game` — replays the pre-game opening
          on demand for anyone who wants to re-read it. See issue #34. -->
     <button id="story" class="cta secondary">STORY</button>
+    <!-- Always shown — re-enters the training hall on demand, any time,
+         independently of `new-game`'s campaign reset. See issue #35. -->
+    <button id="tutorial-btn" class="cta secondary">TUTORIAL</button>
     <div class="controls-hint">
       <div><kbd>A</kbd><kbd>D</kbd> move</div>
       <div><kbd>Space</kbd> jump / double jump</div>

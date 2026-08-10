@@ -7,8 +7,17 @@ import { Audio } from './engine/audio.js';
 import { HUD } from './ui/hud.js';
 import { TouchControls } from './ui/touch.js';
 import { Game } from './game/game.js';
+import { Tutorial } from './game/tutorial.js';
 import { GATES } from './game/gates/index.js';
-import { blankSave, loadSave, writeSave, resumePoint, newGameSave, markIntroSeen } from './game/save.js';
+import {
+  blankSave,
+  loadSave,
+  writeSave,
+  resumePoint,
+  newGameSave,
+  markIntroSeen,
+  markTutorialSeen,
+} from './game/save.js';
 import { STRINGS } from './ui/strings.js';
 
 // `Game` is handed the whole campaign, and opens on the first of it. It builds
@@ -46,6 +55,13 @@ const save = simMode ? blankSave() : loadSave();
 const persistSave = simMode ? () => {} : writeSave;
 
 const game = new Game(world, hud, audio, input, GATES, touch, save, persistSave);
+
+// The training hall — issue #35. Not part of the campaign `Game` runs (see
+// `game/tutorial.js`'s own note), so it is its own object, built lazily here
+// rather than at the cost every gate in `GATES` already pays at boot. `?sim`
+// never opens it, the same reason it never gets real `TouchControls` above.
+const tutorial = simMode ? null : new Tutorial(world, hud, audio, input, touch);
+let tutorialActive = false;
 
 // The title screen names the gate a fresh "start" actually resumes into —
 // gate 1 for a blank save, but a returning hunter's furthest gate otherwise.
@@ -93,14 +109,19 @@ let titleT = 0;
 const loop = new Loop(
   (dt) => {
     if (paused) return;
-    game.update(dt);
+    if (tutorialActive) tutorial.update(dt);
+    else game.update(dt);
   },
   (dt) => {
     // Only while there is a hunter to drive. `cleared` counts — the Warden is
     // down and the walk to the arch is still walking. Hiding them releases
     // whatever was held, so a direction cannot survive into the next run.
-    touch?.setVisible(!paused && !game.resting && (game.state === 'playing' || game.state === 'cleared'));
-    if (game.state === 'idle') {
+    touch?.setVisible(
+      !paused && (tutorialActive || (!game.resting && (game.state === 'playing' || game.state === 'cleared')))
+    );
+    if (tutorialActive) {
+      tutorial.render(dt);
+    } else if (game.state === 'idle') {
       titleCamera(dt);
       game.vfx.update(dt);
       world.update(dt);
@@ -115,7 +136,7 @@ const loop = new Loop(
     // chance to read this frame's presses.
     input.endFrame(dt);
   },
-  () => (paused ? 0 : game.timeScale())
+  () => (paused ? 0 : tutorialActive ? 1 : game.timeScale())
 );
 
 /** A slow drift across the gate's landmark while the title is up. */
@@ -180,6 +201,27 @@ function showIntro(onDone) {
   showNext();
 }
 
+// The training hall — issue #35. Swaps which of `game`/`tutorial` the loop
+// above is driving: `game`'s own level and hunter are hidden rather than torn
+// down, since a run may still be resumed once the hall lets go. `onDone` is
+// what the caller wants to happen next — `startRun()` on a fresh save's first
+// ever entry, or back to the title screen for the on-demand TUTORIAL button.
+function enterTutorial(onDone) {
+  tutorialActive = true;
+  hud.screen('title', false);
+  game.level.setVisible(false);
+  game.entityRoot.visible = false;
+  document.getElementById('tutorial-skip').classList.remove('hidden');
+  tutorial.start(() => {
+    document.getElementById('tutorial-skip').classList.add('hidden');
+    tutorialActive = false;
+    game.level.setVisible(true);
+    game.entityRoot.visible = true;
+    world.applyRealm(game.gate.realm);
+    onDone();
+  });
+}
+
 document.getElementById('start').addEventListener('click', () => {
   audio.unlock();
   if (game.save.seenIntro) {
@@ -188,10 +230,31 @@ document.getElementById('start').addEventListener('click', () => {
     showIntro(() => {
       game.save = markIntroSeen(game.save);
       persistSave(game.save);
-      startRun();
+      // The hall follows the opening, once, on a fresh save's first run —
+      // `seenTutorial` is checked here rather than assumed, so a save that
+      // somehow already carries it (the TUTORIAL button, played before ever
+      // pressing START) does not open the hall a second time uninvited.
+      if (game.save.seenTutorial) {
+        startRun();
+        return;
+      }
+      enterTutorial(() => {
+        game.save = markTutorialSeen(game.save);
+        persistSave(game.save);
+        startRun();
+      });
     });
   }
 });
+document.getElementById('tutorial-btn').addEventListener('click', () => {
+  audio.unlock();
+  enterTutorial(() => {
+    game.save = markTutorialSeen(game.save);
+    persistSave(game.save);
+    hud.screen('title', true);
+  });
+});
+document.getElementById('tutorial-skip').addEventListener('click', () => tutorial.skip());
 document.getElementById('new-game').addEventListener('click', () => {
   // `seenIntro` survives this reset — see `newGameSave`'s note in save.js.
   game.save = newGameSave(game.save);
@@ -268,4 +331,4 @@ if (simMode) {
 // the filter itself was removed instead. See the note in src/ui/style.css.
 
 // Handy for poking at a running game from the console.
-window.__game = { game, world, loop, audio, input, hud, touch };
+window.__game = { game, world, loop, audio, input, hud, touch, tutorial };

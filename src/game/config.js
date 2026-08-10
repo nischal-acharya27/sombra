@@ -883,6 +883,25 @@ export const SYS_WINDOW = {
   enrage: 1800,
   /** Level-up. */
   levelUp: 2100,
+  /** The training hall's closing line, once every verb has been taught. */
+  tutorialDone: 2400,
+};
+
+/**
+ * The training hall — issue #35. Its geometry is a gate descriptor (see
+ * `gates/tutorial.js`); these are the numbers its own driver (`tutorial.js`)
+ * needs and no gate does.
+ */
+export const TUTORIAL = {
+  /** Grounded speed past which "move" counts as performed. */
+  moveSpeed: 3,
+  /**
+   * How far below the floor counts as having fallen off it — should not be
+   * reachable given how far `gates/tutorial.js`'s single segment is padded,
+   * but the rule is "no death, ever" here, so a hunter who somehow clears the
+   * padding is put back at the spawn rather than let fall forever.
+   */
+  fallResetY: -12,
 };
 
 export const PROGRESSION = {
