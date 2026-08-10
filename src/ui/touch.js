@@ -103,70 +103,103 @@ export const UNIT = { min: 46, vw: 12, vh: 13.5, max: 70 };
 export const JUMP_HOLD = { rise: RISE, buffer: BUFFER, need: RISE + BUFFER };
 
 /**
- * The size of one direction button in the arrow pad, in units.
+ * The size of one direction button in the arrow pad, in units — a square,
+ * not the rectangle `PAD_W`/`PAD_H` used to draw.
  *
- * `DECISIONS.md` § Backlog: playtest round 3 asks for the `1.0` square this
- * used to be to grow to AAGO's own footprint — the `magic` entry in
- * `buttons`, below, at `w: 1.38, h: 1.44`. The height gets there exactly:
- * nothing below the pad constrains how tall it can be. The width cannot:
- * LEFT and RIGHT sit side by side (the two-column cross the previous ticket
- * chose specifically to fit the narrowest supported viewport, 360×800
- * portrait), so the pad's reach is *two* widths wide, and two widths of
- * `1.38` alone (2.76 units, 126.96px of the 130.92px `tools/touchcheck.js`
- * measures between the screen edge and AAGO at that viewport) leaves under
- * 4px total for both the pad's own margin from the bezel and the gap
- * between LEFT and RIGHT — not a number, a collision `touchcheck.js`'s fit
- * check catches outright (`right sits on magic`). `1.2` is the largest
- * width that still leaves a deliberate, round 10px of daylight there,
- * rather than the razor-thin clearance a value nearer `1.38` would leave
- * standing.
+ * `DECISIONS.md` § Backlog: playtest round 3 asked for the pad to be
+ * symmetric and to grow toward AAGO's footprint. The previous fix grew the
+ * pad tall (three rows: DOWN, then LEFT/RIGHT, then UP) without growing it
+ * wide to match, which is a rectangle no matter how each cell is sized —
+ * *four* targets stacked three rows deep can only draw a square frame if
+ * the two columns are proportioned to match, and LEFT/RIGHT sitting flush
+ * against each other in the middle row makes that impossible (the algebra:
+ * a square frame plus every target the same distance from its centre forces
+ * the middle row's own height to be negative). The fix is the shape a
+ * four-way pad actually has on a controller: LEFT and RIGHT no longer touch —
+ * there is empty space at the centre exactly the width of the gap above and
+ * below UP and DOWN, so the cross is symmetric on both axes at once.
  */
-export const PAD_W = 1.2;
-export const PAD_H = 1.44;
+export const PAD_SIZE = 1.2;
 
-/** The gap between adjacent direction buttons, in units. */
-export const PAD_GAP = 0.12;
+/** The empty space each direction button sits off centre, in units. */
+export const PAD_GAP = 0.15;
+
+/** Centre-to-centre distance from the pad's middle to each target. */
+export const PAD_REACH = PAD_SIZE + PAD_GAP;
 
 /**
  * Where the whole pad is anchored, in units from the screen's own edges.
  *
- * `PAD_X0` shrank from `0.25` to make room for the wider pad above without
- * touching AAGO's own position — see `PAD_W`. `PAD_Y0` is untouched: nothing
- * above the pad is tight enough at any supported viewport to need it.
+ * `PAD_X0` is LEFT's own margin from the bezel; `PAD_Y0` is DOWN's. Nothing
+ * above or left of the pad is tight enough at any supported viewport to
+ * need either shrunk further — `tools/touchcheck.js`'s fit check still
+ * leaves ~10px of daylight before AAGO at the narrowest supported viewport,
+ * 360×800 portrait, same as the previous layout did.
  */
 export const PAD_X0 = 0.1;
 export const PAD_Y0 = 0.35;
+
+/**
+ * The size of one face button in the action diamond, in units — again a
+ * square, for the same reason `PAD_SIZE` is: SLASH/JUMP/RISE/AAGO drawing a
+ * square frame requires it, and the previous layout's four different sizes
+ * scattered along a sweep never could.
+ *
+ * Smaller than `PAD_SIZE` because the diamond has to fit entirely below the
+ * DASH bar (`ARM_Y0` up to DASH's own `y: 3.70`), where the pad only answers
+ * to the screen's edge and has the whole height below it to spend.
+ */
+export const ARM_SIZE = 1.0;
+
+/** The empty space each face button sits off centre, in units. */
+export const ARM_GAP = 0.15;
+
+/** Centre-to-centre distance from the diamond's middle to each button. */
+export const ARM_REACH = ARM_SIZE + ARM_GAP;
+
+/**
+ * Where the diamond is anchored, in units from the screen's own edges.
+ *
+ * `ARM_X0` is SLASH's own margin from the bezel — SLASH sits nearest the
+ * corner a right thumb rests in, same as JUMP did in the old sweep. `ARM_Y0`
+ * is JUMP's margin from the bottom edge.
+ */
+export const ARM_X0 = 0.3;
+export const ARM_Y0 = 0.25;
 
 /**
  * Where each control sits.
  *
  * `x` is measured from the control's own edge of the screen and `y` from the
  * bottom, both in units, so the two clusters stay pinned under the two thumbs
- * at any width. The four buttons in `buttons` below the DASH bar sweep up and
- * to the left from where a right thumb rests, and **the order along that
- * sweep is how often a hand reaches for the move**: JUMP biggest and nearest,
- * then SLASH and RISE, then AAGO furthest. PUKAR is not on this sweep — see
- * the pad descriptor below.
+ * at any width.
  *
- * SLASH and JUMP traded slots from an earlier layout — `DECISIONS.md` §
- * Backlog: playtest round 2, "SLASH and JUMP trade positions in the touch
- * action cluster". Light attacks carry every combo and a jump does not, so
- * the playtest called SLASH the more frequently reached-for of the two —
- * that verdict moved SLASH to the slot nearer AAGO and gave JUMP the corner
- * SLASH used to hold. The sweep's own ordering principle, nearest-to-furthest
- * is most-to-least reached for, did not change; only which verb sits where
- * on it did.
+ * The four buttons below the DASH bar are a diamond now, not a sweep —
+ * `DECISIONS.md` § Backlog: playtest round 3 asked for the arrow pad to be
+ * symmetric, and the same complaint applies to this cluster: four boxes of
+ * four different sizes scattered up and to the left from JUMP's corner never
+ * drew a square frame, whatever a ruler laid across them said about
+ * "symmetric enough". A diamond does: JUMP nearest the thumb at the bottom
+ * vertex, SLASH at the corner vertex nearest the bezel (light attacks carry
+ * every combo and a jump does not — `DECISIONS.md` § Backlog: playtest round
+ * 2 called SLASH the more frequently reached-for of the two, which is why it
+ * keeps the corner JUMP used to hold), RISE mirroring it on the inner vertex,
+ * AAGO at the top, furthest from the resting thumb. Every one of the four is
+ * `ARM_REACH` from the diamond's own centre, so the frame around them is a
+ * square by construction, not by measurement.
  *
- * DASH is off the sweep entirely — `DECISIONS.md` § Backlog: playtest round
+ * DASH is off the diamond entirely — `DECISIONS.md` § Backlog: playtest round
  * 2, "STEP is renamed DASH and moves to its own control above the cluster".
  * It reads as a shoulder button, the way a controller's L1/R1 sits above the
  * face buttons rather than joining their diamond, a convention players
  * already bring in from twin-stick and joypad layouts. Its own control
  * exists because `player.js` tests dash before everything else — it is the
- * defensive option, and a player mashing it under pressure means it —
- * so it earns a target neither the sweep's ordering nor a diagonal step
- * further into the four-button diamond expresses as directly as its own bar
- * above all of them does.
+ * defensive option, and a player mashing it under pressure means it — so it
+ * earns a target neither the diamond's ordering nor a fifth vertex expresses
+ * as directly as its own bar above all of them does. Its width now matches
+ * the diamond's own span exactly (`ARM_X0` to `ARM_X0 + 2 * ARM_REACH +
+ * ARM_SIZE`), so the shoulder bar reads as sitting over the diamond rather
+ * than beside it.
  *
  * Both clusters hug the bottom corners, and that is not decoration: the camera
  * frames the hunter around the centre of the screen with the horizon high, so
@@ -175,9 +208,9 @@ export const PAD_Y0 = 0.35;
  * How much room is left *between* the clusters depends on the screen, and the
  * honest figure is reported by the suite rather than claimed here. In landscape
  * — the orientation the game is for — it is most of the width. At the narrowest
- * portrait the layout supports it, the two clusters very nearly meet along the
- * bottom strip; what saves it there is that they are still below the hunter,
- * and that they are translucent.
+ * portrait the layout supports it, the two clusters still leave ~10px clear
+ * down the middle; what would save it if they didn't is that they are still
+ * below the hunter, and that they are translucent.
  */
 export const TOUCH_LAYOUT = {
   unit: UNIT,
@@ -188,14 +221,12 @@ export const TOUCH_LAYOUT = {
    * column that carries DOWN below them and UP above, each target a discrete
    * press rather than a point slid across a base.
    *
-   * The cross is two columns wide rather than three deliberately: LEFT and
-   * RIGHT sit side by side, and UP/DOWN are centred in the gap between them
-   * instead of taking a third column of their own. A three-column row (LEFT,
-   * DOWN, RIGHT, UP stacked above DOWN) is the more literal read of a
-   * keyboard's arrow cluster, but at the narrowest portrait viewport
-   * `tools/touchcheck.js` tests it does not leave 44px targets room to sit
-   * clear of the action-button cluster on the other side of the screen — the
-   * two-column cross does, with the same four discrete presses.
+   * LEFT and RIGHT no longer sit flush against each other in a shared middle
+   * row — see `PAD_SIZE` for why a frame square on both axes needs the same
+   * empty gap at the centre horizontally as UP and DOWN leave vertically.
+   * Each of the four is `PAD_REACH` from the pad's own centre, off to one
+   * side only, which is what makes the frame around them a square rather
+   * than the tall rectangle the three-stacked-rows version drew.
    *
    * `down` is still `DECISIONS.md` § The steer control becomes a stick: held,
    * it is read by `player.js` exactly as the keyboard's `S`/`ArrowDown` is —
@@ -214,14 +245,14 @@ export const TOUCH_LAYOUT = {
     side: 'left',
     down: 'down',
     targets: [
-      { dir: 'left', action: 'left', x: PAD_X0, y: PAD_Y0 + PAD_H + PAD_GAP, w: PAD_W, h: PAD_H },
-      { dir: 'right', action: 'right', x: PAD_X0 + PAD_W + PAD_GAP, y: PAD_Y0 + PAD_H + PAD_GAP, w: PAD_W, h: PAD_H },
-      { dir: 'down', action: 'down', x: PAD_X0 + (PAD_W + PAD_GAP) / 2, y: PAD_Y0, w: PAD_W, h: PAD_H },
-      { dir: 'up', action: 'up', x: PAD_X0 + (PAD_W + PAD_GAP) / 2, y: PAD_Y0 + 2 * (PAD_H + PAD_GAP), w: PAD_W, h: PAD_H },
+      { dir: 'left', action: 'left', x: PAD_X0, y: PAD_Y0 + PAD_REACH, w: PAD_SIZE, h: PAD_SIZE },
+      { dir: 'right', action: 'right', x: PAD_X0 + 2 * PAD_REACH, y: PAD_Y0 + PAD_REACH, w: PAD_SIZE, h: PAD_SIZE },
+      { dir: 'down', action: 'down', x: PAD_X0 + PAD_REACH, y: PAD_Y0, w: PAD_SIZE, h: PAD_SIZE },
+      { dir: 'up', action: 'up', x: PAD_X0 + PAD_REACH, y: PAD_Y0 + 2 * PAD_REACH, w: PAD_SIZE, h: PAD_SIZE },
     ],
   },
   buttons: [
-    { verb: 'light', action: 'light', label: STRINGS.TOUCH_SLASH, side: 'right', x: 2.04, y: 0.50, w: 1.44, h: 1.56, tone: 'cyan' },
+    { verb: 'light', action: 'light', label: STRINGS.TOUCH_SLASH, side: 'right', x: ARM_X0, y: ARM_Y0 + ARM_REACH, w: ARM_SIZE, h: ARM_SIZE, tone: 'cyan' },
     /**
      * `sustain` is the one place the touch scheme is not a transcription of
      * the keyboard, and it is here because measuring said it had to be.
@@ -248,14 +279,16 @@ export const TOUCH_LAYOUT = {
      * arc — and a gate that did would be authoring against an input half the
      * players do not have.
      */
-    { verb: 'jump', action: 'jump', label: STRINGS.TOUCH_JUMP, side: 'right', x: 0.36, y: 0.36, w: 1.62, h: 1.58, tone: 'plain', sustain: TAP_WORTH },
-    { verb: 'heavy', action: 'heavy', label: STRINGS.TOUCH_RISE, side: 'right', x: 0.54, y: 2.04, w: 1.50, h: 1.50, tone: 'cyan' },
-    { verb: 'magic', action: 'magic', label: STRINGS.TOUCH_MAGIC, side: 'right', x: 3.60, y: 0.96, w: 1.38, h: 1.44, tone: 'blue' },
-    // The shoulder bar — off the sweep above, above all four of it. Wide
-    // rather than square, the way a controller's L1/R1 reads, and high
-    // enough above RISE (the sweep's own tallest box, top edge at 3.54) to
-    // clear it rather than graze it.
-    { verb: 'dash', action: 'dash', label: STRINGS.TOUCH_DASH, side: 'right', x: 0.90, y: 3.70, w: 3.50, h: 1.00, tone: 'plain' },
+    { verb: 'jump', action: 'jump', label: STRINGS.TOUCH_JUMP, side: 'right', x: ARM_X0 + ARM_REACH, y: ARM_Y0, w: ARM_SIZE, h: ARM_SIZE, tone: 'plain', sustain: TAP_WORTH },
+    { verb: 'heavy', action: 'heavy', label: STRINGS.TOUCH_RISE, side: 'right', x: ARM_X0 + 2 * ARM_REACH, y: ARM_Y0 + ARM_REACH, w: ARM_SIZE, h: ARM_SIZE, tone: 'cyan' },
+    { verb: 'magic', action: 'magic', label: STRINGS.TOUCH_MAGIC, side: 'right', x: ARM_X0 + ARM_REACH, y: ARM_Y0 + 2 * ARM_REACH, w: ARM_SIZE, h: ARM_SIZE, tone: 'blue' },
+    // The shoulder bar — off the diamond above, above all four of it. Wide
+    // rather than square, the way a controller's L1/R1 reads, its own span
+    // matching the diamond's exactly so it reads as sitting over it rather
+    // than beside it, and high enough above AAGO (the diamond's own top
+    // vertex, top edge at ARM_Y0 + 2 * ARM_REACH + ARM_SIZE) to clear it
+    // rather than graze it.
+    { verb: 'dash', action: 'dash', label: STRINGS.TOUCH_DASH, side: 'right', x: ARM_X0, y: 3.70, w: 2 * ARM_REACH + ARM_SIZE, h: 1.00, tone: 'plain' },
   ],
 };
 
