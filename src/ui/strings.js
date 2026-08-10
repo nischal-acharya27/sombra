@@ -238,6 +238,20 @@ export const STRINGS = {
   GATE10_BEAT_CLEARED_BIG: 'THE CHAYA LETS GO',
   GATE10_BEAT_CLEARED_BODY: 'Nine gates were enough. It does not need a tenth.',
 
+  // -- the opening: 4 screens, once per save, before gate 1 (issue #34) -----
+  INTRO_WHEEL_TITLE: 'THE SYSTEM',
+  INTRO_WHEEL_BIG: 'THE WHEEL HAS STOPPED',
+  INTRO_WHEEL_BODY: 'Souls back up with nowhere to go. The overflow tears gates into the living world.',
+  INTRO_HUNTER_TITLE: 'THE SYSTEM',
+  INTRO_HUNTER_BIG: 'HUNTER, D-RANK',
+  INTRO_HUNTER_BODY: 'Licensed. Routine work: walk into what a gate lets through, and clear it.',
+  INTRO_THREAT_TITLE: 'THE SYSTEM',
+  INTRO_THREAT_BIG: 'WHAT COMES THROUGH',
+  INTRO_THREAT_BODY: 'Souls that did not move on. Some of them have turned hostile.',
+  INTRO_GOAL_TITLE: 'THE SYSTEM',
+  INTRO_GOAL_BIG: 'THE WAY DOWN',
+  INTRO_GOAL_BODY: 'Six realms stand between this gate and the Wheel. At the end of them: Yama, who stopped judging.',
+
   // -- title screen -------------------------------------------------------
   /** `n` is 1-based; `name` is the resumed gate's own name. */
   TITLE_TAG: (n, name) => `GATE ${n} — ${name}`,

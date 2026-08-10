@@ -8,7 +8,7 @@ import { HUD } from './ui/hud.js';
 import { TouchControls } from './ui/touch.js';
 import { Game } from './game/game.js';
 import { GATES } from './game/gates/index.js';
-import { blankSave, loadSave, writeSave, resumePoint } from './game/save.js';
+import { blankSave, loadSave, writeSave, resumePoint, newGameSave, markIntroSeen } from './game/save.js';
 import { STRINGS } from './ui/strings.js';
 
 // `Game` is handed the whole campaign, and opens on the first of it. It builds
@@ -146,14 +146,61 @@ function startRun() {
   game.start();
 }
 
-document.getElementById('start').addEventListener('click', startRun);
+// The 4-screen opening — issue #34. Same `storyWindow` component the gate
+// boundary beats use, paged behind its own NEXT button. Unlike
+// `Game._showBeatQueue`, the last screen still waits for a click: there is no
+// bossRestPrompt to hand off to here, and closing on a timer is the exact bug
+// `storyWindow`'s own note in hud.js already names. `introPlaying` blocks the
+// idle-state Enter shortcut below from firing `startRun` out from under a
+// screen that is still up — `game.state` stays 'idle' for the whole sequence,
+// since `game.start()` has not been called yet.
+const INTRO_BEATS = [
+  { title: STRINGS.INTRO_WHEEL_TITLE, big: STRINGS.INTRO_WHEEL_BIG, body: STRINGS.INTRO_WHEEL_BODY },
+  { title: STRINGS.INTRO_HUNTER_TITLE, big: STRINGS.INTRO_HUNTER_BIG, body: STRINGS.INTRO_HUNTER_BODY },
+  { title: STRINGS.INTRO_THREAT_TITLE, big: STRINGS.INTRO_THREAT_BIG, body: STRINGS.INTRO_THREAT_BODY },
+  { title: STRINGS.INTRO_GOAL_TITLE, big: STRINGS.INTRO_GOAL_BIG, body: STRINGS.INTRO_GOAL_BODY },
+];
+let introPlaying = false;
+
+function showIntro(onDone) {
+  introPlaying = true;
+  hud.screen('title', false);
+  const queue = [...INTRO_BEATS];
+  const showNext = () => {
+    const b = queue.shift();
+    if (!b) {
+      hud.hideStoryWindow();
+      introPlaying = false;
+      onDone();
+      return;
+    }
+    audio.play('systemOpen');
+    hud.storyWindow({ title: b.title, big: b.big, body: b.body, onNext: showNext });
+  };
+  showNext();
+}
+
+document.getElementById('start').addEventListener('click', () => {
+  audio.unlock();
+  if (game.save.seenIntro) {
+    startRun();
+  } else {
+    showIntro(() => {
+      game.save = markIntroSeen(game.save);
+      persistSave(game.save);
+      startRun();
+    });
+  }
+});
 document.getElementById('new-game').addEventListener('click', () => {
-  // Same assignment `recordGateClear` and `markTaught` already use elsewhere
-  // in this file's call chain — `Game` holds the save as a plain mutable
-  // field, not a reference `reset()` re-reads from storage.
-  game.save = blankSave();
+  // `seenIntro` survives this reset — see `newGameSave`'s note in save.js.
+  game.save = newGameSave(game.save);
   persistSave(game.save);
   startRun();
+});
+document.getElementById('story').addEventListener('click', () => {
+  audio.unlock();
+  showIntro(() => hud.screen('title', true));
 });
 document.getElementById('retry').addEventListener('click', startRun);
 document.getElementById('again').addEventListener('click', startRun);
@@ -178,7 +225,7 @@ addEventListener('keydown', (e) => {
     if (game.state === 'playing' || game.state === 'cleared') setPaused(!paused);
   }
   if (e.code === 'KeyR' && (paused || game.state === 'dead')) startRun();
-  if (e.code === 'Enter' && (game.state === 'idle' || game.state === 'dead')) startRun();
+  if (e.code === 'Enter' && !introPlaying && (game.state === 'idle' || game.state === 'dead')) startRun();
 });
 
 // `?sim` runs the scripted verification suite instead of the game. It steps

@@ -35,7 +35,24 @@ export function blankSave() {
     bestStyle: {},
     taught: [],
     settings: {},
+    seenIntro: false,
   };
+}
+
+/**
+ * NEW GAME's reset: a blank save except `seenIntro`, which survives it. The
+ * opening is a first-time-ever thing, not a per-campaign one — issue #34 — so
+ * restarting the campaign does not re-show it to a hunter who already knows
+ * it.
+ */
+export function newGameSave(save) {
+  return { ...blankSave(), seenIntro: save.seenIntro };
+}
+
+/** Marks the pre-game opening seen. Idempotent, same shape as `markTaught`. */
+export function markIntroSeen(save) {
+  if (save.seenIntro) return save;
+  return { ...save, seenIntro: true };
 }
 
 /**
