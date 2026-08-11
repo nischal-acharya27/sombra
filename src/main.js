@@ -9,6 +9,7 @@ import { TouchControls } from './ui/touch.js';
 import { Game } from './game/game.js';
 import { Tutorial } from './game/tutorial.js';
 import { GATES } from './game/gates/index.js';
+import { GATE_VTEST } from './game/gates/gate-vtest.js'; // PROTOTYPE — issue #41, drop before merge
 import {
   blankSave,
   loadSave,
@@ -26,6 +27,11 @@ import { STRINGS } from './ui/strings.js';
 // `Game.levels`. `World` opens on the first realm and `Game._enterGate` moves
 // it on from there.
 //
+// PROTOTYPE — issue #41: `?vtest` boots straight into a throwaway vertical
+// test gate instead of the campaign, to playtest stacked-ledge traversal.
+const VTEST = location.search.includes('vtest');
+if (VTEST) GATES.splice(0, GATES.length, GATE_VTEST);
+
 // Runs always start at gate 1, until there is a save file to say otherwise.
 const world = new World(document.getElementById('view'), GATES[0].realm);
 const hud = new HUD();
@@ -51,8 +57,8 @@ const simMode = location.search.includes('sim');
 const touch = !simMode && TouchControls.wanted() ? new TouchControls(input) : null;
 if (touch) document.body.classList.add('touch');
 
-const save = simMode ? blankSave() : loadSave();
-const persistSave = simMode ? () => {} : writeSave;
+const save = simMode || VTEST ? blankSave() : loadSave();
+const persistSave = simMode || VTEST ? () => {} : writeSave;
 
 const game = new Game(world, hud, audio, input, GATES, touch, save, persistSave);
 
