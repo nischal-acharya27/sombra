@@ -253,17 +253,41 @@ youngest Pandava — a mortal, not an avatar, which makes this one of the
 cleanest defeats on the list to hand to a hunter with no theological
 substitution problem at all.
 
-**Iconography (procedural).** The hardest entry on the list to build a
-"boss fight" for honestly: Shakuni is a courtier, not a warrior, and his
-entire signature is the dice, not combat prowess. A defensible design is to
-build him as a slight, aged, unarmored humanoid whose "weapon" is a
-literal giant die or set of dice used as a thrown/summoned hazard prop
-(numbers a mechanic could read off, echoing his loaded rolls), rather than
-a scaled-up melee combatant — the gate could lean into pattern/probability
-telegraphs (a die that must be read before it "commits") as his signature
-rather than a sweep/charge kit copied from a tyrant boss. Palette: subdued,
-courtly, not supernatural — the odd one out among mostly-monstrous bosses,
-which is itself worth treating as the point rather than a gap to fill in.
+**Iconography (procedural).** Shakuni is a courtier, not a warrior, and his
+entire signature is the dice, not combat prowess — the hardest entry on the
+list to build a "boss fight" for honestly, resolved via `/grilling` during
+his villain design handoff (`docs/agents/villain-handoff.md`). Silhouette
+and scale: roughly human/player scale (`hh ≈ 0.85`, matching `PLAYER.hh`),
+slight through proportion — narrow build, unarmored — rather than through
+stature, so he reads as an aged courtier rather than a lesser creature.
+Signature weapon: a single large, ornate die, the one tradition says was
+carved from his father's bones — not a set, so the "read it before it
+commits" telegraph stays sharp rather than diffuse. Palette: subdued,
+courtly, not supernatural on the body (aged cloth, bone, dull gold — none
+of the roster's violet/iron/crimson supernatural registers), the odd one
+out among mostly-monstrous bosses and worth treating as the point rather
+than a gap to fill; the die's shown-face and resolving zone carry the
+kit's one saturated danger accent instead, reusing an existing danger hue
+rather than inventing a new one so the "this is about to hurt you" read
+stays consistent with every other Warden.
+
+**Kit shape.** Ranged/summoned-hazard, not a thrown bolt: Shakuni casts the
+die, it lands and shows a face during a windup, then resolves into a
+telegraphed zone keyed to that face — a literal mechanical reading of
+"loaded dice" and "a genius for manipulation" rather than a die-shaped
+reskin of an existing projectile.
+
+**Phase-transition flag.** None. No boon, no reveal/transform — his menace
+stays entirely human throughout; escalation comes from the die's
+telegraphs tightening (more faces, shorter windows), not a rig or palette
+swap.
+
+**Tier call.** 2 — new rig in `models.js`; the enemy class extends `Enemy`
+directly, following `BhootBatti`'s keep-distance/windup skeleton, with the
+bolt-spawn replaced by the die-cast-and-resolve sequence. Tier 3 was never
+actually in play — reserved for the four locked bosses per issue #40 — so
+this call follows from the doc's own constraints as much as from the kit
+above.
 
 **Respectful-treatment note.** Low risk in isolation, but see the intro:
 Shakuni and Kaikeyi are the same *shape* (human political schemer, no
@@ -271,7 +295,9 @@ monstrous form, motivated by a grievance the text itself takes seriously)
 and having both in the final 15 risks two gates that play identically
 despite different casts. If only one survives a trim, Shakuni is the
 stronger keep — his story ends in an actual death in battle, giving the
-gate a real combat resolution Kaikeyi's story does not have.
+gate a real combat resolution Kaikeyi's story does not have. The "hardest
+to build honestly" risk above is resolved by the die-read-and-resolve kit,
+not a gap left for a future session to reopen.
 
 ---
 
