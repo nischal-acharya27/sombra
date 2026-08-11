@@ -902,6 +902,9 @@ export const TUTORIAL = {
    * padding is put back at the spawn rather than let fall forever.
    */
   fallResetY: -12,
+  /** Harmless practice targets raised once the last step (PUKAR) clears. */
+  dummyCount: 2,
+  dummySpacing: 3,
 };
 
 export const PROGRESSION = {

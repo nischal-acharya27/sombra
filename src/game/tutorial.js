@@ -21,6 +21,7 @@
 import * as THREE from 'three';
 import { Level } from './level.js';
 import { Player } from './player.js';
+import { boxHit } from './actor.js';
 import { Bolt, Raakchyas } from './enemies.js';
 import { Corpse } from './shadow.js';
 import { GameCamera } from './camera.js';
@@ -30,6 +31,19 @@ import { P } from '../render/palette.js';
 import { MAGIC, GATE_ARCH, SYS_WINDOW, CHAYA, TUTORIAL } from './config.js';
 import { GATE_TUTORIAL } from './gates/tutorial.js';
 import { STRINGS } from '../ui/strings.js';
+
+/**
+ * A raakchyas that never commits to its pounce — the same gate `chayaOf` in
+ * `shadow.js` uses to keep an ally from attacking the hunter it follows.
+ * Its `attackBox()` only ever goes live from the `'pounce'` state, so this
+ * one override is the whole guarantee: it chases and takes hits like the
+ * real thing, but nothing here can ever threaten the hunter.
+ */
+class PracticeDummy extends Raakchyas {
+  _canCommit() {
+    return false;
+  }
+}
 
 /**
  * Move, jump, dash, slash, rise, aago, PUKAR — the order issue #35 asks for,
@@ -122,6 +136,7 @@ export class Tutorial {
     this.bolts = [];
     this.corpses = [];
     this.chaya = null;
+    this.dummies = [];
 
     // The one remnant this space ever offers — a scripted stand-in rather
     // than a kill, since nothing in this hall is allowed to fight the
@@ -154,6 +169,8 @@ export class Tutorial {
     if (this.chaya) this.entityRoot.remove(this.chaya.root);
     this.chaya = null;
     this.corpses = [];
+    for (const d of this.dummies) this.entityRoot.remove(d.root);
+    this.dummies = [];
     this.dummyBody.visible = false;
     this.shard.visible = false;
     this.t = 0;
@@ -201,6 +218,7 @@ export class Tutorial {
         body: STRINGS.TUTORIAL_DONE_BODY,
         duration: SYS_WINDOW.tutorialDone,
       });
+      this._spawnDummies();
       this._openExit();
       return;
     }
@@ -213,7 +231,18 @@ export class Tutorial {
     this.wayOpen = true;
     this.level.openExit();
     this.audio.play('gateOpen');
-    this.hud.objective(STRINGS.TUTORIAL_OBJ_LEAVE);
+    this.hud.objective(STRINGS.TUTORIAL_OBJ_LEAVE(Math.sign(this.gate.exitX - this.player.x)));
+  }
+
+  /** Something to practice on before the walk out — raised once, after PUKAR. */
+  _spawnDummies() {
+    for (let i = 0; i < TUTORIAL.dummyCount; i++) {
+      const x = this.player.x + 4 + i * TUTORIAL.dummySpacing;
+      const y = this.level.groundAt(x);
+      const d = new PracticeDummy(this.level, this.ctx, x, y);
+      this.entityRoot.add(d.root);
+      this.dummies.push(d);
+    }
   }
 
   /** Lay the stand-in remnant down a few paces ahead of wherever the hunter is. */
@@ -226,6 +255,23 @@ export class Tutorial {
     this.dummyBody.visible = true;
     this.shard.visible = true;
     this.corpses = [new Corpse(x, y, this.dummyBody, this.shard, Raakchyas)];
+  }
+
+  /** Same shape as `Game._resolveCombat`'s player-vs-enemy block, minus exp and style. */
+  _resolveDummyHits() {
+    const p = this.player;
+    const hb = p.hitbox();
+    if (!hb || !p.attack) return;
+    const def = p.attack.def;
+    for (const d of this.dummies) {
+      if (d.dead || p.attack.hitSet.has(d)) continue;
+      if (!boxHit(hb, d.hurtBox())) continue;
+      p.attack.hitSet.add(d);
+      const landed = d.takeHit({ damage: def.damage, knock: def.knock, launch: def.launch, fromX: p.x });
+      if (!landed) continue;
+      const dir = Math.sign(d.x - p.x) || p.facing;
+      this.vfx.hitSpark(d.x - dir * 0.3, d.y + d.hh, dir, 1, P.violetGlow);
+    }
   }
 
   _spawnBolt(x, y, dir) {
@@ -283,6 +329,15 @@ export class Tutorial {
     }
     if (this.chaya) this.chaya.update(dt, this.player, []);
     for (const c of this.corpses) c.update(dt);
+
+    for (const d of this.dummies) d.update(dt, this.player);
+    this._resolveDummyHits();
+    for (let i = this.dummies.length - 1; i >= 0; i--) {
+      if (this.dummies[i].removeMe) {
+        this.entityRoot.remove(this.dummies[i].root);
+        this.dummies.splice(i, 1);
+      }
+    }
     // The corpse window is a real mechanic elsewhere; here it would just be a
     // timer the hunter can fail against, which the ticket rules out. Missing
     // it re-arms the same stand-in instead of letting it run out for good.
@@ -308,6 +363,9 @@ export class Tutorial {
     if (this.wayOpen) {
       const inside = Math.abs(this.player.x - this.gate.exitX) <= GATE_ARCH.reach;
       if (inside && this.input.pressed('up')) this._exit();
+      // Kept live rather than set once in `_openExit` — the arrow has to still
+      // point the right way if the hunter wanders past the portal and doubles back.
+      else this.hud.objective(STRINGS.TUTORIAL_OBJ_LEAVE(Math.sign(this.gate.exitX - this.player.x)));
     }
   }
 

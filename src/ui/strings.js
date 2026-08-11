@@ -258,7 +258,8 @@ export const STRINGS = {
   TUTORIAL_INTRO_BODY: 'Every hunter is tested here before a gate opens for them. Do as the System asks.',
   TUTORIAL_DONE_BIG: 'LICENSED',
   TUTORIAL_DONE_BODY: 'The gate will not test you again.',
-  TUTORIAL_OBJ_LEAVE: 'STEP OUT',
+  /** `dir` is which way the exit sits from the hunter right now — the arrow is the whole signal across a hall with no other landmark pointing at it. */
+  TUTORIAL_OBJ_LEAVE: (dir) => (dir < 0 ? '← STEP OUT' : 'STEP OUT →'),
 
   TUTORIAL_MOVE_BIG: 'MOVE',
   TUTORIAL_MOVE_KEY: 'A and D.',
