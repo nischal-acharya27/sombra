@@ -408,24 +408,70 @@ signal to break the rule is present, though, and worth keeping in any
 retelling rather than smoothing away, since it is the story's own note
 that this victory is not entirely clean.
 
-**Iconography (procedural).** A human warrior-king in full war regalia —
-gada (mace) as the defining weapon, matching the source duel directly and
-giving the fight a built-in signature move (a telegraphed downward mace
-slam reads naturally off the source material rather than needing an
-invented gimmick). No monstrous features — he should read as the most
-"human-scale mortal rival" boss on the roster, physically imposing but not
-supernatural, contrasting directly against the boon-monsters around him.
-Kuru court palette (regal, martial) distinct from Kamsa's darker tyrant
-coding.
+**Iconography (procedural).** A human warrior-king in full war regalia, not
+a monster — the most "human-scale mortal rival" boss on the roster,
+physically imposing but not supernatural, contrasting directly against the
+boon-monsters around him, resolved via `/grilling` during his villain
+design handoff (`docs/agents/villain-handoff.md`), cross-referenced against
+a Raja Ravi Varma court portrait and a modern devotional illustration for
+grounding. Silhouette and scale: `hw ≈ 0.68, hh ≈ 1.35` — roughly 2× the
+hunter's own `hw: 0.34` and 1.6× their `hh: 0.85`, deliberately well short
+of the other three locked bosses' `1.5`–`1.7`/`1.9`–`2.0` (Guardian,
+Goru-Mukh, Hakim, Chiranjivi), since none of them read as human and he
+has to. Signature weapon: a gada, matching the source duel directly and
+giving the fight a built-in signature move — a shaft topped with an
+ornate knobbed/spiked spherical head, a pointed finial, and hanging
+tassels at the neck (both reference images agree on this over a plain
+hammer-head), held two-handed and head-down at idle so the boss's body
+stays legibly harmless per `boss.js`'s own rule, raised overhead as the
+slam's telegraph. A tall, tiered, jeweled crown — not a plain band —
+reuses Hakim's "headdress in place of horns" trick but carries the "king"
+read in silhouette even before the mace registers. Palette: new Kuru-court
+entries in `palette.js` — `kuruPlate` (warm gold-bronze armor),
+`kuruPlateDark` (deep maroon/oxblood, not near-black, keeping "regal"
+rather than grim), `kuruCore` (a rich crimson gada-head flare — the
+telegraph vocabulary every boss carries, kept in the game's existing
+danger hue-family so it reads instantly rather than inventing a new signal
+color), and `kuruWrap` (a saturated green lower-garment accent — both
+reference images independently put him in green at the waist/legs against
+gold-bronze armor, worth trusting as his color rather than treating it as
+incidental) — deliberately distinct from Kamsa's dark bronze/black
+"prison-iron" coding so the two court tyrants don't read as reskins of
+each other.
+
+**Kit shape.** Melee weapon-swing — a wielded gada, the first tier-3 boss
+to actually swing a held prop rather than attack with its own body
+(Guardian, Goru-Mukh, Hakim and Chiranjivi are all body/fist/horn
+contact). The against-the-rules low blow that ends the duel in the source
+text — Krishna's signal, Bhima's illegal strike to the thighs — stays
+narrative-only: it's about Bhima's victory specifically, not a mechanic
+the hunter needs to replicate, so it belongs in dialogue/flavor rather
+than an unconventional "cheat" attack in the kit.
+
+**Phase-transition flag.** None — no boon, no reveal or transform, matching
+his "no monstrous features" iconography above. Escalation comes from the
+existing enrage pattern (`enrageAt`/`enrageSpeedMul`/`enrageWindupMul`):
+faster, stronger, tighter-telegraphed mace swings as he's cornered, which
+reads as a proud king refusing to yield rather than a rig or palette swap.
+The enrage transition is also the natural hook for a line about the dice
+game or his own grievance, giving a future gate-content session something
+concrete to land on rather than a bare "keep him nuanced" instruction.
+
+**Tier call.** 3 — bespoke `Boss` subclass, per issue #40's locked
+four-boss list (Duryodhana, Ravana, Hiranyakashipu, Mahishasura). Not
+actually a live decision for this entry; noted for the record the way
+Bakasura's and Shakuni's entries note tier 2 was never in play for them.
 
 **Respectful-treatment note.** Low risk as source material — Duryodhana is
 a mortal antagonist whose flaws (envy, pride, a genuine sense of being
 wronged by primogeniture politics) the epic treats with real nuance rather
 than pure malice; worth preserving some of that nuance in dialogue so he
-doesn't collapse into a generic "evil prince." His death by an
-against-the-rules blow is itself a well-known moral complication in the
-text (it's part of why the Pandavas' victory is not depicted as
-unambiguously righteous) and is worth keeping rather than cleaning up.
+doesn't collapse into a generic "evil prince," with the enrage-phase
+escalation above as a concrete place to land a line of it rather than a
+vague instruction. His death by an against-the-rules blow is itself a
+well-known moral complication in the text (it's part of why the Pandavas'
+victory is not depicted as unambiguously righteous) and is worth keeping
+rather than cleaning up.
 
 ---
 
