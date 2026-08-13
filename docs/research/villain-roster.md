@@ -586,17 +586,30 @@ ratio comes that close to parity. Differentiate from Kumbhakarna explicitly
 in the geometry (rounder, sagging proportions vs. Kumbhakarna's
 straightforward oversized-humanoid bulk) and in the moveset (grapple vs.
 heavy weapon swing) so the two giant-shaped entries don't read as the same
-fight twice. Signature feature: oversized forearms and hands, out of
-proportion even to his own already-large frame — the actual grabbing
-instrument for the kit below, and the combat-readable tell during the
-windup, the same job Charger's lowered horns or Kawach's raised shield do
-for their own commits. Palette: sickly, bruised, gluttonous — sallow,
-bilious skin with mottled bruise-purple worked into the sagging folds,
-distinct from Raakchyas's clean violet-black and Kawach's iron-brown so he
-doesn't read as either a bigger raakchyas or a rustier Kawach; the
-oversized hands carry the kit's one saturated accent, an inflamed,
-reddened tone, doing the same "this is the part that hurts you" job
-Kawach's amber eye does.
+fight twice. Cross-referenced against a VedicFutura 3D-print sculpt
+(*Bakasura – Hungry Man-Eater from Ekacakra*, Printables) once concrete
+reference art existed for him: it adds a horned skull-crest helm, kept
+despite Charger already owning horns as its windup tell, because
+Bakasura's horns sit static on his head as a silhouette/warlord-adjacent
+read rather than a telegraph — the two don't compete for the same
+combat-readable signal, since Bakasura's own tell stays on the hands (see
+below). It also confirms long, loose hair spilling out from under the
+helm, a wide fanged grin with heavy jowls for the "predatory glutton" face
+read, and — the detail worth keeping — a spine/vertebra-bead necklace
+with a skull pendant at the sternum. Signature feature: oversized forearms
+and hands, banded in the same stacked bone rings the reference sculpt uses
+as bracers, out of proportion even to his own already-large frame — the
+actual grabbing instrument for the kit below, and the combat-readable
+tell during the windup, the same job Charger's lowered horns or Kawach's
+raised shield do for their own commits. Palette: sickly, bruised,
+gluttonous — sallow, bilious skin with mottled bruise-purple worked into
+the sagging folds, distinct from Raakchyas's clean violet-black and
+Kawach's iron-brown so he doesn't read as either a bigger raakchyas or a
+rustier Kawach; the oversized hands carry the kit's one saturated accent,
+an inflamed, reddened tone, doing the same "this is the part that hurts
+you" job Kawach's amber eye does; the bone jewelry — necklace, forearm
+rings, helm crest — stays a neutral bleached-ivory so it doesn't compete
+with that accent.
 
 **Kit shape.** Grapple, not a hold: no move strips player input or catches
 them into a new state — every hit resolves as `Enemy`'s ordinary
