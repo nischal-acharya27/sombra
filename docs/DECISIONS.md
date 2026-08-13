@@ -2701,3 +2701,66 @@ Steps, in order, only the first two of which touch this repo:
 **Sequencing.** The user wants the boss-recovery ticket (and whatever else
 the grilling session surfaces) landed before step 1 starts — this section
 exists so the plan survives to that point rather than being re-derived.
+
+## Boss/Warden dialogue returns, via the existing paged story window — not the timer-based one that was correctly cut
+
+Reversed 2026-08-13, from a `/grilling` session on Taraka's villain handoff.
+The 2026-08-09 tickets above ("regular-enemy encounter windows stop freezing
+the game," "boss intros keep only the name") cut narrative text from every
+encounter in response to a real playtest complaint, and reduced bosses to a
+bare name card. Read against SOMBRA's ambition as a *story*, not just a
+hack-and-slash loop, that trade goes too far for bosses specifically: this
+is a game that wants to tell a story through dialogue-fight-dialogue beats,
+and a name card is not a story.
+
+**What the 2026-08-09 complaint was actually about, re-examined.** The
+quoted playtest line — text disappearing before it could be read, while the
+fight kept happening underneath — describes `HUD.window({ duration })`: a
+fixed-timer window (`SYS_WINDOW.bossIntro` was 2400ms) that auto-dismissed
+regardless of read speed, paired with `this.freeze` covering only that same
+fixed window. The complaint was about the *timer*, not about the *freeze* or
+the *dialogue*. This distinction went unexamined in the 2026-08-09 cut,
+which removed both together.
+
+**The fix already exists in this codebase and was never broken.**
+`HUD.storyWindow()` (`src/ui/hud.js:192`) and `Game._fireBeats`/
+`_showBeatQueue` (`src/game/game.js:348`) — built for the gate-*cleared*
+boundary, boss-rest narration — already do exactly what a Mega Man-style
+dialogue scene needs: no timer (`storyWindow`'s own comment: "unlike
+`window()` this never times itself out — a fixed-duration fade cut the text
+off mid-sentence for anyone who reads slower than the timer, which is what a
+player report caught"), one beat rendered at a time (`HUD` renders one,
+`Game` owns the queue behind it), advance only on an explicit player action
+(the `NEXT` button, or the `RESUME` prompt for the queue's last beat), and
+self-clearing so a second beat can never orphan or stack on the first. The
+fight is genuinely held during this — `resting` gates `Game.update` — which
+is correct and matches the ask ("the dialogue screen appears, and only moves
+to the next... ONLY AFTER THE PLAYER PUSHES A BUTTON"), not a regression to
+re-litigate.
+
+**The gap: this pattern is wired to exactly one boundary.** `_fireBeats` only
+ever fires with `at: 'cleared'`. Boss intros use the old
+`hud.window({ duration })` path (reduced to a name-only card, no queue, no
+pagination), and nothing mid-fight uses either mechanism. Extending
+`_fireBeats` to new boundaries — an `'intro'` boundary before a Warden's
+fight starts, and per-boss boundaries for scripted mid-fight beats (Taraka's
+curse-transformation is the first concrete case, see her villain-handoff
+write-up in `docs/research/villain-roster.md`) — reuses `storyWindow`'s
+queue/paging exactly as written, pausing simulation for the beat's duration
+the same way `resting` already does for the cleared boundary. No new
+dialogue-rendering design is needed; this is a wiring problem, not a design
+problem.
+
+**Scope: bosses/Wardens only.** Grunt encounters keep the toast-only,
+no-freeze fix from 2026-08-09 — that complaint was about ten gates of
+many-per-gate grunt pauses, which this entry has no new argument against.
+Bosses are once-per-gate (or, with a phase beat, twice), which is exactly
+the presence budget the 2026-08-09 boss ticket already judged a name card
+was allowed to spend — dialogue spends it more usefully.
+
+**Not built in this session.** No `'intro'` or per-boss mid-fight boundary
+exists yet in `game.js`, and no gate currently authors `beats` for either.
+The implementing session wires the boundary(ies) and decides how much
+dialogue content each boss carries; today's session only records the
+directional call and names Taraka's transformation as the first beat that
+needs it.

@@ -538,20 +538,83 @@ specific to Rama's arc and doesn't map onto the hunter's situation at all.
 
 **Iconography (procedural).** The curse gives a clean two-state design: was
 beautiful, is now "distorted, contorted, monstrous" per the source's own
-language — a strong candidate for a start-beautiful/reveal-monstrous
-transition similar to Shurpanakha's, though the two should be
-differentiated in execution (Taraka is described as physically immense and
-brutish — elephant-strength — where Shurpanakha's true form is closer to
-clawed and fanged but human-scaled). Forest-demon coding: dark, wild,
-overgrown palette rather than a court or elemental one.
+language, resolved via `/grilling` during her villain design handoff
+(`docs/agents/villain-handoff.md`). Reference material for the monstrous
+form (no usable image found; text description only): "a giant,
+hideous-looking cannibal with an imposing, muscular frame capable of moving
+at lightning speed," a grotesque distorted face with prominent teeth and an
+enraged expression, styled raw and primal — minimal clothing, animal pelts
+or a stanpatta, primitive bone/skull jewelry. Silhouette and scale
+(monstrous form): `hh ≈ 1.3`, `hw ≈ 0.78` — comparable giant-tier height to
+Bakasura's `hh 1.25`, but a narrower, taller ratio (~0.6 vs. his ~0.8) for
+an athletic-muscular read rather than his round-bellied one, so the two
+giants on the roster don't silhouette the same. "Lightning speed" is built
+as a real stat, not flavor: a move speed above the rest of the Warden pack,
+distinct from Bakasura's grapple-burst and the actual differentiator
+between the two giants at the behavior level, not just the geometry.
+Skull/bone-necklace jewelry is dropped for her specifically — Bakasura
+already owns that exact motif (spine/vertebra-bead necklace, skull
+pendant) — in favor of the reference's other half, raw hide/pelts, which
+carries into both her forms as identity rather than corruption. Beautiful
+form: no surviving reference either way, so it's built purely from
+contrast — human-scale (`hh ≈ 0.9`, `hw ≈ 0.4`, close to `PLAYER`'s own
+0.34/0.85), warm and naturalistic rather than desaturated or afterlife-coded,
+same pelts, so the swap reads as violence done *to* a person rather than a
+costume change. Palette: forest-demon coding on the monstrous form per the
+original note — moss-green-to-black skin, bark-brown undertones, an
+amber-red enraged-eye accent (distinct from Raakchyas's crimson and
+Charger's orange) — kept apart from every existing violet/iron/slate demon
+on the roster. Differentiate from Shurpanakha explicitly once she is built:
+Taraka reads as physically immense and brutish where Shurpanakha's true
+form is closer to clawed-and-fanged but human-scaled, per the original
+note.
 
-**Respectful-treatment note.** Moderate. The text's own discomfort — Rama
-hesitating specifically because she is a woman — is worth preserving as a
-detail rather than erasing, since erasing it produces a cleaner but less
-honest adaptation. Her backstory (a curse imposed for defending her
-husband's memory) gives room to write her as a tragic figure rather than a
-simple monster, similar in spirit to Kumbhakarna, if the gate wants that
-register.
+**Kit shape.** Melee charge/pounce, not grapple-and-hold — claws close the
+distance fast rather than wrestling for a throw, so she doesn't repeat
+Bakasura's kit on top of already being the roster's other giant. Extends
+`Charger` directly (`src/game/enemies.js:387`): its chase → telegraphed
+windup → committed lane-charge is already the shape "lightning speed,
+closes distance" needs, reskinned as a claw-swipe hitbox instead of a body
+check. Identical kit in both curse phases (below) — only the model, palette
+and move-speed tells change at the swap, not the attack list.
+
+**Phase-transition flag.** Yes — the roster's first. Two rigs, both built
+at spawn and swapped with a `visible` flag (the same pre-built/toggle
+pattern `Game` already uses for gate transitions, never built mid-run), not
+a single rig with a palette/pose morph. Triggered by an HP threshold,
+mirroring `Boss._enrage()` (`src/game/boss.js:105`) conceptually but
+implemented locally in Taraka's own `Enemy`/`Charger` subclass — she's a
+Warden, not one of the four locked bosses, so this does not touch the
+shared `Enemy`/`Charger` base classes. Cosmetic-only: the attack list,
+telegraphs and hitbox extents (fixed at the monstrous-form `hw`/`hh` for
+the entire fight, not resized at the swap) are identical before and after;
+only the rig, palette and speed-tell tightening change. The swap itself is
+a scripted beat, not a silent cut: it fires inside a new paused dialogue
+beat (see "Boss/Warden dialogue returns..." in `docs/DECISIONS.md`) —
+`_fireBeats` gains a per-boss mid-fight boundary, Taraka is its first
+concrete use, and the transformation plays out as a held, player-advanced
+story-window moment (a brief writhe/contort animation, a distinct
+pained/anguished sound cue, not a generic monster growl) rather than an
+instant model swap the player might miss. Because the beat pauses the
+simulation, there's no fairness concern about the hitbox mismatch during
+it — nothing is being fought over while it plays.
+
+**Tier call.** 2 — new rig in `models.js` (both curse-phase meshes, built
+up front); the enemy class extends `Charger` directly, per the kit-shape
+call above, rather than bespoke chase/commit logic under `Enemy`.
+
+**Respectful-treatment note.** Moderate, carried over and strengthened by
+the design above rather than left as an unused flag. The text's own
+discomfort — Rama hesitating specifically because she is a woman — doesn't
+map onto the hunter's situation (no equivalent hesitation for a hunter who
+isn't Rama to inherit) and isn't reproduced in the gate. What does carry
+over is her backstory: a curse imposed for defending her husband's memory,
+room to write her as a tragic figure rather than a simple monster, similar
+in spirit to Kumbhakarna. The HP-threshold reveal makes that legible in
+play rather than only in this document — the player directly witnesses the
+curse happen to her, in a held dialogue beat she can actually read, rather
+than being told about it in backstory text or watching an instant costume
+swap.
 
 ---
 
