@@ -563,22 +563,85 @@ overwhelming force, so a hunter defeating him through skill/attrition sits
 more naturally against the source than, say, Hiranyakashipu's does.
 
 **Iconography (procedural).** The clearest "giant" silhouette on the
-roster: vastly oversized relative to a human, described as mountain-like.
-Procedurally this is the strongest candidate for a scale-up of the
-existing Guardian/Boss rig proportions rather than a new topology — bigger
-hw/hh, slower telegraphs, a straightforward "committed heavy swing" kit,
-distinct from Ravana's regal multi-head reading and from Bakasura's
-grappling reading (see Bakasura's entry for the differentiation this
-needs). Signature prop: no fine weapon — bare hands or an uprooted
-tree/club fits both the "sleep-boon simpleton" and "overwhelming brute
-force" readings the text gives him.
+roster: vastly oversized relative to a human, described as mountain-like,
+resolved via `/grilling` during his villain design handoff
+(`docs/agents/villain-handoff.md`), text-only — no reference image was
+used, following Taraka's precedent for an entry with no usable art.
+Silhouette and scale: `hw 1.8`, `hh 2.2` — by instruction, made
+*exceptionally* giant rather than merely the roster's biggest Warden,
+which pushes him past every one of the four locked bosses (`GoruMukh`'s
+`hw 1.7` was the prior largest; the bosses top out `hh 2.0`), so he reads
+as the single largest silhouette in the game. This intentionally breaks
+the assumption Bakasura's own entry left standing — that Wardens stay
+under boss scale to preserve the campaign's escalation curve — resolved by
+decoupling size from difficulty: `contactDamage: 0` and the no-passive-
+contact rule mean his oversized collision box is a movement-space and
+visual fact, not a threat multiplier, so a Warden can be physically bigger
+than a boss without out-escalating it mechanically. The scale-up
+deliberately echoes only Guardian/Boss-rig *proportions*, not its
+plate-armor/blank-slit-faceplate identity — Kumbhakarna is built
+bare-chested with an actual face, not armored, because the
+respectful-treatment note below needs a face to land pathos on, and an
+inhuman war-machine read would work against it. Coarse, weathered-granite
+grey-brown stone-toned skin, chosen to sit clear of every other giant/demon
+tone already on the roster (Shurpanakha's pale ash-grey, Taraka's
+moss-green-to-black, Bakasura's sallow-bilious-purple). Minimal warrior
+garb — a wrap, at most simple bracers — and deliberately no jewelry,
+the inverse of Bakasura's bone-jewelry-heavy read, reinforcing the
+"sleep-boon simpleton" framing through absence rather than another motif.
+Disheveled hair and beard. Default character read is heavy-lidded, groggy
+eyes — just woken from a years-long sleep — which flare the roster's
+shared damage-signal amber (`0xffb347`, already carried by Bakasura's
+hands, Taraka's eye and Shurpanakha's eye) as the attack telegraph, rather
+than inventing a new accent. Signature weapon: settles the original note's
+open "bare hands or an uprooted tree/club" question in favor of the
+club/uprooted tree — bare hands would leave him sharing both Bakasura's
+`Enemy`-extension shape *and* Bakasura's unarmed identity, so the wielded
+weapon is what keeps the two giants distinct at the kit level and not just
+in geometry.
+
+**Kit shape.** Extends `Enemy` directly — the same chase → telegraph →
+attack → recover skeleton Kawach and Bakasura already reskin, not
+`Charger`: a "straightforward committed heavy swing" is the opposite of
+`Charger`'s speed identity, already spent on Taraka. Two moves picked by
+range, the same shape as Bakasura's grab-slam/tackle pair: a close-range
+heavy downward smash with the club, and a longer-range horizontal
+sweep/lumbering tackle for reach, so the fight doesn't collapse into a
+single fixed engagement distance.
+
+**Phase-transition flag.** Yes — the roster's third, after Taraka and
+Shurpanakha, but a different mechanism than their two-rig, visible-flag
+swap: one rig throughout, an HP-threshold enrage that changes only pose,
+speed and palette, mirroring `Boss._enrage()` conceptually (Guardian's own
+`enrageAt`/`enrageSpeedMul`) but implemented Warden-locally, the same way
+Taraka's and Shurpanakha's transitions are. Opens groggy — slower
+telegraphs, heavier-lidded eyes, a duller skin sheen — and at the
+threshold snaps to fully awake: eyes wide, faster wind-ups, a speed
+pickup. The trigger fires a paged, player-advanced dialogue beat
+(`HUD.storyWindow`/`Game._fireBeats`, `docs/DECISIONS.md`) — the third
+consumer of that machinery, after Taraka's transformation and
+Shurpanakha's reveal — staging the text's own beat: he counsels peace, is
+refused, and fights anyway out of loyalty.
+
+**Tier call.** 2 — new rig in `models.js`; the enemy class extends
+`Enemy` directly, reusing Kawach/Bakasura's chase → telegraph → attack →
+recover skeleton, with the offset heavy-swing attack box and range-picked
+second move as the only kit departures, plus the HP-threshold enrage state
+layered on top Warden-locally rather than routed through the bespoke Boss
+state machine — matching Taraka's and Shurpanakha's precedent for keeping
+a phase-transition inside tier 2. Tier 3 was never in play regardless of
+how boss-like the source material reads: reserved for the four locked
+bosses per issue #40, and Kumbhakarna isn't on that list.
 
 **Respectful-treatment note.** Low risk, and arguably the best-positioned
 entry on the list for sympathetic writing without any tension against the
 source: the epic itself frames him as a loyal, decent figure trapped by
 family duty into a war he argued against, forced to choose kin over
-conscience. If SOMBRA wants one Warden whose pre-fight dialogue earns real
-pathos rather than menace, this is the strongest built-in candidate.
+conscience. This session gives that candidacy a mechanical home rather
+than leaving it as a suggestion for a future one: the enrage-trigger
+dialogue beat above *is* the counsel-peace → refused → fight-anyway
+moment, staged as the held, player-advanced beat the pathos needs rather
+than a name card or a toast the fight talks over.
 
 ---
 
