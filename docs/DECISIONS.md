@@ -2702,6 +2702,108 @@ Steps, in order, only the first two of which touch this repo:
 the grilling session surfaces) landed before step 1 starts — this section
 exists so the plan survives to that point rather than being re-derived.
 
+### Per-gate music extends the Nepali naming precedent; backgrounds split off
+
+Grilled from issue #36 ("Nepal-flavored theming"), 2026-08-11. The ticket
+bundled music and backgrounds together; split into two rather than grilled
+as one, because they have different existing footholds — music has none
+(`SPEC-CAMPAIGN.md` named it deferred, unbuilt "own job" work), backgrounds
+already have a mechanism to reconcile with (the per-gate `REALM` palette).
+Music was grilled first and is now `ready-for-agent` on #36; backgrounds is
+filed bare, `needs-triage`, for its own session later.
+
+**Music is Nepali-specific, not cross-tradition.** § "Naming pivots to
+Nepali" already drew this line once, for names: Aago, Pukar and Chaya are
+Nepali specifically, not generic Sanskrit/"South Asian", even though the
+realms' mythology (Naraka, deva, asura, Yama) deliberately stays
+cross-tradition on the grounds that these are living religions and
+borrowed-iconography theme-parking is a difference worth maintaining. Music
+extends the *naming* precedent rather than the *mythology* one — a timbre
+choice is closer in kind to a name than to a doctrinal claim. Synthesis
+should aim at specific Nepali-instrument timbres (a struck/plucked low body
+evoking madal, a bowed voice evoking sarangi, a breathy melodic lead evoking
+bansuri) rather than a generic "exotic" pastiche, the same trap the
+campaign's own cross-tradition framing is written to avoid.
+
+**Music progresses per-gate, mirroring the palette's arc — as an authored
+config, not a shared driver.** Checked before deciding: the palette's
+"progression" isn't a continuous formula threaded across the campaign: each
+gate hand-authors its own static `REALM` object (gate 1 pastel, later gates
+progressively darker, gate 8 echoing gate 1 as the spec's own "payoff"), and
+`Game._enterGate` swaps it wholesale via `world.applyRealm(this.gate.realm)`.
+Music follows the identical pattern rather than inventing a coupling between
+two unrelated systems: each gate authors its own small `MUSIC` config (root
+note, mode, instrumentation density) next to its `REALM` object, and
+`Game._enterGate` passes it to `Audio.startMusic()` in place of today's
+no-argument call. The existing drone-plus-ostinato architecture and its
+combat-intensity layering (`Audio`'s `targetIntensity`) are extended, not
+replaced.
+
+**Scoped to the ten campaign gates only.** `Audio.startMusic()` is currently
+only ever called from `Game` — the opening story sequence and the training
+hall (#34, #35) already play with no music at all, SFX only, and stay that
+way here. Both were built "deliberately not `Game`," kept separate from the
+campaign's own machinery on purpose; whether either wants music of its own
+is a separate decision for whoever wants to file it, not a default this
+ticket assumes.
+
+## The villain design handoff workflow
+
+Settled 2026-08-11 via a `/grilling` session on issue #43, a child ticket of
+the campaign-redesign map (issue #38). The full template, tier taxonomy and
+image rule now live in `docs/agents/villain-handoff.md`, linked from this
+project's `CLAUDE.md` alongside its other durable process docs; this entry
+is the reasoning, not the reference.
+
+**Wardens split into three build tiers, not the two the existing pattern
+implies.** `boss.js`'s own comment already states the rule for the expensive
+tier — "bosses subclass, they do not copy" — and the ten-gate campaign's
+"Wardens are configuration, not code" covers the cheap one. But that cheap
+tier turns out narrower than it reads: `buildCharger`/`buildKawach`/etc.'s
+`skin` parameter only recolors, so Kevat, Vyaghri and Amar-Yoddha are
+literally the same buffalo-charger geometry in three palettes. That worked
+for the old campaign because none of those three needed a distinct
+silhouette. Eleven of the new roster's Wardens do — `docs/research/
+villain-roster.md`'s own iconography notes assume real shape differences
+(Vritra a legless serpent chain, Kumbhakarna a scaled giant, Bakasura a
+grappling glutton, Trishiras three functionally distinct heads) that no
+palette swap can deliver. So a third tier sits between the two: a new rig in
+`models.js` for a genuinely new silhouette, whose enemy class still extends
+an existing behavior (`Enemy`/`Charger`-style chase-and-attack) rather than
+earning a bespoke state machine. Reskin, new-rig, bespoke-boss — and which
+tier a villain needs is decided once, during that villain's own handoff
+session, not re-derived when someone sits down to build it.
+
+**The written-description template is mostly already built.** `docs/
+research/villain-roster.md`'s "Iconography (procedural)" note, written for
+all 15 candidates before this ticket existed, already covers silhouette,
+scale, signature weapon/feature and palette — the four things #43 asked the
+template to capture. Two fields are missing and get added by retrofit
+rather than a rewrite: **kit shape** (melee weapon-swing / grapple-throw /
+ranged-prop / no-combat-form — the thing that decides whether a new rig can
+reuse an existing behavior class or needs one of its own) and a
+**phase-transition flag** (does this villain have a reveal/transform moment,
+reusing the existing boss-enrage precedent of a palette/pose swap, or none).
+The tier call from the paragraph above is the template's third addition.
+
+**Reference images are never committed, and nothing about them is expected
+to outlive the session that produces the write-up.** The no-asset-files rule
+already settled this in spirit; the only open question was mechanism. The
+answer is the plainest one available: pasted inline in a live handoff
+conversation, or read from an absolute path outside the repo, consumed once.
+Because of this, all 15 villains' descriptions get written up in individual
+live sessions rather than front-loaded — there's no artifact to front-load
+against.
+
+**The workflow lives at `docs/agents/villain-handoff.md`**, matching the
+existing `docs/agents/issue-tracker.md` / `triage-labels.md` / `domain.md`
+pattern — a durable, repeatedly-consulted process doc rather than a one-time
+decision or the destination spec itself, which doesn't exist yet. The
+eventual campaign redesign spec (map issue #38's actual destination) folds
+this in or points at it rather than duplicating it, per that map's own
+Destination text naming this exact workflow as something the finished spec
+has to define.
+
 ## Boss/Warden dialogue returns, via the existing paged story window — not the timer-based one that was correctly cut
 
 Reversed 2026-08-13, from a `/grilling` session on Taraka's villain handoff.

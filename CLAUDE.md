@@ -90,3 +90,8 @@ The five canonical triage roles, each label string equal to its name. See `docs/
 ### Domain docs
 
 Single-context: `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+### Villain design handoff
+
+How reference images + a written description become procedural three.js
+geometry for a campaign villain. See `docs/agents/villain-handoff.md`.
