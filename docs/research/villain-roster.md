@@ -87,21 +87,127 @@ Purnima effigies) and twenty arms are the signature; a ten-head rig is
 expensive for this engine's per-boss node budget, so a defensible
 compression is 3–5 visible heads arranged in an arc with the others implied
 by silhouette/backglow, the way the Guardian's core stands in for a health
-bar rather than modeling every wound. Broad-shouldered, crowned, richly
-adorned (this is a king, not a beast) — gold/dark palette, distinct from any
-iron/ash palette used elsewhere. Signature weapon: the Chandrahas ("moon
-laughter") sword, a boon-gift from Shiva — a curved blade reads well as a
-primitive-built prop. Scale: notably larger than a human but humanoid,
-walking upright, not a quadruped or a giant on Kumbhakarna's scale.
+bar rather than modeling every wound — resolved via `/grilling` during his
+villain design handoff (`docs/agents/villain-handoff.md`), against three
+reference images. Two of the three (a South Indian miniature painting and a
+devotional digital illustration, both agreeing independently on ten crowned
+heads in an arc, twenty fanned arms, rich gold ornamentation) anchor the
+build; the third (a Smite game-skin illustration — red skin, a single face
+under a horned crown, no ten-heads motif at all) was rejected as the
+anchor, since it reads as a generic Western fantasy demon-lord and drops
+the one signature the source and both other references agree on, working
+against the respectful-treatment note below rather than for it. Silhouette
+and scale: `hw ≈ 1.7, hh ≈ 2.0` — the top of the existing four-locked-boss
+cluster (matching Goru-Mukh's `hw 1.7` and Chiranjivi's `hh 2.0`), reading
+as the largest of the four per "notably larger than a human" while staying
+clearly under Kumbhakarna's deliberately-outlier `hw 1.8, hh 2.2` per the
+original note's own instruction not to reach his scale; the arm-fan and
+head-arc will read wider than the collision box alone, which is fine —
+`contactDamage` is 0 roster-wide (Kumbhakarna's precedent), so an oversized
+silhouette is a visual/movement-space fact, not a threat multiplier. Skin:
+a warm bronze/copper human tone (the devotional illustration's read),
+deliberately not the miniature painting's classical blue — blue would sit
+too close to the palette's already-heavily-spent blue-violet family
+(`raakchyasBody`, `chayaBody`, `bossPlate`/`bossCore`, `wheelPlate`, and
+`chargerHide`'s own blue-grey), and every existing rakshasa/asura on the
+roster already signals "monster" through an exotic skin tone
+(Shurpanakha's ash-grey, Taraka's moss-green-to-black, Bakasura's
+sallow-purple, Kumbhakarna's granite-grey) — exactly the flattening the
+respectful-treatment note warns against applying to Ravana specifically.
+A human skin tone makes the same move Kumbhakarna's actual-face read did
+for his own note: it argues "person," and leaves the ten-heads/twenty-arms
+attribute to carry the "not merely human" read on its own. New Lanka-court
+palette entries: `lankaSkin` (bronze), `lankaPlate`/`lankaPlateDark`
+(heavy gold, more ornate than Duryodhana's Kuru-court gold-bronze, per
+"richly adorned" being explicit here where it wasn't for him), `lankaRobe`
+(a dark crimson/vermillion accent, both references' red-and-saffron
+drapes), and `lankaCore` (the per-head telegraph flare — see Kit shape —
+in the game's existing warm amber/gold danger family, distinct from
+Duryodhana's crimson `kuruCore` the way each locked boss's core is its own
+hue within that shared family, not a reused value).
 
-**Respectful-treatment note.** Ravana is not read as a simple villain across
-the tradition — he is a Brahmin, a scholar of the Vedas, a devotee of Shiva
-(the Shiva Tandava Stotra is traditionally attributed to him), and in parts
-of South India and Sri Lanka he is venerated rather than reviled (Ravana
-Purnima). A flat "evil demon king" treatment flattens a genuinely
-ambivalent figure the tradition itself argues about. Worth at minimum a
-line of dialogue that lets him articulate his own case rather than only
-menace.
+Signature weapon: not one prop but four, each independently corroborated
+by a reference image and each swung by a dedicated arm-pair rather than
+held as static flavor — the twenty-arms motif made mechanical rather than
+decorative. The **Chandrahas** ("moon laughter") curved sword remains the
+core signature (present in both anchor references); **trishul** (trident,
+both anchor references) and **chakra** (discus, the miniature painting)
+join it; a fourth hooked mace visible in the miniature painting was
+dropped deliberately — Duryodhana's entire signature *is* a gada, and a
+second locked boss swinging one, even as one of four, dilutes his one
+identity — in favor of a **torch/flame implement** (the devotional
+illustration), whose fire needs its own hue distinct from the hunter's own
+`aagoCore`/`aagoGlow` so the two don't read as the same attack from
+opposite sides. Remaining arms beyond these four stay static ornament,
+compressed the same way the heads are. Chandrahas's boon-gift-from-Shiva
+origin (Ravana shakes Mount Kailash, is pinned under it, sings penance,
+is forgiven and gifted the sword) is usually placed in the *Uttara Kanda*
+— the same book this entry's Source field already leans on for the
+penance/boon material generally — but the episode's provenance within
+Valmiki's own hand specifically (as opposed to a later Puranic elaboration
+within that book) isn't cleanly verifiable; worth citing as "per the
+Uttara Kanda tradition" rather than asserting it flatly.
+
+**Kit shape.** Melee-and-ranged weapon-rotation, tier 3 so there is no
+existing behavior class to fit into (unlike a tier-2 call) — a new state
+machine regardless. The four weapons map onto the telegraph vocabulary
+already shared by Guardian/Goru-Mukh/Hakim/Chiranjivi (`boss.js`'s
+`sweeping`/`leaping`/`volley`/`slam` states, reused shapes reskinned per
+weapon rather than new mechanics per attack): Chandrahas → sweep
+(close-range slash), trishul → lunge (reach thrust, closes distance),
+chakra → volley (ranged spinning throw), torch → slam (AOE ground-fire
+smash). Each weapon's telegraph is tied to a specific head in the
+compressed 3–5-head arc rather than one shared chest-core flare like the
+other three locked bosses use — the head nearest the active arm bares its
+teeth and flares `lankaCore` before that attack commits. This is the one
+place the "compress ten heads to 3–5, implied by silhouette" call gets to
+do more than save geometry: it makes the extra heads functional, something
+the player learns to read individually, rather than a decoration that
+stops registering once the initial "ten heads" beat has landed.
+
+**Phase-transition flag.** No rig-swap transformation — unlike the
+Wardens, there is no curse/disguise premise in the source to dramatize a
+reveal, and Duryodhana (the one other tier-3 precedent) landed on the same
+"none" call for the same reason. But the shared `Boss._enrage()` hook every
+locked boss already has (core-color swap, speed/windup multipliers,
+cooldown reduction) carries two Ravana-specific payloads at its threshold
+rather than only a palette change: the implied/backglow heads intensify,
+baseline 3 visible heads becoming 5 at the threshold, spending the
+node-budget compression as an actual escalation beat instead of a fixed
+decoration; and the threshold fires a paged `_fireBeats`/`storyWindow`
+dialogue beat (`docs/DECISIONS.md`) — the first use of that machinery by a
+locked Boss rather than a Warden (Taraka, Shurpanakha and Kumbhakarna are
+its three prior consumers, all Wardens), confirming the mechanism was never
+actually tier-locked. This is the concrete mechanical spot the
+respectful-treatment note's "let him articulate his own case" lands on,
+the same way Kumbhakarna's counsel-refused beat gave his own note a home
+instead of leaving it as a suggestion.
+
+**Tier call.** 3 — bespoke `Boss` subclass, per issue #40's locked
+four-boss list (Duryodhana, Ravana, Hiranyakashipu, Mahishasura). Not
+actually a live decision for this entry, the way Duryodhana's and
+Bakasura's/Shakuni's entries note tier 3 or tier 2 was never in play for
+them either.
+
+**Respectful-treatment note.** Ravana is not read as a simple villain
+across the tradition — he is a Brahmin, a scholar of the Vedas, a devotee
+of Shiva (the Shiva Tandava Stotra is traditionally attributed to him), and
+in parts of South India and Sri Lanka he is venerated rather than reviled
+(Ravana Purnima). A flat "evil demon king" treatment flattens a genuinely
+ambivalent figure the tradition itself argues about, and the design above
+answers it with two concrete homes rather than leaving it as an unused
+flag: the bronze-skin, no-monster-coding palette call keeps the *design*
+from reading as generic demon before he has said a word, and the
+enrage-threshold dialogue beat is where he actually gets to speak in his
+own voice. The harder half of the note — the fight sits awkwardly against
+the source because the boon's loophole exists specifically because Ravana
+considered a mortal beneath asking protection from, and SOMBRA's hunter is
+explicitly not Rama — isn't something a win condition can resolve, and
+shouldn't be resolved mechanically (no invented "the hunter is secretly
+non-human" escape hatch; nothing else in this game's fiction earns that).
+It belongs in the same dialogue beat instead: a line where Ravana registers,
+mid-fight, that he is dying to someone he wrote off — named directly, left
+unresolved, the way the note itself asks.
 
 ---
 
