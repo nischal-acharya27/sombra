@@ -1039,22 +1039,123 @@ name and iconography.
 a beautiful-woman form concealing a true rakshasi form, with the poison
 motif as a signature (poisoned "milk"/breath/contact attacks rather than a
 conventional weapon) and a nursing/maternal visual register that needs
-careful handling (see below). Large true form once revealed, per the
-source (her corpse is described as sprawling across a great distance).
+careful handling (see below), resolved via `/grilling` during her villain
+design handoff (`docs/agents/villain-handoff.md`). Reference material: a
+V&A-collection Kalighat-style folk painting and a devotional digital
+illustration (a third, a Shutterstock stock-art piece, didn't resolve —
+bot-walled preview page, no direct image available). Both usable
+references stage the nursing tableau directly — the folk painting has her
+open-mouthed baring teeth while Krishna feeds at her breast, the digital
+piece has him sucking her finger — so neither is usable for pose or
+composition, only for the disguise form's garb, jewelry, hair and
+expression, the same partial-use precedent Shurpanakha's TV-still set.
+Neither depicts a monstrous true form; that half is text-derived only, the
+same as Taraka's was. Silhouette and scale: disguise form `hw 0.36, hh
+0.86`, essentially `PLAYER`'s own `0.34`/`0.85` — nothing in the source or
+either reference suggests she reads as unusual before the reveal, since the
+entire premise depends on passing as an ordinary woman. True form: the
+source's corpse-sprawling-across-a-great-distance language points toward
+giant scale, but the roster already carries three giant-or-giant-adjacent
+Wardens (Taraka `hh≈1.3`, Bakasura `hh 1.25`, Kumbhakarna `hh 2.2`), and
+Shurpanakha's handoff already overrode a giant-scale reference for exactly
+this reason ("three giant-scaled Wardens back to back would flatten the
+roster"). Same call here: `hw 0.62, hh 1.15` — bigger and heavier than any
+human-scale Warden (Kamsa's `hw 0.58, hh 1.05` was the prior largest) but
+read as bloated/swollen rather than towering, so the size increase carries
+the "poison filling her body" idea and gives the true form a distinct
+silhouette *shape* rather than a fourth tall giant. Signature
+weapon/feature: no wielded weapon, natural/motif-based, per the original
+note — poison delivered by touch and breath rather than the source's
+literal milk, so nothing in the geometry or animation set stages a feeding.
+Disguise form's hands carry subtly clawed nails (visible in the digital
+reference despite full human dress) as a tell hidden in plain sight, sized
+up into full rakshasi claws at the reveal. Palette: disguise form pulls
+from the folk painting over the digital piece — bold crimson-and-mustard
+striped drape (`putanaRobe` `0xb8283f`, `putanaRobeGold` `0xd9a63c`) rather
+than the digital piece's generic gold-on-maroon court look already spent
+by Duryodhana and Ravana, with silver jewelry reusing the existing
+`bladeSteel` (`0xd7dcea`) rather than inventing a redundant accent, and a
+new `putanaSkin` (`0xd1976a`) distinct from `hunterSkin`, `mathuraSkin` and
+Ravana's `lankaSkin`. True form: a sickly bile-khaki `putanaTrueSkin`
+(`0x8f8a5c`) with a darker `putanaTrueSkinDark` (`0x453f2c`) undertone —
+kept off Taraka's moss-green-to-black and Shurpanakha's ash-grey
+specifically so the roster's demon skins stay distinguishable at a glance.
+A new `putanaToxin` (`0xacd94a`, toxic yellow-green) lights the poison
+breath/cloud prop and the true form's mouth/eye glow — distinct from
+Taraka's forest palette, `tantrikSigil`'s violet and `aagoCore`'s orange —
+while the attack telegraph itself reuses the roster's shared damage-signal
+`amber` (`0xffb347`, already carried by Bakasura, Taraka, Shurpanakha,
+Kumbhakarna and Kamsa) rather than breaking that convention.
+
+**Kit shape.** Extends `Enemy` directly (`src/game/enemies.js:30`) — the
+same chase → telegraph → attack → recover skeleton Kawach, Bakasura,
+Kumbhakarna and Kamsa already reskin, not `Charger`: she isn't a
+speed-identity chaser, she closes distance as false hospitality rather
+than aggression. Two moves picked by range: a close-range poisoned
+embrace — arms spreading in an inviting gesture before a committed,
+telegraphed grab, satisfying the no-passive-contact rule the same way
+every other Warden's melee move does (damage lands on the committed
+attack, never on incidental touch) — and a mid-range toxic breath/spit
+cloud, a telegraphed exhale that leaves a lingering hazard patch rather
+than a direct-hit projectile, punishing a hunter who stands and trades.
+Reskinned rather than replaced across the reveal, the same resolution
+Shurpanakha's handoff reached for the same structural reason (tier 3 isn't
+available and a kit that genuinely changes at the reveal was never an
+option): the embrace becomes a claw-grab with identical hitbox and timing,
+the breath cloud grows heavier and wider, but the two-move shape and its
+range split don't change.
+
+**Phase-transition flag.** Yes — the roster's fourth, after Taraka,
+Shurpanakha and Kumbhakarna, and the second two-rig visible-flag swap
+after Shurpanakha specifically (Kumbhakarna's was a single-rig
+pose/palette enrage, which doesn't fit a disguise premise that needs an
+actual different silhouette underneath). Two rigs — disguise, true form —
+both pre-built at spawn and swapped on a `visible` flag, never built
+mid-run, triggered by an HP threshold mirroring `Boss._enrage()`
+conceptually but implemented Warden-locally in her own `Enemy` subclass,
+matching Taraka's and Shurpanakha's precedent exactly. The swap fires
+inside the same paused, player-advanced dialogue beat their transitions
+use (`_fireBeats`'s per-boss mid-fight boundary, `docs/DECISIONS.md`) —
+she is that machinery's fourth consumer. Unlike Kamsa's entry, which
+deliberately declined to commit its enrage threshold as a dialogue-beat
+hook because no version of a line about infanticide avoids spectacle,
+Putana's reveal beat is worth committing to: the source hands this
+character a genuine redemptive angle (see below), and the reveal is where
+it has a mechanical home to land in rather than staying a suggestion left
+for a future session.
+
+**Tier call.** 2 — new rig in `models.js` for both forms; the enemy class
+extends `Enemy` directly, reusing Kawach/Bakasura/Kumbhakarna/Kamsa's
+chase → telegraph → attack → recover skeleton, with the poisoned-embrace
+grab and range-picked breath-cloud as the kit departures, plus the
+two-rig phase-transition layered on top Warden-locally rather than routed
+through the bespoke `Boss` state machine — matching Taraka's and
+Shurpanakha's precedent for keeping a phase-transition inside tier 2.
+Tier 3 was never in play: reserved for the four locked bosses per issue
+#40, and Putana isn't on that list.
 
 **Respectful-treatment note.** High flag, and different in kind from the
 others: the source material stages violence around an infant-nursing
 tableau, and a boss fight extracted from that imagery risks landing as
 grotesque regardless of intent, independent of any theological concern.
-If used at all, the disguise/poison motif can likely be preserved (a
-deceiver whose true threat is hidden behind a caring facade is a workable,
-respectful abstraction) while the specific nursing-infant staging is left
-out entirely rather than adapted literally. Her redemption/liberation in
-the source (evil intent notwithstanding, she is freed by the very act) is
-worth preserving in spirit — it is an unusually strong, ready-made fit for
-SORGI's own "a remnant is a soul released, not a monster erased" framing,
-and leaning into that reading is probably the single best redemptive angle
-available anywhere on this list.
+The design above answers this directly rather than leaving it as a
+caution for later: the poison motif survives entirely through touch (the
+embrace grab) and breath (the toxin cloud), and nothing in either rig, the
+attack animations, or the reveal beat stages a feeding tableau at any
+point — the source's "milk" is abstracted into breath from the first
+geometry decision onward, not softened after the fact. Her
+redemption/liberation in the source (evil intent notwithstanding, she is
+freed by the very act) is worth preserving in spirit — it is an unusually
+strong, ready-made fit for SORGI's own "a remnant is a soul released, not
+a monster erased" framing, and leaning into that reading is probably the
+single best redemptive angle available anywhere on this list. This
+session gives that reading its mechanical home: the reveal's dialogue beat
+(above) should be written toward release rather than a villainy recap or
+a victory the hunter celebrates — the same escort-not-punishment framing
+Shurpanakha's reveal beat uses — so the clear plays as the poison finally
+leaving her rather than a monster put down. Beat-writing itself is left
+for whoever authors her `_fireBeats` dialogue, same as Shurpanakha's
+interiority note.
 
 ---
 
