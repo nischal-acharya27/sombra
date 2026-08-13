@@ -525,17 +525,61 @@ Bhima** — a mortal Pandava — making this, like Duryodhana, one of the
 cleanest defeats to hand to a non-divine hunter with essentially no
 theological substitution problem.
 
-**Iconography (procedural).** A glutton-demon: heavy-bellied, oversized,
-built for a wrestling/grapple-flavored kit rather than a weapon kit — the
+**Iconography (procedural).** A glutton-demon, not a warrior: heavy-bellied,
+oversized, built for a wrestling/grapple kit rather than a weapon kit — the
 source is explicit that Bhima beats him unarmed, which is a genuinely
-distinct combat shape from every weapon-wielding boss on this list and
-worth preserving as a design constraint (a boss whose signature moves are
-grabs/throws/body-slams rather than a mace or sword swing). Scale: large
-but not Kumbhakarna-giant — more "grotesquely overfed ogre" than
-"mountain." Differentiate from Kumbhakarna explicitly in the geometry
-(rounder, sagging proportions vs. Kumbhakarna's straightforward
-oversized-humanoid bulk) and in the moveset (grapple vs. heavy weapon
-swing) so the two giant-shaped entries don't read as the same fight twice.
+distinct combat shape from every weapon-wielding entry on this list and
+worth preserving as a design constraint, resolved via `/grilling` during
+his villain design handoff (`docs/agents/villain-handoff.md`). Silhouette
+and scale: `hh ≈ 1.25` — visibly larger than any current Warden (Kawach
+tops out at `0.76`) but well short of the four locked bosses' `1.9`–`2.0`,
+leaving headroom below Kumbhakarna once his own entry is filled in — and
+`hw ≈ 1.0`, unusually wide relative to his own height so "heavy-bellied" is
+a proportion claim and not just a size one; no current enemy's `hw`/`hh`
+ratio comes that close to parity. Differentiate from Kumbhakarna explicitly
+in the geometry (rounder, sagging proportions vs. Kumbhakarna's
+straightforward oversized-humanoid bulk) and in the moveset (grapple vs.
+heavy weapon swing) so the two giant-shaped entries don't read as the same
+fight twice. Signature feature: oversized forearms and hands, out of
+proportion even to his own already-large frame — the actual grabbing
+instrument for the kit below, and the combat-readable tell during the
+windup, the same job Charger's lowered horns or Kawach's raised shield do
+for their own commits. Palette: sickly, bruised, gluttonous — sallow,
+bilious skin with mottled bruise-purple worked into the sagging folds,
+distinct from Raakchyas's clean violet-black and Kawach's iron-brown so he
+doesn't read as either a bigger raakchyas or a rustier Kawach; the
+oversized hands carry the kit's one saturated accent, an inflamed,
+reddened tone, doing the same "this is the part that hurts you" job
+Kawach's amber eye does.
+
+**Kit shape.** Grapple, not a hold: no move strips player input or catches
+them into a new state — every hit resolves as `Enemy`'s ordinary
+telegraphed contact (`takeHit`'s existing knock/launch), just reskinned
+through animation and reach so it reads as a throw rather than a swing.
+Two committed moves, picked by range the way `Charger` already varies by
+distance without becoming a new tier: a close-range grab-slam, the
+signature move, with an asymmetric `attackBox` reaching roughly `2×hw`
+forward in his facing direction — a genuine threat, not Kawach's bleak
+`hw + 0.3` margin that only lands on a player standing still and close —
+with negligible reach behind him, since a grab lunges forward, not
+sideways; and a shorter-range lunge/tackle for a player sitting just
+outside grab distance, so the fight doesn't collapse into "either he's in
+grab range or he's not." Both stay inside the tier-2 telegraph → attack
+box → recover contract.
+
+**Phase-transition flag.** None. No boon, no disguise or reveal — the
+source never shows him as anything but a rakshasa, unlike Mahishasura's
+buffalo↔human. Escalation, if wanted, comes from the two moves tightening
+(the tackle appearing more often, windups shortening) rather than a rig or
+palette swap.
+
+**Tier call.** 2 — new rig in `models.js`; the enemy class extends `Enemy`
+directly, following Kawach's chase → telegraph → attack → recover
+skeleton, with the offset attack box and second telegraph variant above as
+the only departures. No true hold/input-strip state, so no new engine
+surface beyond that — squarely inside what tier 2 already covers, and tier
+3 was never actually in play regardless: reserved for the four locked
+bosses per issue #40, and Bakasura is a Warden.
 
 **Respectful-treatment note.** Low risk — a straightforward folk-tale-shaped
 demon story without the reception complications Mahishasura, Shurpanakha
