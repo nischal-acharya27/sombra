@@ -321,13 +321,72 @@ at all here, which is a structural problem distinct from every other entry:
 building a boss fight *and a defeat* for her means inventing a resolution
 the source doesn't provide.
 
-**Iconography (procedural).** A rakshasi shapeshifter: the source explicitly
-gives her two forms — an attractive human disguise and a "true" monstrous
-form with claws and a distorted face, which is a clean two-state
-phase-transition hook (start human-shaped, force a reveal partway through
-the fight, similar in spirit to how the existing bosses' enrage state
-changes their palette/pose). Scale: human to slightly-larger-than-human in
-true form; claws as the natural signature weapon rather than a wielded one.
+**Iconography (procedural).** A rakshasi shapeshifter, resolved via
+`/grilling` during her villain design handoff
+(`docs/agents/villain-handoff.md`). Reference material: a TV-serial still
+for the human disguise — the moment just after the mutilation itself (the
+red mark is the wound, not a tilaka), useful regardless for palette — and
+two independent pieces of demon-form fan art that disagree with each
+other: one gives her ridged horns, ash-grey skin and amber eyes; the other
+gives her no horns, blue-grey skin, wild red hair, and stages her at giant
+scale, towering over Rama. Resolved by trusting what's textually grounded
+over either artist's individual drama, the same tiebreaker Duryodhana's
+write-up used for references that disagree. Silhouette and scale:
+human-disguise `hw 0.38`, `hh 0.88`, close to `PLAYER`'s own `0.34`/`0.85`;
+true form `hw 0.46`, `hh 0.95` — broader and slightly taller than her own
+disguise, but deliberately kept **human-scaled**, not giant, overriding
+the giant-scale reference specifically to preserve the original note's
+differentiation from Taraka (three giant-scaled Wardens back to back would
+flatten the roster). Signature weapon: claws, natural rather than wielded,
+matching both demon-form references and the source's own language. Horns
+are dropped despite one reference having them — the roster already spends
+that motif on Charger's windup tell and Bakasura's skull-crest, and the
+second demon-form reference draws her without any — in favor of hair as
+her one unique silhouette tell: bound and ornate under the headdress in
+human form, loose and wild at the reveal, and kept **black in both
+forms** rather than the second reference's red, so the transformation
+reads as violence done to a person rather than a costume change — the
+same logic Taraka's pelts use across her two phases. Palette: human form
+lifts directly from the TV-still reference — gold jewelry, a
+black-and-white cowrie-shell-banded headdress, a red drape, heavy kohl —
+no invention needed. True form: a new pale ash-grey skin (`palette.js` has
+no existing collision) marked with dull, dried-blood-maroon vein-cracks
+across the face, deliberately duller than the game's danger-red so the
+marking never competes with her actual attack telegraph, and an
+eye/telegraph accent that reuses the existing `amber` (`0xffb347`),
+already the shared damage-signal hue, rather than inventing a new one —
+distinct from Raakchyas's crimson eye and Charger's orange despite the
+shared vocabulary.
+
+**Kit shape.** One attack, reskinned rather than replaced across the
+reveal — not a human kit and a separate monster kit. Pre-reveal, the move
+reads as an illusion: a conjured decoy or flash of misdirection lands the
+hit. Post-reveal, the identical hitbox and timing plays as a bare-claw
+swipe. This resolves a real tension the handoff surfaced: Taraka's
+precedent (the roster's only other phase-transition) is explicitly
+cosmetic-only specifically to stay tier 2 without a new state machine, and
+tier 3 isn't available to Shurpanakha at all — reserved for the four
+locked bosses, issue #40 — so a kit that genuinely changed at the reveal
+was never a design option, only a presentation one.
+
+**Phase-transition flag.** Yes — the roster's second, after Taraka. Two
+rigs (human-disguise, true form), both pre-built at spawn and swapped on a
+`visible` flag, never built mid-run. Triggered by an HP threshold,
+mirroring `Boss._enrage()` conceptually but implemented Warden-locally in
+her own `Raakchyas` subclass, matching Taraka's precedent exactly. Given
+the weight the respectful-treatment note below puts on this exact moment,
+the swap fires inside the same paused, player-advanced dialogue beat
+Taraka's handoff built the machinery for (`_fireBeats`'s per-boss
+mid-fight boundary, `docs/DECISIONS.md`) — she is that machinery's second
+consumer, not a second bespoke wiring job.
+
+**Tier call.** 2 — new rig in `models.js` for both phases; the enemy class
+extends `Raakchyas` directly, reusing its chase → windup → pounce shape
+(reskinned as the illusion-feint / claw-swipe pair above) rather than
+building fresh timing under `Enemy`. The reuse is thematically exact —
+rakshasi is the feminine of the same demon-word the grunt is named for —
+with the acknowledged risk that a player who has fought fifty Raakchyas by
+this point may clock the shared rhythm.
 
 **Respectful-treatment note.** The second-highest flag on this list. The
 disfigurement of a woman for expressing desire, staged as a punishment
@@ -343,7 +402,15 @@ and leaning into "this is a wronged, humiliated soul the Wheel's
 stoppage trapped" rather than "monster defeated" would sit better with
 both the mechanic and the modern reading; (2) treating her only as
 Ravana's-sister-the-catalyst without any interiority, which repeats the
-text's own flattening of her into a plot device.
+text's own flattening of her into a plot device. The design above answers
+(1) directly: the gate's mechanical clear is identical to every other
+Warden's (health to zero, standard remnant-clear), but the surrounding
+narration — HUD text, the reveal's dialogue beat — uses SORGI's escort
+framing rather than victory framing, and the true-form reveal is staged as
+a scripted, held beat rather than an instant model swap the player might
+cheer through. (2) is not resolved by this session — interiority is a
+beat-writing concern, not an iconography one — and is left for whoever
+authors her `_fireBeats` dialogue to pick up.
 
 ---
 
