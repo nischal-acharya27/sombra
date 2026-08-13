@@ -231,19 +231,87 @@ the prophecy — a hunter can plausibly end a tyrant's reign even if they
 can't complete the specific prophecy.
 
 **Iconography (procedural).** A human tyrant-king, not a monster —
-overbuilt, armored, physically imposing rather than supernatural in form.
-Strong candidate for a heavy-set, broad-torso rig with layered
-plate/regalia built from stacked boxes, a mace or heavy sword as signature
-weapon (he is described as monstrously strong). Palette: Mathura's court —
-dark bronze/black, could use a "prison-iron" motif referencing the
-dungeon he kept Devaki in. Scale: human, elevated (bigger than the hunter,
-not monstrous).
+overbuilt, armored, physically imposing rather than supernatural in form,
+resolved via `/grilling` during his villain design handoff
+(`docs/agents/villain-handoff.md`), text-only — no usable reference image
+was found, following Taraka's and Kumbhakarna's precedent for an entry
+worked from description alone. Silhouette and scale: `hw 0.58, hh 1.05` —
+roughly 1.7× the hunter's `hh 0.85` and 1.6× their `hw 0.34`, the bulkiest
+human-scale silhouette on the roster, deliberately well short of
+Kumbhakarna's giant `hw 1.8, hh 2.2` and even short of the tier-3 bosses'
+`1.5–1.7`/`1.9–2.05`, keeping the "bigger than the hunter, not monstrous"
+call the original research note made. Rather than reading as generic
+overbuilt regalia, the armor is built from the iconography of the cell he
+kept Devaki in: a barred gorget collar around the neck (literal bar-shapes,
+not a smooth ruff), heavy shackle-cuffs at both wrists worn unused as
+regalia — he is the jailer, not the prisoner, and the irony is the point —
+a loose chain drape looped from both pauldrons across the chest, and an
+iron circlet-crown with bar-like spikes rather than the gold/jewels
+Duryodhana and Ravana each already claim, so the "king" read comes from
+the same jailer-iron identity rather than competing with either on
+opulence. New Mathura-court palette entries: `mathuraPlate` (`0x332618`,
+dark bronze/near-black armor base) and `mathuraPlateDark` (`0x1a130b`),
+`mathuraIron` (`0x6e7176`, cold grey for the bars/shackles/chain/crown —
+deliberately the coldest, least "regal" material on the roster, so the
+prison-iron reads as bolted onto the armor rather than matching it), and
+`mathuraSkin` (`0xc9946a`, a human tone distinct from both the hunter's own
+and Ravana's `lankaSkin` so the two human-coded villains don't visually
+merge). The attack telegraph reuses the roster's shared damage-signal amber
+(`0xffb347`, already carried by Bakasura's hands, Taraka's eye,
+Shurpanakha's eye and Kumbhakarna's eyes), flaring at his eyes and at the
+mace-head before either move commits, rather than inventing a new accent.
+Signature weapon: a mace whose striking head is a fused mass of
+shackle-iron — cuffs and chain-links hammered into the head — settling the
+original note's open "mace or heavy sword" question in favor of the mace,
+both because blunt/crushing suits "monstrously strong" better than a blade
+and because it lets the weapon carry the prison-iron identity the way the
+armor does, rather than sitting apart from it as an unrelated prop.
+
+**Kit shape.** Extends `Enemy` directly, the same chase → telegraph →
+attack → recover skeleton Kawach, Bakasura and Kumbhakarna reskin, not
+`Charger` — a heavy armored king is the opposite of `Charger`'s speed
+identity. Two moves picked by range: a close-range overhead mace smash
+(the shackle-iron head coming straight down, the "commit" move), and a
+mid-range chain lash — the shoulder-chains snapping out as a reach attack,
+telegraphed by an audible/visual rattle before the strike. The chain drape
+does double duty as armor motif and second weapon rather than sitting on
+the rig as pure decoration.
+
+**Phase-transition flag.** None — no boon, no reveal or transform, the
+same call Duryodhana's entry landed on for the same reason: no
+curse/disguise premise in the source to dramatize, and Kamsa is
+traditionally defeated at a wrestling match, not unmasked as something
+else. He still carries the ordinary
+`enrageAt`/`enrageSpeedMul`/`enrageWindupMul` every Warden already has —
+tighter mace wind-ups and a faster chain-lash as he's cornered, reading as
+a paranoid king who feels the prophecy closing in rather than a rig or
+palette swap. Unlike every other phase-transition entry on the roster so
+far (Taraka, Shurpanakha, Kumbhakarna, Ravana, and even Duryodhana's
+plain-enrage case), this session deliberately declines to commit the
+enrage threshold as a dialogue-beat hook — see the respectful-treatment
+note below for why.
+
+**Tier call.** 2 — new rig in `models.js`; the enemy class extends `Enemy`
+directly, reusing Kawach/Bakasura/Kumbhakarna's chase → telegraph → attack
+→ recover skeleton, with the shackle-iron mace smash and range-picked
+chain lash as the kit departures. Tier 3 was never in play: reserved for
+the four locked bosses per issue #40 (Duryodhana, Ravana, Hiranyakashipu,
+Mahishasura), and Kamsa isn't on that list.
 
 **Respectful-treatment note.** Low risk — a fairly uncomplicated tyrant
 across the tradition, without the reception controversies Ravana or
 Mahishasura carry. Worth avoiding turning the infanticide backstory into
 spectacle in dialogue or environment art; it can be referenced without being
-staged.
+staged. This session's design takes that caution further than the original
+note asked: every other phase-transition or enrage-threshold entry on the
+roster (Duryodhana included) commits its escalation moment as a
+dialogue-beat hook that gives the respectful-treatment note "a mechanical
+home." Kamsa's deliberately does not — manufacturing a beat here risks
+doing exactly the staging the note warns against, since there is no
+version of "a line about the infanticide" that isn't spectacle. The armor
+and weapon carry the backstory instead, worn as unused regalia rather than
+performed as narration; if a future session wants a line, it should be
+about the prophecy and his fear of it, not the children.
 
 ---
 
