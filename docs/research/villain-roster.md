@@ -1535,18 +1535,94 @@ obviously map onto a hunter's situation, though it is a more
 combat-legible, less loophole-dependent defeat than Hiranyakashipu's or
 Mahishasura's.
 
-**Iconography (procedural).** Three heads, each performing a distinct
-function rather than being identical repeats — the strongest design
-opportunity here is differentiating the three heads by *behavior* rather
-than just count (one could drive a ranged/soma-drinking attack, one a
-melee/recitation-chant telegraph, one an all-seeing tracking/aggro
-behavior), which both reads as more interesting than a generic
-"three-headed monster" and deliberately avoids duplicating Ravana's
-multi-head silhouette (see the cut-recommendation note above — differentiate
-by *function*, not just head count, if both stay in the roster).
-Priestly coding rather than monstrous: robed, ascetic-adjacent geometry
-rather than armored or bestial, since he is explicitly a priest-figure in
-the source, not a warrior-king or beast.
+**Iconography (procedural).** Resolved via `/grilling` during his villain
+design handoff (`docs/agents/villain-handoff.md`), with no reference
+images pasted this session — the myth's own detail (each head's distinct
+sacred function) and existing codebase precedent carried the whole grill,
+the same shape Vritra's handoff took.
+
+Silhouette and scale: three heads, each performing a distinct function
+rather than identical repeats, arranged as a **tight triangular cluster on
+one neck** — one forward-facing primary head flanked by two smaller heads
+off the same shoulders and robed torso — rather than Ravana's wide
+horizontal arc of crowned heads. That arrangement choice is the load-
+bearing one: Ravana's silhouette is already built (tier 3, 3–5 heads
+compressed from ten, humanoid, bronze-skinned, gold-armored, commit
+`f3c4b5f`), and a fan/arc would duplicate it regardless of head count. A
+single-neck cluster reads as "one ascetic figure, three faculties" instead
+of "many-headed monster," with zero geometric overlap even at a glance.
+Hitbox stays in the modest tier-2 band — near Kamsa's `hw 0.58, hh 1.05`
+or Narakasura's `hw 0.54, hh 1.0` — rather than reaching for size, since he
+is explicitly a priest, not a warrior-king or beast; the two extra heads
+sit as visual toppers above the box, the same precedent as Kumbhakarna's
+tusks or Narakasura's horn-crown.
+
+Signature feature, not weapon: no armor, no shield, no wielded blade — the
+three heads themselves are the signature, each carrying at most a small
+ritual implement rather than a weapon, one per function from the source.
+The **soma head** carries a kamandalu (ritual vessel), the prop for a
+ranged attack. The **recitation head** carries nothing separate; the chant
+itself is the telegraph. The **all-seeing head** carries nothing and has
+no attack at all — its entire job is behavioral, tracking the hunter
+continuously regardless of which way the body or the other two heads face,
+a free aggro tell rather than a move. Giving one of three heads no attack
+is a more specific translation of "one head observed all directions" than
+a symmetrical three-for-three attack set would be, and it is the detail
+that most avoids "generic three-headed monster."
+
+**Kit shape.** Two-move hybrid ranged/melee, extending `Enemy` directly —
+tier 2, no new shared architecture touched, the same call Vritra's entry
+made and for the same reason (single AABB, no per-head hitbox). **Soma
+bolt** (ranged) reuses the cast-then-release telegraph shape Tantrik's
+sigil already establishes, reskinned onto the kamandalu prop. **Chant
+strike** (melee) reuses the existing thrust telegraph-then-reach-box
+pattern, the same reuse precedent as Vritra's bite/lunge. The all-seeing
+head's tracking override is not a third move — it is a standing behavioral
+effect layered on top of the two attacks, keeping the move count at two
+rather than stretching toward tier-3 scope.
+
+**Material/color palette.** Two calls, both against precedent already on
+the roster. First, **human skin tone**, not an exotic/monster color — the
+same move Ravana's and Kumbhakarna's entries made, since Trishiras is a
+deity's son and an actual priest, and an exotic hue would do the "monster"
+work the geometry is deliberately not doing. `trishirasSkin`: human,
+distinct from `hunterSkin` (`0xe8c4a0`) but in the same family. Second,
+**ascetic robe colors**, not court or armor colors — pale saffron/ochre,
+the actual register of Vedic priestly dress, distinct from Ravana's and
+Duryodhana's gold-and-crimson court palette and from Tantrik's grey-stone
+`tantrikRobe`. `trishirasRobe`/`trishirasRobeDark`. The two attacks share
+one accent rather than each claiming its own: `trishirasCore`, a pale
+gold-white (soma's traditional color), used for both the kamandalu bolt
+and a throat/mouth glow during the chant strike — one figure's sacred
+function under two applications, not two unrelated villain powers needing
+separate branding. One more entry beyond the template's ask:
+`trishirasEye` — the all-seeing head's eyes stay lit while the other two
+stay closed or downcast (soma head mid-sip, recitation head mid-chant),
+making the tracking head's identity a single color choice rather than a
+prop it doesn't need. `trishiras*`-prefixed rather than borrowed from an
+existing realm, the same call Vritra's entry made — no gate/realm
+assignment exists for him yet in `SPEC-CAMPAIGN.md`. Exact hex values
+deferred to the build session, as Vritra's entry also deferred them.
+
+**Phase-transition flag.** No rig-swap transformation — no disguise/curse
+premise in the source, the same "none" call Kamsa's, Narakasura's,
+Hiranyakashipu's and Vritra's entries made for the same reason. But an
+**enrage-only reveal** layered on top, the scope Vritra's and Ravana's
+entries used (a health-threshold escalation, not a new phase or new
+moves): past the threshold, all three heads' eyes snap open and light with
+`trishirasEye` at once, where normally only the all-seeing head's do — a
+direct escalation of "one head observed all directions," alongside the
+standard windup/cooldown tightening every enraged enemy gets. Costs
+nothing architecturally; any `Enemy` subclass can gate a palette/behavior
+change on an hp threshold, this does not require `Boss._enrage()`
+specifically, the same precedent Vritra's tier-2 entry established.
+
+**Tier call.** 2 — new rig (`buildTrishiras`), extending `Enemy` directly
+with a bespoke two-attack state set, no new shared architecture. Never
+actually a live decision, the way Duryodhana's, Bakasura's and Shakuni's
+entries noted tier wasn't in play for them either — tier 3 stays capped to
+the four locked bosses per issue #40 (Duryodhana, Ravana, Hiranyakashipu,
+Mahishasura) and Trishiras isn't one of them.
 
 **Respectful-treatment note.** Moderate — lower profile than Ravana or
 Mahishasura in terms of live devotional controversy, but the Rigveda is
@@ -1555,7 +1631,21 @@ priest performing sacred functions (Vedic recitation, soma ritual) even in
 his myth's frame as an antagonist — those specific acts (chanting, the
 soma rite) probably shouldn't be caricatured as "evil magic" moves without
 care, since they're depictions of real ritual practice, not invented
-villain flavor.
+villain flavor. Every design call above already answers this
+structurally — human skin instead of monster coding, ascetic robe instead
+of court/armor colors, a shared soma-gold telegraph instead of a
+poison/curse hue, no weapon at all — but the design also gives it a
+concrete mechanical home rather than leaving the answer implicit, the same
+pattern Narakasura's and Putana's entries used: the enrage-threshold beat
+above doubles as a `_fireBeats`/`storyWindow` dialogue moment (Wardens'
+existing precedent — Taraka, Shurpanakha, Kumbhakarna, not Boss-exclusive),
+where the recitation head's line should read as an actual invocation or
+plea rather than monster flavor text, and is also the natural spot to
+surface the myth's real hook — the divided-loyalty premise, outwardly
+Indra's priest while secretly favoring the asuras — giving him a sliver of
+interiority about why he is being killed, rather than only menace.
+Beat-writing itself deferred to whoever authors `_fireBeats`, the same
+deferral Narakasura's and Putana's entries made.
 
 ---
 
