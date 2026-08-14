@@ -1183,13 +1183,101 @@ which is worth weighing against the "cut third" recommendation above
 rather than treating that recommendation as settled.
 
 **Iconography (procedural).** A tyrant-king form comparable in register to
-Kamsa's or Hiranyakashipu's but should be differentiated by an
-earth/territorial motif (his mother is the earth goddess) — stone,
-root, or mountain-adjacent material coding rather than a purely
-court/regal palette, to avoid reading as a third identical throne-room
-boss. Weapon: no single canonical signature weapon is well attested across
-sources; a spear or captured-celestial-trophy prop (referencing the stolen
-earrings) is a reasonable design invention here, flagged as such.
+Kamsa's or Hiranyakashipu's, differentiated by an earth/territorial motif
+(his mother is the earth goddess), resolved via `/grilling` during his
+villain design handoff (`docs/agents/villain-handoff.md`). Reference
+material: five AI-generated fantasy/devotional images, none of them
+attested iconography in the sense Putana's Kalighat painting or
+Shurpanakha's TV still were — closer to stock-art guesses than a visual
+tradition, so treated as motif inspiration only rather than authoritative
+pose/composition/material reference. All five independently gave him
+large horns despite sharing no other consistent detail, which is at least
+weak evidence of a convergent shorthand worth adopting as his
+distinguishing silhouette element, since nothing else in the references
+agreed. Two of the five also gave him four arms dual-wielding weapons —
+rejected rather than adopted: Ravana's entry already owns multi-armed
+iconography on this roster (twenty arms compressed to visible arm-pairs,
+each swinging a dedicated weapon, "the twenty-arms motif made
+mechanical"), and a second multi-armed boss would collide with that
+signature directly, on top of the "third identical throne-room boss" risk
+the original note already flags. Silhouette and scale: `hw 0.54, hh
+1.0` — roughly 1.6× the hunter's `hw 0.34` and 1.2× their `hh 0.85`,
+sitting a notch below Kamsa's `hw 0.58, hh 1.05` deliberately so the two
+tyrant-Wardens don't read as the same bulk next to each other; the
+horn-crown sits outside the collision box as a visual topper the way
+Kumbhakarna's tusks and Goru-Mukh's horns already do, so the height read
+still lands taller than Kamsa's despite the smaller hitbox. Also worth
+naming: Goru-Mukh (gate 3's boss) is already "the Ox-Headed," with a
+bestial horned skull, so Narakasura's horns are built growing from an
+otherwise humanoid demon face — all five references agree on this — not
+a bovine snout, keeping the two from converging on "horned boss" as a
+silhouette category. Signature weapon: no single canonical weapon is well
+attested across sources; settles the original note's open "spear or
+captured-celestial-trophy" question by combining both into one prop
+rather than choosing between them — a spear with Aditi's stolen earrings
+mounted near the head as a fused trophy, both still flagged as design
+invention. This also rules out a third mace-wielding tyrant on the roster
+(mace/gada is already spent by Kamsa and Duryodhana) and a second sword
+(one of Ravana's four); reach/thrust reads as a mechanically distinct
+silhouette from either. New `bhauma*` palette entries — "Bhaumasura," an
+attested alternate name meaning "son of Bhumi," chosen specifically
+because `naraka*` (`narakaIron`/`narakaCore`/etc.) is already claimed by
+gate 3's own realm palette, an unrelated coincidental name match:
+`bhaumaStone`/`bhaumaStoneDark` (basalt/root-brown armor plate, not
+metal — the "carved from the earth he commands" read, distinct from
+Kamsa's iron and Duryodhana's gold), `bhaumaSkin` (warm grey-brown stone
+tone, deliberately browner than `mathuraIron`'s cold grey `0x6e7176` so
+the two materials don't merge, kept off Taraka's and Putana's greens),
+and `bhaumaEmber` (a rust-magma crack accent, ambient/passive only,
+referencing the lava-fissure detail one reference carried). The stolen
+earrings themselves reuse `devaGold` (`0xf2cf7a`, Deva-lok's own gold)
+rather than inventing a fourth royal-gold entry — the one deliberately
+wrong-feeling color on his body, since it's looted, not his, making the
+theft legible at the palette level rather than only in backstory. The
+attack telegraph reuses the roster's shared damage-signal `amber`
+(`0xffb347`), flaring at the earrings/spearhead before a thrust, the same
+convention every other Warden's weapon-flare already holds.
+
+**Kit shape.** Extends `Enemy` directly, the same chase → telegraph →
+attack → recover skeleton Kawach/Bakasura/Kumbhakarna/Kamsa/Putana
+reskin, not `Charger` — a territorial king holds ground rather than
+speed-chasing. Two moves picked by range: a close-range committed spear
+thrust/lunge, telegraphed by the earrings flaring amber before the
+step-in, the same "damage lands on the committed attack" shape as every
+other Warden's melee move; and a mid/long-range ground-slam with the
+spear butt that cracks a line of stone spikes/a fissure toward the
+hunter — a telegraphed hazard patch, mechanically the same commit →
+telegraph → lingering-danger shape as Putana's breath cloud, but dressed
+in the earth motif rather than reused wholesale. This makes the
+earth/territorial motif a mechanical decision, not only a palette one —
+the same way Putana's poison-as-touch/breath answered her
+respectful-treatment note at the geometry level rather than after the
+fact.
+
+**Phase-transition flag.** None — no disguise, curse, or transform
+premise in the source, the same call Kamsa's and Duryodhana's entries
+both landed on: he's a tyrant king defeated in battle, not unmasked as
+something else. He still carries the ordinary
+`enrageAt`/`enrageSpeedMul`/`enrageWindupMul` every Warden already has —
+tighter spear thrusts and faster ground-slams as he's cornered. Unlike
+Kamsa's entry, which declined to commit its enrage threshold as a
+dialogue-beat hook (no version of a line about the infanticide avoids
+spectacle), this session commits it, the same call Putana's entry
+reached for the same reason: the research entry calls his
+mass-liberation resolution "probably the single best fit anywhere on the
+roster" for the campaign's own release-focused ending, which is a
+stronger case for giving the theme a mechanical home now than for
+leaving it as a suggestion. The beat should foreshadow the coming
+liberation — the fortress-hold cracking, the 16,000 captives about to be
+freed — rather than a villainy recap.
+
+**Tier call.** 2 — new rig in `models.js`; the enemy class extends
+`Enemy` directly, reusing Kawach/Bakasura/Kumbhakarna/Kamsa/Putana's
+chase → telegraph → attack → recover skeleton, with the earrings-trophy
+spear thrust and range-picked ground-slam hazard as the kit departures.
+Tier 3 was never in play: reserved for the four locked bosses per issue
+#40 (Duryodhana, Ravana, Hiranyakashipu, Mahishasura), and Narakasura
+isn't on that list.
 
 **Respectful-treatment note.** Moderate. Diwali is one of the largest living
 festivals this material touches, so accuracy matters more than usual — the
@@ -1199,7 +1287,13 @@ to Krishna is a real part of the source but is frequently mishandled in
 pop adaptations (played as a harem punchline); recommend omitting that
 epilogue from any SOMBRA telling and ending the gate's story on the
 liberation itself, which is both the stronger story beat for this format
-and the one least likely to misrepresent the source.
+and the one least likely to misrepresent the source. This session gives
+that ending a mechanical home rather than leaving it as a closing note:
+the enrage-threshold dialogue beat (above) foreshadows the liberation
+directly, so the fight itself plays toward the captives' release rather
+than only ending there. Beat-writing itself is left for whoever authors
+his `_fireBeats` dialogue, same as Putana's and Shurpanakha's interiority
+notes.
 
 ---
 
