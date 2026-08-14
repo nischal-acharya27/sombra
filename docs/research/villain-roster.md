@@ -1423,14 +1423,77 @@ Rama/Krishna/Durga cases, though Indra himself is still a specific,
 worshipped deity rather than a generic hero.
 
 **Iconography (procedural).** The one clearly non-humanoid entry on the
-list — a genuine opportunity for a boss silhouette unlike anything else in
-the roster: a long serpent/dragon body (a chain of cylinder segments is a
-natural primitive-geometry fit), no limbs in the conventional sense,
-coiled around or through the arena geometry itself rather than standing in
-it. Elemental palette: drought-cracked earth tones, or storm-dark with the
-vajra's lightning motif as the telegraph/core-flare equivalent (a bright
-crack of light along the coils in place of a chest core). Scale: vastly
-larger than a human, more landscape-feature than combatant.
+list, resolved via `/grilling` during his villain design handoff
+(`docs/agents/villain-handoff.md`) with no reference images pasted — myth
+research and existing codebase precedent carried the whole session, unlike
+Narakasura's or Putana's handoffs, which leaned on external images.
+
+Tier call: **2** (new rig, existing behavior), not 3. Despite being the
+roster's only non-humanoid silhouette — the entry that most tempts a
+bespoke build — Tier 3 is reserved for the four locked bosses (Duryodhana,
+Ravana, Hiranyakashipu, Mahishasura, per issue #40), and Vritra isn't one
+of them, so the tier ceiling holds regardless of how novel the shape is.
+What makes Tier 2 workable rather than strained: `actor.js`'s collision
+model is a single AABB per `Actor`, with no per-segment hitbox anywhere in
+the shared physics, and adding one for a single Warden would be exactly
+the kind of shared-code change the tier system exists to avoid. So the
+coiled body is a **visual-only puppet**: the collision box covers only the
+head/forequarters (`hw 0.9, hh 1.3` — bigger than any other Warden's box,
+Kamsa's `hw 0.58, hh 1.05` and Narakasura's `hw 0.54, hh 1.0`, but short of
+the four locked bosses' `hw 1.5–1.7, hh 1.9–2.05`, keeping the boss/Warden
+scale distinction legible in the numbers and not just the title), while an
+8-segment tapering tail — pre-built once, posed each frame by cheap trig
+off the root's facing, no per-frame allocation — trails roughly 6–7× the
+hitbox's `hw` beyond it. The tail sits outside the fight box as pure
+silhouette, the same precedent as Kumbhakarna's tusks or Narakasura's
+horn-crown sitting outside their boxes as visual toppers, here scaled up
+from a topper to the entire "landscape feature" read the original note
+asked for.
+
+Kit shape: **body-based melee**, a category this roster hasn't needed
+before — no wielded weapon (Vritra is defeated *by* the vajra in the myth,
+never carries one) and no limbs to swing one anyway. Two moves, both
+reusing existing telegraph shapes rather than inventing new physics: a
+bite/lunge (the head snaps forward on the same telegraph-then-reach-box
+pattern as any weapon thrust, re-skinned) and a coil-slam (the visual tail
+sweeps down as a telegraphed ground-hazard patch, mechanically the same
+shape as Narakasura's stone-spike slam). Extends `Enemy` directly — the
+collision model being untouched means the "existing behavior class" isn't
+stretched at all, only the rig and the attack skins are new.
+
+The water-withholding premise stays **flavor and palette, not a new arena
+mechanic** — a functional drought/hazard system would need new terrain
+code built for one Warden, Tier-3 scope in spirit even though the tier
+label wouldn't change. It surfaces instead through the telegraph: a crack
+of light along the coils in place of a chest core.
+
+Palette: the two directions this note used to offer — drought-cracked
+earth tones, or storm-dark with the vajra's lightning motif — don't blend
+into one body-material story, so this session picked rather than combined:
+**storm-dark with lightning**, not drought-earth. Two reasons: the earth/
+stone lane is already occupied (Narakasura's `bhauma*` entries), and the
+coil-crack telegraph reads as a lightning-crack-through-dark-scale on a
+storm body but fights a light-crack-on-cracked-soil redundancy on a
+drought one. New palette entries, added at the build session rather than
+here: `vritraBodyDark` (storm-dark scale base), `vritraCore` (lightning-
+white-blue crack accent, doubling as the attack telegraph color) —
+`vritra*` prefixed rather than borrowed from an existing realm, since, per
+the Source note above, he predates the itihasas/Puranas and isn't tied to
+one of the game's existing realm identities the way
+`naraka*`/`manav*`/`bhauma*` are.
+
+No phase-transition (no disguise/curse premise in the myth, same call as
+Kamsa's, Narakasura's and Hiranyakashipu's entries), but an **enrage-only
+reveal** on top of it, reusing the existing boss-enrage palette-swap
+precedent (Ravana's entry) without adding a phase or new moves: past a
+health threshold, `vritraCore`'s cracks intensify and spread across more
+of the coil — drought visibly winning more of the body as the fight
+escalates, breaking only at defeat.
+
+Scale, restated in full: hitbox `hw 0.9, hh 1.3` against the hunter's own
+`hw 0.34, hh 0.85` (`src/game/config.js`); visual tail extends roughly
+6–7× the hitbox `hw` beyond it across 8 tapering segments — "vastly larger
+than a human, more landscape-feature than combatant" made concrete.
 
 **Respectful-treatment note.** Low risk — Vritra is not a figure with a
 contemporary devotional community attached the way Ravana or Mahishasura
