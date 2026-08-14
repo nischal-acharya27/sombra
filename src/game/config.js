@@ -643,11 +643,17 @@ export const AMAR_YODDHA = {
 /**
  * Shakuni — gate 1's Warden, per `docs/research/villain-roster.md`'s handoff
  * (`dfed2a1`): a courtier, not a warrior, so his kit is a summoned hazard
- * rather than a melee state machine. `hw`/`hh` sit at player scale (slight
- * through proportion, not stature — the handoff's own call). Tier 2: a new
- * rig in `models.js`, but the class extends `Enemy` directly rather than
- * copying `BhootBatti`'s flight — Shakuni is grounded and walks a keep-
- * distance ring the way `Kawach` paces, not the way `BhootBatti` hovers.
+ * rather than a melee state machine. `hw`/`hh` sit a little past player
+ * scale — enlarged along with the rig itself (`SHAKUNI_SCALE` in
+ * `models.js`) so he reads as at least as big as the hunter rather than
+ * slight, per playtest. Tier 2: a new rig in `models.js`, but the class
+ * extends `Enemy` directly rather than copying `BhootBatti`'s flight —
+ * Shakuni is grounded and walks a keep-distance ring the way `Kawach` paces,
+ * not the way `BhootBatti` hovers.
+ *
+ * Two moves share `interval` as one cooldown — `Shakuni.update` in
+ * `enemies.js` rolls which one fires each time it lapses — so "faster" means
+ * both read off the same, shortened number rather than drifting apart.
  *
  * `die.windup` is how long the die sits at its landing point showing a face
  * before the zone it read resolves — the "read it before it commits" the
@@ -656,21 +662,35 @@ export const AMAR_YODDHA = {
  * bigger face is a wider zone to clear, so reading the face is not flavor.
  * `die.damage`/`die.knock` stay flat across faces: only the read changes,
  * not the punishment for missing it.
+ *
+ * `cards` is the die's opposite: a courtier's fan of ten thrown at once
+ * across `spread` radians, punishing exactly the range the die's own
+ * keep-away read leaves open. Per-card `damage` is low because standing in
+ * the fan risks several cards landing at once, not one.
  */
 export const SHAKUNI = {
   hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
-  hw: 0.34,
-  hh: 0.85,
-  speed: 2.2,
+  hw: 0.46,
+  hh: 1.15,
+  speed: 3.2,
   chaseRange: 22,
   keepDistance: 8.5, // holds well back — a courtier, not a brawler
+  interval: 1.35, // cooldown between casts, either move
   die: {
-    interval: 3.0, // cooldown between casts
-    cast: 0.32, // raise-and-throw flourish before the die is in flight
-    windup: 1.0, // die down, face showing — the readable window
+    cast: 0.28, // raise-and-throw flourish before the die is in flight
+    windup: 0.85, // die down, face showing — the readable window
     radiusRange: [1.6, 3.6], // face 1 -> 1.6, face 6 -> 3.6
     damage: 16,
     knock: 9,
+  },
+  cards: {
+    cast: 0.45, // fan-out flourish before the cards are in flight
+    count: 10,
+    spread: 0.62, // radians, full fan width
+    speed: 15,
+    damage: 8,
+    life: 2.4,
+    recover: 0.45,
   },
   exp: 260,
   contactDamage: 0,

@@ -753,13 +753,27 @@ export function buildTantrik(skin = null) {
  * where "read it before it commits" actually happens; the held die is
  * flavour, not the telegraph.
  */
+/** Read at player scale in-engine despite `hw`/`hh` already matching `PLAYER`'s
+ * — a narrower torso and a lower body-group origin than `buildHunter`'s own
+ * left him reading small next to the hunter he is supposed to loom over. A
+ * wrapper scale rather than resizing every part: it grows the whole rig from
+ * the feet (root's own origin) without touching `root.scale`, which `Enemy
+ * .finishSetup`/`_spawnAnim` drive for the rise-from-shadow entrance
+ * (0.01 -> 1) — scaling `root` here would just be overwritten back to 1 the
+ * moment he spawns. */
+const SHAKUNI_SCALE = 1.35;
+
 export function buildShakuni() {
   const root = new THREE.Group();
   const n = {};
 
+  const rig = new THREE.Group();
+  rig.scale.setScalar(SHAKUNI_SCALE);
+  root.add(rig);
+
   const body = new THREE.Group();
   body.position.y = 0.60;
-  root.add(body);
+  rig.add(body);
   n.body = body;
 
   // Narrower than a grunt's torso and permanently stooped a few degrees —

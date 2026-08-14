@@ -162,6 +162,10 @@ export class Game {
      * exactly what it always meant); this only gates `update()`.
      */
     this.resting = false;
+    /** True only for the paged Warden-intro window; see `render()`'s `cam.update` call. */
+    this._wardenIntro = false;
+    /** Non-null while a boss-kill stat box is held open waiting on a press; see `_levelUp`. */
+    this._levelUpHold = null;
     /** Whatever a click on the currently open resting-driven prompt does. See `_showBeatQueue`. */
     this._advance = null;
     this.freeze = 0;
@@ -274,6 +278,8 @@ export class Game {
     this.activeEncounter = null;
     this.wayOpen = false;
     this.resting = false;
+    this._wardenIntro = false;
+    this._levelUpHold = null;
     this._advance = null;
     this.state = 'playing';
 
@@ -541,7 +547,7 @@ export class Game {
     if (this.resting) this._pollAdvanceInput();
 
     const focus = this.boss && !this.boss.dead ? this.boss : null;
-    this.cam.update(dt, this.player, focus);
+    this.cam.update(dt, this.player, focus, this._wardenIntro);
     this.vfx.update(dt);
     this.world.update(dt);
     this.world.followShadows(this.cam.x, this.cam.y);
@@ -744,7 +750,7 @@ export class Game {
       this._addStyle(style, move);
     }
 
-    if (e.dead) this._onKill(e);
+    if (e.dead) this._onKill(e, isBoss);
   }
 
   /** The ally is mortal, and stays dead. Another one costs another corpse. */
@@ -921,7 +927,33 @@ export class Game {
       if (s.type === 'warden') this._spawn({ ...s, encounter: e.id });
     }
     e._wardenPreSpawned = true;
+    // `Enemy.update()` is what drives the rise-from-shadow spawn scale
+    // (0.01 -> 1, see `_spawnAnim`) *and* what calls `syncRig()`, the only
+    // place `root.position`/`root.rotation` are ever copied from `x`/`y`/
+    // `facing` — and it only runs inside `Game.update()`, which returns
+    // immediately for the whole conversation below, since `resting` freezes
+    // simulation. Left alone the Warden sits at its spawn scale *and* at the
+    // world origin (`root.position`'s untouched default), never actually
+    // drawn where `x`/`y` say it stands, for the entire intro — only once
+    // the dialogue ends and simulation resumes does it snap into place,
+    // which is the "he appears after the dialogue" bug this pre-spawn exists
+    // to fix. Done by hand here for exactly this one frame, ahead of the
+    // paged beats, rather than by running a real update tick — a tick would
+    // also drive its state machine (`chase`, potentially straight into a
+    // cast) while the hunter is still supposed to be talking to it, not
+    // fighting it.
+    if (this.boss) {
+      this.boss.spawnT = 0;
+      this.boss.root.scale.setScalar(1);
+      this.boss.faceToward(this.player.x);
+      this.boss.syncRig();
+    }
     this.resting = true;
+    // Read by `render()`'s `cam.update` call: the conversation framing stays
+    // live for exactly this paged window, and `_beginWardenFight` below
+    // drops it the moment the fight actually starts, back to the ordinary
+    // combat camera.
+    this._wardenIntro = true;
     this._fireBeats('intro', () => {
       this._advance = () => this._beginWardenFight(e);
       this.hud.beginPrompt(this._advance);
@@ -931,6 +963,7 @@ export class Game {
   /** The hunter accepts the intro's last beat: the story window closes and the fight actually starts. */
   _beginWardenFight(e) {
     this.resting = false;
+    this._wardenIntro = false;
     this._advance = null;
     this.hud.hideRestPrompts();
     this._beginEncounter(e, true);
@@ -1015,10 +1048,21 @@ export class Game {
       // prompt land directly under whatever it last opened — so the hunter
       // reads every beat before the way out even opens. See `restResume`.
       this.resting = true;
-      this._fireBeats('cleared', () => {
-        this._advance = () => this.restResume();
-        this.hud.bossRestPrompt(this.gate.warden.title, () => this.restResume());
-      });
+      const showClearedBeats = () => {
+        this._fireBeats('cleared', () => {
+          this._advance = () => this.restResume();
+          this.hud.bossRestPrompt(this.gate.warden.title, () => this.restResume());
+        });
+      };
+      // The killing blow that closed this encounter may have also levelled
+      // the hunter up — `_levelUp` runs earlier this same tick, from
+      // `_resolveCombat`, and leaves `_levelUpHold` behind when its stat box
+      // is still up waiting on a press. Firing the beats straight away would
+      // stack a second, independently-timed box under it; chaining onto the
+      // hold's own dismissal instead means the beats never even start
+      // painting until the stat box is gone.
+      if (this._levelUpHold) this._levelUpHold.then = showClearedBeats;
+      else showClearedBeats();
     } else if (e.lock) {
       this.hud.objective(STRINGS.OBJ_CLEAR_GATE);
       this.hud.toast(STRINGS.TOAST_AREA_CLEARED, 'gold');
@@ -1189,7 +1233,7 @@ export class Game {
 
   // -- progression ----------------------------------------------------------
 
-  _onKill(e) {
+  _onKill(e, isBoss = false) {
     this.kills++;
     this.exp += e.exp;
     this.vfx.damageNumber(e.x, e.y + e.hh * 2 + 0.9, STRINGS.EXP_GAIN(e.exp), { color: '#ffb347', scale: 0.85 });
@@ -1198,12 +1242,12 @@ export class Game {
     let need = PROGRESSION.curve(this.level_);
     while (this.exp >= need) {
       this.exp -= need;
-      this._levelUp();
+      this._levelUp(isBoss);
       need = PROGRESSION.curve(this.level_);
     }
   }
 
-  _levelUp() {
+  _levelUp(isBoss = false) {
     this.level_++;
     this.player.maxHp += PROGRESSION.hpPerLevel;
     this.player.maxMp += PROGRESSION.mpPerLevel;
@@ -1214,7 +1258,7 @@ export class Game {
     this.audio.play('levelup');
     this.vfx.shadowBurst(this.player.x, this.player.y + 1, 34, P.cyan);
     this.vfx.groundBurst(this.player.x, this.player.y, 1.1);
-    this.hud.window({
+    const content = {
       title: STRINGS.LEVEL_UP_TITLE,
       big: `LV ${this.level_}`,
       lines: [
@@ -1222,8 +1266,29 @@ export class Game {
         [STRINGS.STAT_MAX_MP, `${this.player.maxMp}`, true],
         [STRINGS.STAT_STATUS, STRINGS.STAT_RESTORED, true],
       ],
-      duration: SYS_WINDOW.levelUp,
-    });
+    };
+    if (!isBoss) {
+      this.hud.window({ ...content, duration: SYS_WINDOW.levelUp });
+      return;
+    }
+    // The killing blow that closes a Warden's encounter can level the
+    // hunter up in the same tick `_clearEncounter` (running later this same
+    // tick, from `_updateEncounters`) starts paging its own 'cleared' beats
+    // into the same `#windows` column, directly below this one. A timed
+    // dismiss here used to race that: the stat box would expire mid-beat and
+    // visibly slide the beat box up underneath it — the exact stacking bug
+    // the Warden-intro dialogue had. Held open until the player actually
+    // dismisses it instead, the same way that dialogue now waits for a
+    // press rather than a clock. `_clearEncounter` sees `_levelUpHold` below
+    // and defers its own beats behind this dismissal rather than racing it.
+    this.resting = true;
+    this.hud.window(content);
+    const hold = (this._levelUpHold = {});
+    this._advance = () => {
+      this.hud.hideWindow();
+      if (this._levelUpHold === hold) this._levelUpHold = null;
+      hold.then?.();
+    };
   }
 
   /**

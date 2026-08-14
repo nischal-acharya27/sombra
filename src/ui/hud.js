@@ -190,6 +190,12 @@ export class HUD {
       this._windowEl = el;
     }
 
+    // No `duration`: the caller is holding it open on purpose (see the
+    // boss-kill stat box in `Game._levelUp`) and is responsible for calling
+    // `hideWindow()` once the player has actually dismissed it — a `0`-delay
+    // `setTimeout` is what an omitted `duration` would otherwise schedule.
+    if (duration == null) return Promise.resolve();
+
     return new Promise((resolve) => {
       this._windowOutTimer = setTimeout(() => {
         el.classList.add('out');
@@ -200,6 +206,15 @@ export class HUD {
         }, 260);
       }, duration);
     });
+  }
+
+  /** Closes an untimed `window()` early — the boss-kill stat box's own `hideStoryWindow`. */
+  hideWindow() {
+    const el = this._windowEl;
+    if (!el) return;
+    this._windowEl = null;
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 260);
   }
 
   /**

@@ -1178,8 +1178,18 @@ function transition(game, input) {
     // The Kevat's death now holds on the boss-rest screen rather than
     // lighting the arch outright — see `Game.resting`. RESUME is the choice
     // that keeps this row's claim (the arch takes a walking hunter) intact;
-    // NEXT GATE would skip the very walk being measured.
-    if (game.resting) game.restResume();
+    // NEXT GATE would skip the very walk being measured. The same kill can
+    // also level the hunter up, which holds its own stat box open behind
+    // `_advance` ahead of the boss-rest screen (`Game._levelUp`'s
+    // `_levelUpHold`) — so this can no longer assume `resting` means the
+    // RESUME card is already up. Driving `_advance` every tick, exactly what
+    // `Bot.step()` already does for any resting-driven prompt, clears
+    // whichever one actually is, in order, however many there are.
+    let waited = 0;
+    while (game.resting && waited < 600) {
+      game._advance?.();
+      waited++;
+    }
     const finish = new Bot(game, input);
     finish.hold('right', true);
     let extra = 0;
@@ -1583,6 +1593,19 @@ function storyBeats(game, input) {
   );
   const run = walkGate(game, input, { maxSeconds: 120, readTells: true });
   say('the crossing still clears with the beats wired in', run.ok, `state ${game.state}, ${run.time}s`);
+  // `walkGate` stops the instant `game.state` leaves 'playing' — right as the
+  // Kevat's death flips it to 'cleared', before anything downstream of that
+  // kill has had a chance to run. The kill can also level the hunter up,
+  // which now holds its own stat box open behind `_advance` ahead of the
+  // 'cleared' beat this row is about to check for (`Game._levelUp`'s
+  // `_levelUpHold`) — so the beat may not have opened yet. Same generic
+  // drive `Bot.step()` uses for any resting-driven prompt, clears whichever
+  // one is actually up.
+  let waited = 0;
+  while (game.resting && waited < 600) {
+    game._advance?.();
+    waited++;
+  }
   say('the closing beat fired once the Kevat fell', game.storyBeats.some((b) => b.at === 'cleared' && b.opened));
   say('nothing that fired over the whole walk did so mid-encounter', game.storyBeats.every((b) => !b.liveEncounter));
 

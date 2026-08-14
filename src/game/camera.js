@@ -48,7 +48,7 @@ export class GameCamera {
     this.targetDist = dist;
   }
 
-  update(dt, player, focus = null) {
+  update(dt, player, focus = null, conversation = false) {
     this.t += dt;
 
     // Lead the player by their velocity, but only once they are actually
@@ -60,7 +60,25 @@ export class GameCamera {
     let ty = player.y;
 
     // With a second point of interest (a boss), frame both.
-    if (focus) {
+    if (focus && conversation) {
+      // A paged Warden intro is a two-person scene, not combat — centre
+      // evenly between speaker and listener rather than leading 62% toward
+      // the player, and pull back further per unit of spread. The ordinary
+      // combat framing below tops out at 26 and was tuned against fights
+      // that stay inside `keepDistance`; a Warden pre-spawned well down its
+      // own hall for the intro (gate 1: 26 units from the trigger) sits
+      // outside that frustum for the whole conversation otherwise — the
+      // hunter never actually sees who is talking. `Game._startEncounter`
+      // passes `conversation` true for exactly the paged-intro window.
+      tx = lerp(player.x, focus.x, 0.5);
+      ty = lerp(player.y, focus.y + 1, 0.3);
+      const spread = Math.abs(focus.x - player.x);
+      // 0.72 rather than the 0.6 the frustum math alone needs: both bodies
+      // clearing the edge is the floor, not the target — a Warden cropped by
+      // the frame the instant the camera stops moving reads as broken framing
+      // even though he is, technically, in shot.
+      this.targetDist = clamp(BASE.dist + spread * 0.72, BASE.dist, 36);
+    } else if (focus) {
       tx = lerp(player.x, focus.x, 0.38) + this.lead * 0.4;
       ty = lerp(player.y, focus.y + 1, 0.3);
       const spread = Math.abs(focus.x - player.x);

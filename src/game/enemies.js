@@ -1222,7 +1222,7 @@ export class Shakuni extends Enemy {
     this.n = this.root.userData.nodes;
     this.finishSetup();
     this.state = 'chase';
-    this.cooldown = rand(cfg.die.interval * 0.4, cfg.die.interval);
+    this.cooldown = rand(cfg.interval * 0.4, cfg.interval);
     this.phase = 0;
     this.enraged = false;
     this.pulseCd = 0;
@@ -1289,8 +1289,19 @@ export class Shakuni extends Enemy {
         this._pace(dt, player, canSee);
         this.cooldown -= dt;
         if (canSee && this.cooldown <= 0) {
-          this.state = 'cast';
-          this.phase = D.cast;
+          // Held past keep-distance, the die's own ground zone is a puzzle
+          // with no stakes — moving out of a radius he telegraphed a full
+          // second ago is free. The fan of cards is what makes range itself
+          // the threat, so it is the move he favours once the hunter is
+          // actually holding it; up close either read is live.
+          const preferCards = dist > this.cfg.keepDistance + 1.5;
+          if (preferCards || Math.random() < 0.5) {
+            this.state = 'cardCast';
+            this.phase = this.cfg.cards.cast;
+          } else {
+            this.state = 'cast';
+            this.phase = D.cast;
+          }
           this.ctx.audio?.play('growl');
         }
         break;
@@ -1337,12 +1348,23 @@ export class Shakuni extends Enemy {
         }
         break;
 
+      case 'cardCast':
+        this.vx = damp(this.vx, 0, 0.0005, dt);
+        this.faceToward(player.x);
+        this.phase -= dt;
+        if (this.phase <= 0) {
+          this._throwCards(player);
+          this.state = 'recover';
+          this.phase = this.cfg.cards.recover;
+        }
+        break;
+
       case 'recover':
         this.vx = damp(this.vx, 0, 0.001, dt);
         this.phase -= dt;
         if (this.phase <= 0) {
           this.state = 'chase';
-          this.cooldown = D.interval * (this.enraged ? this.cfg.enrageIntervalMul : 1);
+          this.cooldown = this.cfg.interval * (this.enraged ? this.cfg.enrageIntervalMul : 1);
         }
         break;
 
@@ -1357,15 +1379,47 @@ export class Shakuni extends Enemy {
     this.syncRig();
   }
 
+  /**
+   * Ten cards released at once across `cards.spread` radians, centred on the
+   * player — a wall at close range (the fan's own spread barely separates
+   * adjacent cards) that opens into gaps only at real distance, so standing
+   * off past `keepDistance` is no longer the free read the die alone left.
+   * `spawnEnemyBolt` is the same seam the Guardian's own `volley` fires
+   * through in `boss.js`; each card is a full `Bolt` with its own hitbox, so
+   * a hunter caught in the fan can take more than one, on purpose.
+   */
+  _throwCards(player) {
+    const C = this.cfg.cards;
+    const originX = this.x + Math.sign(player.x - this.x || this.facing || 1) * 0.35;
+    const originY = this.y + 0.95;
+    const base = Math.atan2(player.y + 0.9 - originY, player.x - originX);
+    const half = C.spread / 2;
+    for (let i = 0; i < C.count; i++) {
+      const t = C.count === 1 ? 0.5 : i / (C.count - 1);
+      const a = base - half + t * C.spread;
+      this.ctx.spawnEnemyBolt(originX, originY, Math.cos(a), Math.sin(a), {
+        speed: C.speed,
+        damage: C.damage,
+        life: C.life,
+        color: P.crimson,
+      });
+    }
+    this.ctx.vfx.shockRing(originX, originY, 0.6, P.crimson);
+    this.ctx.audio?.play('wispShot');
+  }
+
   _animate(dt) {
     const n = this.n;
     const k = 1 - Math.pow(0.0002, dt);
     let bodyZ = 0;
     let armZ = 0;
 
-    if (this.state === 'cast' || this.state === 'windup') {
+    if (this.state === 'cast' || this.state === 'windup' || this.state === 'cardCast') {
       const D = this.cfg.die;
-      const total = this.state === 'cast' ? D.cast : D.windup * (this.enraged ? this.cfg.enrageWindupMul : 1);
+      const total =
+        this.state === 'cast' ? D.cast
+        : this.state === 'cardCast' ? this.cfg.cards.cast
+        : D.windup * (this.enraged ? this.cfg.enrageWindupMul : 1);
       const u = clamp(1 - this.phase / total, 0, 1);
       bodyZ = -0.05 - u * 0.08;
       armZ = -0.3 - u * 0.5;
