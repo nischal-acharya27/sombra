@@ -474,15 +474,6 @@ export class Game {
     // Cull
     const voidY = this.gate.voidY;
 
-    // Falling out of the world, forgiving-gate case, first — ahead of the
-    // generic cull below. The chaya chases the hunter closely enough that it
-    // is often the one crossing `voidY` first, on the same frame, via its own
-    // recall; running this first makes the water's loss ("FORGOTTEN") the one
-    // that lands rather than the generic ("CHAYA LOST") cull beating it there
-    // by a few lines. No such race exists for gate 1: it has no forgiving case
-    // to preempt.
-    if (this.gate.forgivingVoid && this.player.y < voidY) this._fallInWater();
-
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const e = this.enemies[i];
       if (e.removeMe || e.y < voidY) {
@@ -512,10 +503,6 @@ export class Game {
     // Falling out of the world. No state test: `update` only runs while a gate
     // is live, and a gate is still live once its Warden is down — a hunter who
     // walks off a ledge on the way to the arch has still fallen out of it.
-    //
-    // The crossing's water already had its turn, above; a hunter who fell in
-    // reads `y >= voidY` again by now, `_fallInWater` having put them back on
-    // solid ground, so this only ever fires for the killing case.
     if (this.player.y < voidY) {
       this.player.hp = 0;
       this.player.state = 'dead';
@@ -1290,30 +1277,6 @@ export class Game {
       if (this._levelUpHold === hold) this._levelUpHold = null;
       hold.then?.();
     };
-  }
-
-  /**
-   * The crossing's water, not gate 1's void. Lethe rather than a fall: the
-   * hunter comes back to solid ground at no health cost, but the water takes
-   * whatever chaya they carried in — the campaign's cheapest lesson that the
-   * bond is losable, well before the ending spends it on purpose.
-   *
-   * Called ahead of the generic void cull in `update`, deliberately: the
-   * chaya chases closely enough that its own recall can put it under `voidY`
-   * on the very frame the hunter falls, and this has to be the one that
-   * claims it — see the call site.
-   */
-  _fallInWater() {
-    if (this.chaya) {
-      this.entityRoot.remove(this.chaya.root);
-      this.chaya = null;
-      this.hud.toast(STRINGS.TOAST_FORGOTTEN, 'warn');
-    }
-    this.player.x = this.gate.spawnX;
-    this.player.y = 0.2;
-    this.player.vx = 0;
-    this.player.vy = 0;
-    this.player.state = 'fall';
   }
 
   // -- endings --------------------------------------------------------------

@@ -1170,10 +1170,10 @@ function transition(game, input) {
   const to = game.gate;
   say('the arch leads to the next gate', arrived, arrived ? `${to.id} — ${to.name}` : `still in ${from.id}`);
 
-  // Walk the crossing — with the playthrough's own bot, not a locomotion-only
-  // one. The crossing has a charger on it now, sealed in behind barriers, so a
-  // bot that only knows how to hold right and jump would stand against a
-  // barrier until the stuck timer fired and report the gate as unwalkable.
+  // Walk gate 2 — with the playthrough's own bot, not a locomotion-only one.
+  // It has an encounter sealed in behind barriers, so a bot that only knows
+  // how to hold right and jump would stand against a barrier until the
+  // stuck timer fired and report the gate as unwalkable.
   // `walkGate` is `playthrough` without the reset to gate 1, so what is
   // measured here is the same bot, reading the same tells, that clears gate 1.
   const entryX = +p.x.toFixed(1);
@@ -1186,7 +1186,7 @@ function transition(game, input) {
   // it finishes the walk itself: hold right until the arch takes the hunter
   // through, same as the first check above did from a standing start.
   if (game.state === 'cleared') {
-    // The Kevat's death now holds on the boss-rest screen rather than
+    // The Warden's death now holds on the boss-rest screen rather than
     // lighting the arch outright — see `Game.resting`. RESUME is the choice
     // that keeps this row's claim (the arch takes a walking hunter) intact;
     // NEXT GATE would skip the very walk being measured. The same kill can
@@ -1212,12 +1212,12 @@ function transition(game, input) {
     finish.releaseAll();
   }
 
-  // "Walkable" means the arch took the hunter through — not that the crossing
+  // "Walkable" means the arch took the hunter through — not that gate 2
   // happened to be the last gate. A campaign that keeps growing must not make
   // this row read the count of gates that exist.
   const walked = arrived && game.gateIndex !== 1;
   say(
-    'and the crossing is walkable',
+    'and gate 2 is walkable',
     walked,
     walked
       ? `x ${entryX} → ${to.exitX} in ${(game.runTime - entryT).toFixed(1)}s, ` +
@@ -1560,7 +1560,7 @@ function chargerChaya(game, input) {
 }
 
 /**
- * The crossing's story beats.
+ * Gate 2's story beats.
  *
  * `docs/PLAYTEST.md` round 3 is the failure this whole probe is arranged
  * against: a System window competing with a live fight for the same
@@ -1576,7 +1576,7 @@ function storyBeats(game, input) {
   // --- forced: a beat asked to open mid-encounter ---
   hardStart(game);
   game._enterGate(1);
-  say('lands in the crossing', game.gate.id === 'gate-2', game.gate.id);
+  say('lands in gate 2', game.gate.id === 'gate-2', game.gate.id);
   const openBefore = game.hud.el.windows.children.length;
   game.activeEncounter = { id: 'probe' };
   game._fireBeats('cleared');
@@ -1589,23 +1589,14 @@ function storyBeats(game, input) {
   game._fireBeats('cleared');
   say('the same beat opens once the encounter clears', game.hud.el.windows.children.length === openBefore + 1);
 
-  // --- the glitch, authored for arrival ---
-  say(
-    'the crossing has a glitch beat on arrival',
-    game.gate.beats?.some((b) => b.at === 'enter' && b.glitch === true) ?? false
-  );
-
-  // --- a real walk: both encounters, the Warden, nothing forced ---
+  // --- a real walk: the road to Ekachakra, the Warden, nothing forced ---
   hardStart(game);
   game._enterGate(1);
-  say(
-    "the gate-2 glitch beat is defined but doesn't fire on arrival — 'enter' is cut",
-    !game.storyBeats.some((b) => b.at === 'enter')
-  );
+  say('gate 2 has no arrival beat', !game.gate.beats?.some((b) => b.at === 'enter'));
   const run = walkGate(game, input, { maxSeconds: 120, readTells: true });
-  say('the crossing still clears with the beats wired in', run.ok, `state ${game.state}, ${run.time}s`);
+  say('the gate still clears with the beats wired in', run.ok, `state ${game.state}, ${run.time}s`);
   // `walkGate` stops the instant `game.state` leaves 'playing' — right as the
-  // Kevat's death flips it to 'cleared', before anything downstream of that
+  // Warden's death flips it to 'cleared', before anything downstream of that
   // kill has had a chance to run. The kill can also level the hunter up,
   // which now holds its own stat box open behind `_advance` ahead of the
   // 'cleared' beat this row is about to check for (`Game._levelUp`'s
@@ -1617,79 +1608,8 @@ function storyBeats(game, input) {
     game._advance?.();
     waited++;
   }
-  say('the closing beat fired once the Kevat fell', game.storyBeats.some((b) => b.at === 'cleared' && b.opened));
+  say('the closing beat fired once the Warden fell', game.storyBeats.some((b) => b.at === 'cleared' && b.opened));
   say('nothing that fired over the whole walk did so mid-encounter', game.storyBeats.every((b) => !b.liveEncounter));
-
-  hardStart(game);
-  game.hud.screen('clear', false);
-  return rows;
-}
-
-/**
- * The crossing's water: Lethe rather than a fall.
- *
- * Gate 1's void is answered by `bossFight` and the playthrough probes dying
- * into it whenever a bot mistimes a jump; this is the one row that puts a
- * bot into gate 2's water on purpose, because nothing else in the suite ever
- * falls there by accident. `forgivingVoid` is what the game keys the two
- * gates' behaviour apart on, and every assertion here is about that flag
- * doing its job rather than about the fall itself.
- */
-function crossingWater(game, input) {
-  const rows = [];
-  const say = (what, ok, detail = '') => rows.push({ what, ok, detail });
-  const bot = new Bot(game, input);
-  const p = game.player;
-
-  /** Drop the hunter below `voidY`, mid-air, over the crossing's water. */
-  const dropIntoWater = () => {
-    p.x = 37.5; // the gap between the crossing's first two stones
-    p.y = game.gate.voidY - 1;
-    p.vx = 0;
-    p.vy = -1;
-    bot.step();
-  };
-
-  // --- carrying a chaya in ---
-  hardStart(game);
-  game._enterGate(1);
-  say('lands in the crossing', game.gate.id === 'gate-2', game.gate.id);
-  giveChaya(game, bot);
-  say('a chaya is bound before the fall', !!game.chaya);
-
-  const hpBefore = p.hp;
-  dropIntoWater();
-  say('the hunter survives', game.state === 'playing' && p.hp === hpBefore, `hp ${p.hp}/${hpBefore}`);
-  say('and the chaya is gone', !game.chaya);
-  say(
-    'and lands back on solid ground',
-    p.x === game.gate.spawnX && p.y >= 0,
-    `x ${p.x.toFixed(2)}, y ${p.y.toFixed(2)}`
-  );
-  say('and the System reports it', game.hud.el.toasts.textContent.includes('FORGOTTEN'));
-
-  // Binding again has to behave exactly like the first bind — no leftover
-  // state from a slot that was supposedly freed.
-  const boundAgain = giveChaya(game, bot);
-  say('binding again behaves like a first bind', boundAgain && !!game.chaya);
-
-  // --- falling with no chaya bound ---
-  hardStart(game);
-  game._enterGate(1);
-  say('no chaya bound', !game.chaya);
-  const hpBefore2 = p.hp;
-  dropIntoWater();
-  say('costs no health', p.hp === hpBefore2, `${hpBefore2} -> ${p.hp}`);
-  say('and still returns to solid ground', p.x === game.gate.spawnX);
-
-  // --- gate 1's void is unchanged ---
-  hardStart(game);
-  say('back in gate 1', game.gate.id === 'gate-1');
-  p.x = 4;
-  p.y = game.gate.voidY - 1;
-  p.vy = -1;
-  bot.step();
-  say('gate 1 still kills', game.state === 'dead');
 
   hardStart(game);
   game.hud.screen('clear', false);
@@ -1997,13 +1917,9 @@ function runAll(game, input, seed) {
   // And after even that, because it allocates a rig per set-up and the rule
   // does not have an exemption for probes whose author is confident.
   report.charger = scope(12, () => chargerFight(game, input));
-  // And after even that: it allocates too — `giveChaya` twice over, plus a
-  // gate transition — and the rule does not carve out an exception for the
-  // probe that happens to be last today either.
-  report.crossingWater = scope(13, () => crossingWater(game, input));
-  // And after even that, for the same reason once more: it walks the crossing
-  // end to end and forces a live-encounter case the game would never present
-  // to a normal run, both of which touch the shared `Game` object.
+  // And after even that, for the same reason once more: it walks gate 2 end
+  // to end and forces a live-encounter case the game would never present to
+  // a normal run, both of which touch the shared `Game` object.
   report.storyBeats = scope(14, () => storyBeats(game, input));
   // And after even that: it allocates too — a corpse, a shard, and the chaya
   // rig `extract()` builds off it — and the rule does not carve out an
@@ -2305,18 +2221,7 @@ function print(r) {
   lines.push("  Charger's own. See docs/DECISIONS.md's entry on this issue.");
   lines.push('');
 
-  lines.push('THE CROSSING’S WATER   (Lethe rather than a fall)');
-  for (const t of r.crossingWater) {
-    lines.push(`  ${t.what.padEnd(38)} ${t.detail.padEnd(28)} ${ok(t.ok)}`);
-  }
-  lines.push('');
-  lines.push('  Falling in costs the bound chaya and the walk back, never health, and');
-  lines.push('  never anything at all where there was no chaya to lose. Gate 1 is read');
-  lines.push('  right after, on the same probe, so a fix that makes water forgiving');
-  lines.push('  everywhere shows up here as gate 1 surviving its own void.');
-  lines.push('');
-
-  lines.push('STORY BEATS   (the crossing’s glitch, and the boundary-only rule)');
+  lines.push('STORY BEATS   (gate 2, and the boundary-only rule)');
   for (const t of r.storyBeats) {
     lines.push(`  ${t.what.padEnd(46)} ${t.detail.padEnd(30)} ${ok(t.ok)}`);
   }
@@ -2328,7 +2233,7 @@ function print(r) {
   lines.push('  fired for real, never once catching the game with an encounter live.');
   lines.push('');
 
-  lines.push('GATE TRANSITION   (gate 1’s arch into the crossing, and gate 1 again)');
+  lines.push('GATE TRANSITION   (gate 1’s arch into gate 2, and gate 1 again)');
   for (const t of r.transition) {
     lines.push(`  ${t.replay ? '· ' : ''}${t.what.padEnd(t.replay ? 44 : 46)} ${t.detail.padEnd(34)} ${ok(t.ok)}`);
   }
