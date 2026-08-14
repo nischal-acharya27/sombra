@@ -338,28 +338,145 @@ lean into the hunter being an entirely different category of combatant
 
 **Iconography (procedural).** A buffalo-human hybrid mid-transformation is
 the signature image in classical art (Mahishasuramardini imagery shows him
-half-emerged from a buffalo body, sword in hand). Procedurally: a
-heavy-shouldered humanoid torso on a rig with bovine head geometry (curved
-horn cylinders, a broadened box-skull), and a secondary "true form" —
-a quadruped buffalo silhouette — as an alternate pose or phase-transition
-state, mirroring how the existing bosses use enrage as a form-shift moment.
-Large scale, animal-dark palette (charcoal/umber) with something
-supernatural bleeding through (a Devi-associated color, gold or crimson, at
-the phase break) to visually cue the transformation the myth is built on.
+half-emerged from a buffalo body) — resolved via `/grilling` during his
+villain design handoff (`docs/agents/villain-handoff.md`), text-only: no
+reference image was supplied this session, the same precedent Taraka's,
+Kumbhakarna's, Kamsa's and Hiranyakashipu's entries set for a design worked
+from description alone. Procedurally: a heavy-shouldered humanoid torso
+with bovine head geometry (curved horn cylinders, a broadened box-skull).
+Silhouette and scale: `hw ≈ 1.6, hh ≈ 1.95` — just under Ravana's `1.7/2.0`,
+the roster's stated ceiling for the four locked bosses specifically because
+his ten-heads/twenty-arms compression earns it; Mahishasura has no
+equivalent multi-limb justification for claiming the literal top spot, so
+he sits just under it rather than re-spending Ravana's ceiling the very
+next entry over, while still landing well above Hiranyakashipu's `1.5/1.85`
+and Duryodhana's deliberately mortal `0.68/1.35` — this is the campaign's
+closing boss and should read as the single most physically imposing figure
+short of Ravana himself.
+
+Signature weapon/feature: none. The first tier-3 boss with no wielded
+prop — Duryodhana's gada, Ravana's four-weapon rotation and
+Hiranyakashipu's boon-charged claws have already spent every adjacent
+register, and a buffalo-demon's power is the buffalo body itself, not a
+court weapon of office. Natural weapons only: horns (the charge/gore
+attack) and raw mass (the stomp/slam) — see Kit shape, which the
+phase-transition below modulates directly rather than leaving as cosmetic.
+
+New Mahisha-specific palette entries in `palette.js`: `mahishaHide`
+(charcoal-umber buffalo skin — genuinely new on the roster; the closest
+neighbors, Kumbhakarna's granite-grey and Hiranyakashipu's oxblood-maroon,
+are stone- and blood-toned respectively, neither overlapping an
+animal-hide register) with `mahishaHideDark` as its shading undertone, and
+`mahishaHorn` (pale bone-grey, distinct from the skin). `mahishaCore` (his
+normal-state attack telegraph, the flare vocabulary every boss carries)
+lands on a saturated marigold-gold, `~0xe0a52a` — clear of every core hue
+already spent by the four *built* bosses (`bossCore` purple, `narakaCore`
+red-orange, `manavCore` pale amber-gold, `wheelCore` purple-magenta,
+`devaCore` pale cream; Duryodhana's/Ravana's/Hiranyakashipu's/
+Kumbhakarna's named cores exist only in their write-ups, not yet in code),
+and marigold is a concrete, recognizable Durga Puja color rather than a
+generic "boss danger orange," giving the telegraph its own
+festival-specific referent. The original note's own suggestion of "a
+Devi-associated color, gold or crimson, at the phase break" is answered by
+*not* inventing a second new hue for the break itself: `P.crimson`
+(`0xff4d5e`), the exact value every boss's core already swaps to at
+`_enrage()`, is reused as-is at the Threshold beat below. That isn't a
+missed opportunity to invent something bespoke — every other boss's
+crimson swap is generically "he's angry now," but for the one boss whose
+myth is literally "Devi's color arrives as she lands the kill," the same
+mechanical swap this codebase already runs for free becomes the actual
+mythological beat rather than a metaphor standing in for it.
+
+**Kit shape.** Melee only, body-based, reusing `boss.js`'s shared
+`sweeping`/`leaping`/`slam` telegraph vocabulary — the same reused-shapes-
+reskinned-per-attack pattern Ravana's four weapons already established.
+Pre-Threshold, leaning buffalo: `leaping` is a horns-first charge/gore
+lunge, `slam` is a ground stomp. At the Threshold, the `sweeping` slot is
+replaced outright by a reach/grapple attack (Bakasura's grab-slam
+precedent) as the pose leans human — arms doing the work a horn charge
+can't. The kit's own arc therefore plays charge-heavy early and
+grapple-heavy late, which lines up with the Purana's specific detail that
+Durga's killing blow lands while he is mid-transformation *toward* human
+form, not toward buffalo: the fight's vocabulary dramatizes the myth's
+actual ending rather than leaving only the palette to do that work.
+
+**Phase-transition flag.** Yes — the first tier-3 boss to take this flag;
+Duryodhana, Ravana and Hiranyakashipu all called "None," folding their
+escalation into the shared `Boss._enrage()` hook alone (core-color swap,
+speed/windup multipliers, cooldown reduction). Mahishasura's transition
+rides that same hook but spends more on top of it than any prior boss:
+one rig throughout — no second buffalo-quadruped mesh built and swapped on
+a `visible` flag the way the tier-2 precedent (Taraka, Shurpanakha, Putana)
+does, and no new rig-swap-on-the-boss's-own-body precedent set either
+(Hiranyakashipu's session added exactly that trick, but for the *hunter's*
+rig at death, never yet a boss's own body mid-fight). Instead, the hybrid
+geometry itself articulates toward "more buffalo" or "more human" at the
+threshold — a pose-level shift, not a mesh swap — deliberately dramatizing
+the myth's own climax (Durga's blow catches him mid-transformation between
+buffalo and human form) as an ambiguity the rig holds, rather than
+resolving it into two discrete forms the way every earlier phase-transition
+entry does. `mahishaCore` swaps to `P.crimson` at the same threshold, per
+the palette note above.
+
+The threshold also fires the second of four dialogue beats — see
+Respectful-treatment note — making this the first tier-3 boss to spend
+more than one `storyWindow`/`_fireBeats` beat in a single fight, itself a
+deliberate, named exception to `docs/DECISIONS.md`'s locked dialogue budget
+("once-per-gate, or with a phase beat, twice").
+
+**Tier call.** 3 — bespoke `Boss` subclass, the fourth and last of the four
+locked bosses per issue #40 (Duryodhana, Ravana, Hiranyakashipu done;
+Mahishasura closes the set, and closes the campaign).
 
 **Respectful-treatment note.** This is the highest-flag entry on the list.
 Adivasi and Dalit communities in parts of India observe *Mahishasur
 Jayanti* / *Mahishasur Shahadat Diwas* ("Mahishasura Martyrdom Day"),
 honoring him as a wronged ancestral king rather than a demon, and reading
-Durga's victory as myth built to justify a conquest — this became a live
-national controversy (raised in Parliament in 2016). This is not a fringe
-reading; it is a real, present-day reception split over a figure central to
-one of Hinduism's biggest festivals. If Mahishasura goes in the roster, he
-should not be written as unambiguous evil-to-be-purged — at minimum the
-same narrative nuance given to Kumbhakarna (a being the story itself does
-not treat as simply monstrous) is warranted, and it may be worth naming
-this contested reception directly to a sensitivity/consult pass before the
-gate is written, rather than deciding it alone.
+Durga's victory as a myth built to justify a conquest — a live, present-day,
+non-fringe reception split (raised in India's Parliament in 2016) over a
+figure central to one of Hinduism's biggest festivals.
+
+Resolved via `/grilling` during his villain design handoff, this session
+picked a stance rather than leaving the original note's either/or standing:
+**name the contested reception directly**, not implicitly the way
+Kumbhakarna's counsel-refused beat handles his own note, and not as a
+single line either — as a real four-beat conversation, spread across the
+fight rather than compressed into the one enrage-threshold line every
+other tier-3 boss's own-voice moment uses. This is an explicit, named
+exception to the locked "once, or twice with a phase beat" dialogue budget
+(`docs/DECISIONS.md`) — worth flagging plainly so a future reader
+recognizes the overrun as a deliberate call for the one fight that closes
+the whole campaign, not an oversight. The four beats, each riding a
+mechanical trigger the fight already produces rather than free-floating
+narration: **Intro** (fight start — he states his own case: the boon, the
+throne he held, framing himself as a wronged king rather than a monster);
+**Threshold** (the phase-transition above — his rhetoric turns as his own
+form does, caught between shapes); a **second late-fight beat** (the
+crux — the contested reception itself gets named directly, both readings
+given real weight rather than the hunter simply refuting him); and
+**Death** (riding the existing `_die`/`_dieAnimate` collapse window, per
+Hiranyakashipu's precedent for using that window for content) — his last
+word, left unresolved, the same "named directly, left unresolved" move
+Ravana's own entry makes rather than settling the split in the hunter's
+favor.
+
+The Intro/Threshold/second-beat trio is also the first written hunter
+dialogue anywhere in the campaign — every prior `storyWindow` beat on the
+roster (Taraka's, Shurpanakha's, Kumbhakarna's, Ravana's) is the Warden
+speaking while the player only advances the queue; the hunter has been a
+silent cipher through every other gate, by design or default, and stays
+that way everywhere else. This session made that a deliberate, one-time
+break rather than a general characterization decision: the hunter speaks
+only in this fight, and only because this is the one villain whose case is
+genuinely worth answering rather than simply defeating — the rarity is
+load-bearing, not incidental, and retrofitting hunter dialogue into any
+other already-written gate would undo the point of spending it here. The
+Death beat is Mahishasura's alone; giving the hunter the closing line would
+read as the hunter winning the argument the prior three beats spent real
+weight trying not to settle. Actual line-by-line dialogue is left for a
+future gate-content session to write, per Ravana's own precedent for what
+this template hands off versus what it doesn't — this entry commits to
+structure and stance, not final text.
 
 ---
 
