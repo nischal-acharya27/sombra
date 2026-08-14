@@ -386,22 +386,124 @@ defeated" anymore. Worth flagging to the roster/order ticket as needing an
 explicit design decision rather than a default.
 
 **Iconography (procedural).** A powerful humanoid asura-king form — regal,
-armored, physically dominant — is the base state; the interesting design
-opportunity is the boon itself as a mechanic (a boss immune to normal
-"where/when" framing, always requiring the fight to happen at a liminal
-moment or place, which is a strong signature-move hook independent of the
-Narasimha question). Palette: gold and dark red, tyrant-court coded, similar
-register to Kamsa but should differentiate — Hiranyakashipu reads more
-overtly supernatural/asura than Kamsa's human-tyrant.
+physically dominant, no extra heads or arms — resolved via `/grilling`
+during his villain design handoff (`docs/agents/villain-handoff.md`),
+text-only: no reference image was supplied this session, the same
+precedent Taraka's, Kumbhakarna's and Kamsa's entries set for a design
+worked from description alone. Silhouette and scale: `hw ≈ 1.5, hh ≈ 1.85`
+— above Duryodhana's deliberately mortal-scale `0.68/1.35` (this is a
+boon-empowered asura, not a human rival), but at the low end of the
+supernatural tier-3 cluster rather than matching Ravana's or Goru-Mukh's
+`1.7/2.0`: a single head and two arms have no multi-limb silhouette to
+lean on the way Ravana's arc of heads does, so the size read has to come
+from mass and stance alone, and pushing him to the top of the cluster
+would leave two of the three same-tier bosses reading as similarly huge
+with only palette telling them apart at a glance.
 
-**Respectful-treatment note.** Narasimha is a living, worshipped form of
-Vishnu (Narasimha Jayanti is observed), not a folkloric detail — replacing
-him with the hunter is not neutral the way replacing a generic hero would
-be. If used, this may be the strongest candidate on the whole list for
-letting the myth's ending *stand* (narrated, shown as backstory/epilogue)
-rather than re-enacted by the hunter, precisely because the boon's mechanism
-is so specifically Narasimha-shaped that anything else reads as a rewrite
-of scripture rather than a reinterpretation of a folk villain.
+Palette breaks from the research entry's own "gold and dark red,
+tyrant-court" suggestion once checked against what's already spent:
+Duryodhana already owns gold-bronze armor plus maroon/oxblood plus a
+crimson core, and Ravana already owns heavy gold plus a vermillion robe
+plus an amber-family core — a third gold-and-dark-red court palette would
+be the least differentiated entry on the roster, in the one run of three
+tier-3 bosses back to back where that's most visible. New Daitya-king
+palette entries: `hiranyaSkin` (`0x6b1f28`, dark oxblood-maroon) carries
+the register directly in *skin* rather than armor cloth — unlike Kamsa's
+or Duryodhana's fully human reads, nothing in his own respectful-treatment
+note pushes toward a human skin tone the way Ravana's did, so an exotic
+asura skin is available and appropriate here — with `hiranyaSkinDark`
+(`0x330e14`) as its shading undertone. Gold survives only as minimal
+regalia, a crown and armbands rather than plate, in `hiranyaGold`
+(`0xc9a355`, a muted antique gold well short of Duryodhana's or Ravana's
+full "richly adorned" armor gold), so he doesn't compete with either on
+opulence — the same non-competing move Kamsa's cold-iron break already
+made against both. The boon itself gets a fourth new hue, `hiranyaBoon`
+(`0xf3e9ff`, a pale, near-white violet-gold), deliberately off the
+roster's shared damage-signal amber (`0xffb347`): every other telegraph
+on the roster warns "incoming hit," but his signature move is the
+inverse — a window where *he* can be hit — and reusing amber for that
+would actively mis-teach a player who has already learned amber as a
+threat colour.
+
+Signature weapon/feature: none. He fights bare-handed — boon-charged fists
+and claws, lit in `hiranyaBoon` — rather than a wielded prop. This is a
+direct statement of the boon's own "nor by any weapon" clause (he carries
+nothing because he doesn't believe anything, weapon or otherwise, can
+touch him), and it sets up a quiet rhyme with the finishing beat below: he
+dies to claws, in the same unarmed register he fought the entire fight in.
+
+**Kit shape.** Melee only, bare-handed — a close-range claw sweep and a
+slam/grab, reusing the sweep/slam vocabulary `boss.js` already shares
+across Guardian/Goru-Mukh/Hakim/Chiranjivi/Ravana rather than inventing
+new offensive mechanics. The boon is not a late-fight unlock: a new
+`threshold` state is woven into the rotation from the start of the fight,
+cycled into periodically alongside the offensive states rather than gated
+behind an HP threshold — the research entry frames the boon as a
+signature-move hook, not a phase-2 escalation, and a boss invulnerable
+through an entire opening phase leaves the hunter nothing to do but wait,
+which isn't a fight. In `threshold`, he strides to or manifests a
+boon-summoned doorway/pillar and is vulnerable only for that self-committed
+window, `hiranyaBoon` flaring on his claws and the threshold itself as the
+tell — the same "everything the boss does is telegraphed" rule every other
+source of damage on the roster already follows, just inverted: this is the
+one boss where the telegraph announces an opening rather than a threat.
+`enrageAt`/`enrageSpeedMul`/`enrageWindupMul` still apply on top once he's
+cornered — faster offensive cycling, shorter and less frequent `threshold`
+windows — tightening the fight rather than unlocking the mechanic, since
+the mechanic was never locked to begin with. One emergent property worth
+flagging for implementation: since he takes damage in no other state, any
+killing blow necessarily lands during `threshold` — the finishing beat
+below never needs a special trigger condition beyond the ordinary
+`takeHit` hp<=0 check every boss already has.
+
+**Phase-transition flag.** None, in the sense the template means — no
+rig-swap reveal, no disguise-to-monster moment; the boon window is a
+recurring kit move from the first second of the fight, not a
+transformation. There is, however, a scripted beat riding the *existing*
+death-transition machinery every boss already has (`Boss._die`/
+`_dieAnimate`, the roughly 3s scripted collapse every boss plays on death)
+that this handoff session added specifically as this boss's homage to the
+source: for that window, the *hunter's* on-screen model — not
+Hiranyakashipu's — swaps to a pre-built alternate Narasimha overlay rig
+(the hunter's own proportions, a mane/head piece, clawed hands) on a
+`visible` flag, built once alongside every other pre-built rig per the
+allocate-nothing rule (`CLAUDE.md`'s own note that `Game` constructs every
+gate up front and switches visibility rather than building mid-run). This
+is the first entry on the roster where the design session adds anything to
+the *hunter's* own rig rather than only the villain's — worth flagging
+explicitly to whoever implements it, since it's a `src/game/actor.js`/
+player-rig concern layered on top of a `src/game/boss.js` one, not a
+boss-local change the way every other phase-transition or enrage payload
+on the roster has been.
+
+**Tier call.** 3 — bespoke `Boss` subclass, third of the four locked
+bosses per issue #40's split (Duryodhana, Ravana, Hiranyakashipu,
+Mahishasura). Not a live decision for this entry, same as Duryodhana's and
+Ravana's own tier-call notes; Mahishasura is the one still open.
+
+**Respectful-treatment note.** The original note posed an either/or:
+restate the boon's loophole near-verbatim with the hunter standing in for
+Narasimha (reads as diminishing the avatar), or write an entirely
+different victory condition (then it isn't really "how Hiranyakashipu was
+defeated" anymore). This session's design is deliberately a third path
+rather than a pick between those two, and that departure is worth stating
+explicitly for whoever picks this entry up rather than leaving it to look
+like the either/or was simply missed. The moment-to-moment fight is fully
+invented — bare-hand asura combat and a boon-vulnerability window are the
+session's own mechanics, not a restaging of man/animal, indoors/outdoors,
+day/night, earth/sky — so nothing in actual play puts the hunter in
+Narasimha's role. The finishing blow is where the source is honored
+directly rather than avoided: a scripted, non-interactive cutaway restores
+the kill to Narasimha's own hand, the myth's real ending shown rather than
+played, with the hunter's control released for that beat exactly the way
+`_die`'s scripted collapse already takes control away from the player on
+every other boss kill in the game — so the mechanism for "control isn't
+the player's for a few seconds" already exists and isn't a new precedent,
+only the content shown during it is new. Narasimha remains a living,
+worshipped form of Vishnu (Narasimha Jayanti is observed) — the beat
+should be built, and later written, with that weight: reverent, not a
+power-fantasy costume swap, and short — a restoration, not a spectacle the
+hunter gets credit for.
 
 ---
 
