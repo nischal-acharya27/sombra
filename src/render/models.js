@@ -893,6 +893,191 @@ export function buildShakuni() {
 }
 
 // ---------------------------------------------------------------------------
+// Bakasura — gate 2's Warden
+// ---------------------------------------------------------------------------
+
+/**
+ * A glutton-demon: heavy-bellied and wide before it is tall, per the
+ * handoff's "a proportion claim, not just a size one" — `hw`/`hh` sit far
+ * closer to parity than any other rig in the game. Built bottom-up like
+ * `buildKawach`, with `body` standing in for Kawach's own torso group: legs
+ * hang off it directly, and the belly/chest/head stack rises from the same
+ * origin rather than from a separate hips group, since there is no waist to
+ * separate them at.
+ */
+export function buildBakasura(skin = null) {
+  const c = skin || {
+    body: P.bakasuraSkin,
+    dark: P.bakasuraSkinDark,
+    bruise: P.bakasuraBruise,
+    hand: P.bakasuraHand,
+    hair: P.bakasuraHair,
+  };
+  const root = new THREE.Group();
+  const n = {};
+
+  const body = new THREE.Group();
+  body.position.y = 1.0;
+  root.add(body);
+  n.body = body;
+
+  // The belly: wide and deep before it is tall, sagging low ahead of a
+  // narrower chest — the one proportion this rig exists to get right.
+  const belly = part(1.0, 0.62, 0.86, c.body, { pivot: 'bottom', outline: 0.036 });
+  body.add(belly);
+  n.belly = belly;
+
+  // Bruise-purple worked into the sag itself, a decal rather than new
+  // geometry so it rides the belly's own squash-stretch for free.
+  const sag = decal(0.5, 0.3, c.bruise, { opacity: 0.55 });
+  sag.position.set(0.44, 0.16, 0);
+  sag.rotation.y = Math.PI / 2;
+  belly.add(sag);
+
+  const chest = part(0.7, 0.5, 0.66, c.body, { pivot: 'bottom', outline: 0.034 });
+  chest.position.y = 0.62;
+  belly.add(chest);
+  n.chest = chest;
+
+  const head = new THREE.Group();
+  head.position.y = 0.52;
+  chest.add(head);
+  n.head = head;
+
+  const skull = part(0.42, 0.4, 0.42, c.body, { pivot: 'bottom', outline: 0.03 });
+  head.add(skull);
+
+  // Heavy jowls hanging past the jaw — the "predatory glutton" face read.
+  for (const side of [-1, 1]) {
+    const jowl = part(0.14, 0.18, 0.16, c.body, { pivot: 'top', outline: 0.02 });
+    jowl.position.set(0.13, 0.08, side * 0.16);
+    skull.add(jowl);
+  }
+
+  // The fanged grin: a dark slot and a row of pale points along it.
+  const mouth = decal(0.24, 0.08, P.outline);
+  mouth.position.set(0.21, 0.06, 0);
+  mouth.rotation.y = Math.PI / 2;
+  skull.add(mouth);
+  for (let i = -2; i <= 2; i++) {
+    const fang = part(0.02, 0.05, 0.02, P.bone, { pivot: 'top', outline: 0.006 });
+    fang.position.set(0.215, 0.08, i * 0.045);
+    skull.add(fang);
+  }
+
+  // Plain, dark eyes — like Shakuni, the menace never reads off the face;
+  // it reads off the hands.
+  for (const side of [-1, 1]) {
+    const eye = decal(0.05, 0.035, P.outline);
+    eye.position.set(0.2, 0.2, side * 0.09);
+    eye.rotation.y = Math.PI / 2;
+    head.add(eye);
+    n[side < 0 ? 'eyeL' : 'eyeR'] = eye;
+  }
+
+  // Long, loose hair spilling from under the helm.
+  const hair = part(0.3, 0.3, 0.3, c.hair, { pivot: 'top', outline: 0.024 });
+  hair.position.set(-0.1, 0.28, 0);
+  skull.add(hair);
+
+  // The horned skull-crest helm — a static silhouette read, not a
+  // telegraph: it sits still through every state the animator drives.
+  const helm = part(0.32, 0.16, 0.32, c.dark, { pivot: 'bottom', outline: 0.026 });
+  helm.position.y = 0.28;
+  skull.add(helm);
+  for (const side of [-1, 1]) {
+    const horn = part(0.06, 0.32, 0.06, P.bone, { pivot: 'bottom', outline: 0.014 });
+    horn.position.set(-0.02, 0.14, side * 0.1);
+    horn.rotation.z = 0.3;
+    horn.rotation.x = side * 0.22;
+    helm.add(horn);
+  }
+
+  // The vertebra-bead necklace, skull pendant at the sternum.
+  const necklace = new THREE.Group();
+  necklace.position.set(0.32, 0.4, 0);
+  chest.add(necklace);
+  for (let i = -3; i <= 3; i++) {
+    const bead = part(0.05, 0.05, 0.05, P.bone, { outline: 0.008 });
+    bead.position.set(Math.cos(i * 0.25) * 0.02, -Math.abs(i) * 0.03, i * 0.06);
+    necklace.add(bead);
+  }
+  const pendant = part(0.08, 0.09, 0.05, P.bone, { pivot: 'top', outline: 0.012 });
+  pendant.position.set(0.02, -0.16, 0);
+  necklace.add(pendant);
+
+  // Arms — oversized forearms and hands, banded in stacked bone rings: the
+  // actual grabbing instrument, and the combat-readable tell during the
+  // windup, the same job Charger's lowered horns or Kawach's raised shield
+  // do for their own commits.
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const shoulder = new THREE.Group();
+    shoulder.position.set(0.05, 0.42, side * 0.42);
+    chest.add(shoulder);
+    n['shoulder' + key] = shoulder;
+
+    const upper = part(0.22, 0.34, 0.22, c.body, { pivot: 'top', outline: 0.026 });
+    shoulder.add(upper);
+
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.34;
+    shoulder.add(elbow);
+    n['elbow' + key] = elbow;
+
+    // Wider than the upper arm — the taper runs backward from a grunt's.
+    const fore = part(0.27, 0.36, 0.27, c.body, { pivot: 'top', outline: 0.028 });
+    elbow.add(fore);
+    for (let i = 0; i < 3; i++) {
+      const ring = part(0.3, 0.05, 0.3, P.bone, { outline: 0.012 });
+      ring.position.y = -0.1 - i * 0.09;
+      elbow.add(ring);
+    }
+
+    const hand = part(0.24, 0.24, 0.22, c.body, { pivot: 'top', outline: 0.024 });
+    hand.position.y = -0.36;
+    elbow.add(hand);
+    n['hand' + key] = hand;
+
+    // The inflamed glow, sitting just outside the hand rather than inside
+    // it — flares during a grab's windup, the same vocabulary Kawach's eyes
+    // and Shakuni's own eyes already use for "about to commit".
+    const glow = decal(0.26, 0.26, c.hand, { opacity: 0.55 });
+    glow.position.set(0.12, -0.36, 0);
+    glow.rotation.y = Math.PI / 2;
+    elbow.add(glow);
+    n['handGlow' + key] = glow;
+  }
+
+  // Legs — short and heavy under all that weight.
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const hip = new THREE.Group();
+    hip.position.set(0, 0, side * 0.26);
+    body.add(hip);
+    n['hip' + key] = hip;
+
+    const thigh = part(0.34, 0.4, 0.34, c.body, { pivot: 'top', outline: 0.03 });
+    hip.add(thigh);
+
+    const knee = new THREE.Group();
+    knee.position.y = -0.4;
+    hip.add(knee);
+    n['knee' + key] = knee;
+
+    const shin = part(0.28, 0.36, 0.28, c.dark, { pivot: 'top', outline: 0.026 });
+    knee.add(shin);
+
+    const foot = part(0.34, 0.12, 0.28, c.dark, { pivot: 'top', outline: 0.02 });
+    foot.position.set(0.07, -0.36, 0);
+    knee.add(foot);
+  }
+
+  root.userData.nodes = n;
+  return root;
+}
+
+// ---------------------------------------------------------------------------
 // Dwar-Rakshak — the level's boss
 // ---------------------------------------------------------------------------
 

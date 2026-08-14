@@ -704,6 +704,61 @@ export const SHAKUNI = {
   enrageIntervalMul: 0.75,
 };
 
+/**
+ * Bakasura — gate 2's Warden, per `docs/research/villain-roster.md`'s
+ * handoff: a glutton-demon, not a warrior, beaten bare-handed in the source
+ * rather than with a weapon. `hw 1.0`/`hh 1.25` is a proportion claim as
+ * much as a size one — unusually close to parity for any enemy in the game,
+ * "heavy-bellied" rather than merely tall. Tier 2: a new rig in
+ * `models.js`, but `Bakasura` in `enemies.js` extends `Enemy` directly
+ * following `Kawach`'s chase → telegraph → attack → recover skeleton, with
+ * an offset attack box and a second telegraph variant as the only
+ * departures.
+ *
+ * Two committed moves, picked by range the way `Charger` already varies by
+ * distance without becoming a new tier: `grab` is the close-range signature
+ * — an asymmetric box reaching `grab.reach` forward and only `grab.reachBack`
+ * behind, since a grab lunges forward and not sideways — and `tackle` covers
+ * the band just past it, so a hunter holding station at "just outside grab
+ * range" is not free. No phase-transition: per the handoff, escalation (if
+ * any) is the two windups tightening via `enrageWindupMul`, not a rig or
+ * palette swap — the same locally-implemented `_enrage()` pattern
+ * `SHAKUNI` above establishes for a tier-2 Warden.
+ */
+export const BAKASURA = {
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hw: 1.0,
+  hh: 1.25,
+  speed: 2.3,
+  chaseRange: 24,
+  stopAt: 2.0,
+  grab: {
+    range: 2.6,
+    windup: 0.62,
+    active: 0.24,
+    recover: 1.1,
+    damage: 22,
+    knock: 13,
+    reach: 2.0, // ~2×hw, per the handoff
+    reachBack: 0.15,
+  },
+  tackle: {
+    range: 4.6,
+    windup: 0.55,
+    active: 0.32,
+    recover: 0.95,
+    speed: 8.5,
+    damage: 15,
+    knock: 10,
+    wallRecover: 0.3,
+  },
+  cooldown: [0.9, 1.7],
+  exp: 58,
+  contactDamage: 0,
+  enrageAt: 0.5,
+  enrageWindupMul: 0.85,
+};
+
 export const GUARDIAN = {
   hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 1.5,

@@ -8,8 +8,8 @@
 
 import * as THREE from 'three';
 import { Actor, boxHit } from './actor.js';
-import { buildRaakchyas, buildCharger, buildKawach, buildBhootBatti, buildTantrik, buildShakuni } from '../render/models.js';
-import { RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, PHYS, JUGGLE } from './config.js';
+import { buildRaakchyas, buildCharger, buildKawach, buildBhootBatti, buildTantrik, buildShakuni, buildBakasura } from '../render/models.js';
+import { RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, PHYS, JUGGLE } from './config.js';
 import { P } from '../render/palette.js';
 import { clamp, damp, lerp, rand } from '../engine/mathx.js';
 
@@ -1431,6 +1431,276 @@ export class Shakuni extends Enemy {
 
     n.robe.rotation.z = lerp(n.robe.rotation.z, bodyZ, k);
     n.shoulderR.rotation.z = lerp(n.shoulderR.rotation.z, armZ, k);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Bakasura
+// ---------------------------------------------------------------------------
+
+/**
+ * Gate 2's Warden — a glutton-demon beaten bare-handed in the source, so its
+ * kit is a grapple rather than a weapon. Follows `Kawach`'s chase →
+ * telegraph → attack → recover skeleton (see that class's own header),
+ * departing only where the handoff calls for it: two committed moves picked
+ * by range instead of one, and an asymmetric attack box on the close one.
+ */
+export class Bakasura extends Enemy {
+  static stats = BAKASURA;
+
+  constructor(level, ctx, x, y, cfg = BAKASURA, skin = null) {
+    super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
+    this.root = buildBakasura(skin);
+    this.n = this.root.userData.nodes;
+    this.finishSetup();
+    this.phase = 0;
+    this.cooldown = rand(cfg.cooldown[0], cfg.cooldown[1]);
+    this.chargeHitSet = new Set();
+    this.leavesCorpse = true;
+    this.enraged = false;
+  }
+
+  /** Always, for a hostile Bakasura. Mirrors `Charger._canCommit`. */
+  _canCommit() {
+    return true;
+  }
+
+  takeHit(hit) {
+    const landed = super.takeHit(hit);
+    if (landed && !this.dead && !this.enraged && this.hp <= this.maxHp * this.cfg.enrageAt) this._enrage();
+    return landed;
+  }
+
+  /**
+   * No rig-swap, no reveal — per the handoff, escalation (if any) is the two
+   * windups tightening via `enrageWindupMul`, the same locally-implemented
+   * call `Shakuni._enrage` makes for its own tier-2 kit.
+   */
+  _enrage() {
+    this.enraged = true;
+    this.ctx.onEnrage?.();
+    this.ctx.audio?.play('enrage');
+  }
+
+  update(dt, player) {
+    this.t += dt;
+    this.hitFlash -= dt;
+    this._flash(dt);
+
+    if (this.state === 'dying') return this._dieAnim(dt);
+    if (this.spawnT > 0) this._spawnAnim(dt);
+
+    const G = this.cfg.grab;
+    const T = this.cfg.tackle;
+    const dx = player.x - this.x;
+    const dist = Math.abs(dx);
+    const canSee = dist < this.cfg.chaseRange && Math.abs(player.y - this.y) < 6;
+    const windupMul = this.enraged ? this.cfg.enrageWindupMul : 1;
+
+    if (this.stagger > 0) {
+      this.stagger -= dt;
+      if (this.stagger <= 0 && this.state === 'hurt') this.state = 'idle';
+    }
+
+    switch (this.state) {
+      case 'idle':
+      case 'chase': {
+        this.cooldown -= dt;
+        if (!canSee) {
+          this.state = 'idle';
+          this.vx = damp(this.vx, 0, 0.001, dt);
+          break;
+        }
+        this.state = 'chase';
+        this.faceToward(player.x);
+
+        // The grab takes the close band; the tackle takes the wider one just
+        // past it, so a hunter holding station at "just outside grab range"
+        // while it closes is not a fight it cannot lose — the handoff's own
+        // "either he's in grab range or he's not" note.
+        if (this._canCommit() && this.cooldown <= 0 && this.grounded) {
+          if (dist < G.range) {
+            this.state = 'grabTelegraph';
+            this.phase = G.windup * windupMul;
+            this.vx = 0;
+            this.chargeHitSet.clear();
+            this.ctx.audio?.play('growl');
+            break;
+          } else if (dist < T.range) {
+            this.state = 'tackleTelegraph';
+            this.phase = T.windup * windupMul;
+            this.vx = 0;
+            this.chargeHitSet.clear();
+            this.ctx.audio?.play('growl');
+            break;
+          }
+        }
+
+        const want = dist > this.cfg.stopAt ? this.facing * this.cfg.speed : 0;
+        const ahead = this.x + Math.sign(want || this.facing) * 0.9;
+        if (want !== 0 && !this.level.hasFloorAhead(ahead, this.y)) this.vx = 0;
+        else this.vx = damp(this.vx, want, 0.0008, dt);
+        break;
+      }
+
+      case 'grabTelegraph': {
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0001, dt);
+        if (this.phase > G.windup * windupMul * 0.35) this.faceToward(player.x);
+        if (this.phase <= 0) {
+          this.state = 'grabAttack';
+          this.phase = G.active;
+          this.chargeHitSet.clear();
+          this.ctx.audio?.play('pounce');
+        }
+        break;
+      }
+
+      case 'grabAttack': {
+        this.phase -= dt;
+        if (this.phase <= 0) {
+          this.state = 'recover';
+          this.phase = G.recover;
+        }
+        break;
+      }
+
+      case 'tackleTelegraph': {
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0001, dt);
+        if (this.phase > T.windup * windupMul * 0.35) this.faceToward(player.x);
+        if (this.phase <= 0) {
+          this.state = 'tackling';
+          this.phase = T.active;
+          this.chargeHitSet.clear();
+          this.ctx.audio?.play('pounce');
+          this.ctx.vfx.dust(this.x, this.y, 6);
+        }
+        break;
+      }
+
+      case 'tackling': {
+        this.phase -= dt;
+        this.vx = this.facing * T.speed;
+        this.applyGravity(dt, PHYS.gravity);
+        const hit = this.moveAndCollide(dt);
+        // Stops at a ledge rather than running off one — same rule
+        // `Charger`'s own charge holds, for the same reason.
+        const ledge = !this.level.hasFloorAhead(this.x + this.facing * 1.0, this.y);
+        if (this.phase <= 0 || hit.wall || ledge) {
+          this.vx = 0;
+          this.ctx.vfx.dust(this.x, this.y, 5);
+          if (hit.wall) {
+            this.ctx.shake?.(0.16);
+            this.ctx.audio?.play('slam');
+          }
+          this.state = 'recover';
+          this.phase = T.recover + (hit.wall ? T.wallRecover : 0);
+        }
+        this._animate(dt);
+        this.syncRig();
+        return;
+      }
+
+      case 'recover': {
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0005, dt);
+        if (this.phase <= 0) {
+          this.state = 'chase';
+          this.cooldown = rand(this.cfg.cooldown[0], this.cfg.cooldown[1]);
+        }
+        break;
+      }
+
+      case 'hurt':
+        this.vx = damp(this.vx, 0, 0.06, dt);
+        break;
+    }
+
+    if (this.juggleT > 0) this.juggleT = this.grounded ? 0 : this.juggleT - dt;
+    this.applyGravity(dt, PHYS.gravity * (this.juggleT > 0 ? JUGGLE.gravityMul : 1));
+    this.moveAndCollide(dt);
+    this._animate(dt);
+    this.syncRig();
+  }
+
+  /**
+   * The grab's box is asymmetric — `grab.reach` forward, `grab.reachBack`
+   * behind, since a grab lunges forward and not sideways. The tackle's is
+   * the ordinary straddling box a moving body already uses, the same shape
+   * `Charger.attackBox` returns for its own charge.
+   */
+  attackBox() {
+    if (this.dead) return null;
+    if (this.state === 'grabAttack') {
+      const G = this.cfg.grab;
+      return this.facing >= 0
+        ? { x0: this.x - G.reachBack, x1: this.x + G.reach, y0: this.y, y1: this.y + this.hh * 2 }
+        : { x0: this.x - G.reach, x1: this.x + G.reachBack, y0: this.y, y1: this.y + this.hh * 2 };
+    }
+    if (this.state === 'tackling') {
+      return { x0: this.x - this.hw - 0.25, x1: this.x + this.hw + 0.25, y0: this.y, y1: this.y + this.hh * 2 };
+    }
+    return null;
+  }
+
+  currentAttackDamage() {
+    if (this.state === 'grabAttack') return { damage: this.cfg.grab.damage, knock: this.cfg.grab.knock };
+    if (this.state === 'tackling') return { damage: this.cfg.tackle.damage, knock: this.cfg.tackle.knock };
+    return null;
+  }
+
+  _animate(dt) {
+    const n = this.n;
+    const k = 1 - Math.pow(0.0002, dt);
+    const G = this.cfg.grab;
+    const T = this.cfg.tackle;
+    let bodyZ = 0;
+    let bodyY = 0;
+    let armZ = 0;
+    let glow = 0;
+
+    if (this.state === 'grabTelegraph') {
+      const u = 1 - this.phase / (G.windup * (this.enraged ? this.cfg.enrageWindupMul : 1));
+      bodyZ = -0.1 - u * 0.16;
+      bodyY = -0.06 - u * 0.06;
+      armZ = 0.2 + u * 0.5;
+      glow = 0.3 + u * 0.7;
+    } else if (this.state === 'grabAttack') {
+      const u = clamp(1 - this.phase / G.active, 0, 1);
+      bodyZ = lerp(0.24, -0.1, u);
+      armZ = lerp(-0.7, 0.35, u);
+      bodyY = -0.08;
+      glow = 1;
+    } else if (this.state === 'tackleTelegraph') {
+      const u = 1 - this.phase / (T.windup * (this.enraged ? this.cfg.enrageWindupMul : 1));
+      bodyZ = -0.08 - u * 0.14;
+      bodyY = -0.05 - u * 0.05;
+    } else if (this.state === 'tackling') {
+      bodyZ = 0.14;
+      bodyY = -0.06;
+    } else if (this.state === 'recover') {
+      const total = Math.max(G.recover, T.recover);
+      const u = clamp(this.phase / total, 0, 1);
+      bodyZ = -0.1 * u;
+      bodyY = -0.06 * u;
+    } else if (this.state === 'hurt') {
+      bodyZ = 0.18;
+    } else if (Math.abs(this.vx) > 0.3) {
+      bodyY = Math.abs(Math.sin(this.t * 5)) * 0.04;
+    } else {
+      bodyY = Math.sin(this.t * 1.4) * 0.03;
+    }
+
+    n.belly.rotation.z = lerp(n.belly.rotation.z, bodyZ, k);
+    n.belly.position.y = lerp(n.belly.position.y, bodyY, k);
+    n.shoulderL.rotation.z = lerp(n.shoulderL.rotation.z, -armZ, k);
+    n.shoulderR.rotation.z = lerp(n.shoulderR.rotation.z, armZ, k);
+
+    for (const key of ['L', 'R']) {
+      const g = n['handGlow' + key];
+      g.material.opacity = lerp(g.material.opacity, 0.35 + glow * 0.65, k);
+    }
   }
 }
 

@@ -676,6 +676,17 @@ function walkGate(game, input, { maxSeconds = 400, readTells = false, carryChaya
       }
     }
 
+    // A stacked ledge ahead: its underside is a ceiling, not open air, so the
+    // 1-unit look-ahead below is too short to use here — by the time it fires
+    // the bot is already standing under the overhang and any jump from there
+    // caps out on the ceiling well short of the ledge's own top. Launch while
+    // there is still clear sky overhead, early enough for the arc to have
+    // cleared the ledge's height before x reaches its underside.
+    const stackedLedgeAhead = game.level.solids.find(
+      (s) => s.x0 > p.x && s.x0 - p.x <= 3 && s.y0 > p.y + 0.6 && s.y1 - p.y <= 6
+    );
+    if (p.grounded && stackedLedgeAhead) bot.press('jump');
+
     // Jump when the ground runs out ahead, and again once falling if it still
     // has. The look-ahead is deliberately short: probing far in front makes the
     // bot leap well before the lip and throw away most of its horizontal reach,
@@ -683,7 +694,7 @@ function walkGate(game, input, { maxSeconds = 400, readTells = false, carryChaya
     const ahead = p.x + 1.0;
     const groundAhead = game.level.groundAt(ahead, p.y + 0.6);
     const needJump = groundAhead === -Infinity || p.y - groundAhead > 2.2;
-    if (p.grounded && needJump) bot.press('jump');
+    if (p.grounded && needJump && !stackedLedgeAhead) bot.press('jump');
     if (!p.grounded && p.vy < 0 && p.jumps < p.maxJumps) {
       const under = game.level.groundAt(p.x, p.y + 0.6);
       const overVoid = under === -Infinity || p.y - under > 2.2;

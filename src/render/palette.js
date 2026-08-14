@@ -136,5 +136,21 @@ export const P = {
   // so it separates from `bone`'s skin and `shakuniRobe` in silhouette.
   shakuniBeard: 0x9a9488,
 
+  // Act 1 — Bakasura. Per docs/research/villain-roster.md: sickly, bruised,
+  // gluttonous — sallow, bilious skin, distinct from Raakchyas's clean
+  // violet-black and Kawach's iron-brown so he doesn't read as a bigger
+  // version of either. Bone jewelry (necklace, forearm rings, helm crest)
+  // reuses `bone` above, deliberately neutral so it never competes with
+  // `bakasuraHand`, the kit's one saturated accent.
+  bakasuraSkin: 0x8f9450,
+  bakasuraSkinDark: 0x565a2e,
+  // Bruise-purple worked into the belly's own sagging folds.
+  bakasuraBruise: 0x5c3a5e,
+  // The oversized hands' inflamed, reddened tone — the actual grabbing
+  // instrument and the combat-readable tell, doing the same "this is the
+  // part that hurts you" job Kawach's amber eye does for its own bash.
+  bakasuraHand: 0xdb5a3c,
+  bakasuraHair: 0x2e2318,
+
   outline: 0x0a0813,
 };

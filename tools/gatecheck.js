@@ -25,7 +25,7 @@
 // descriptor is authored correctly, that one asks whether `Level` built what
 // the descriptor said.
 
-import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR } from '../src/game/config.js';
+import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR } from '../src/game/config.js';
 import { ARCHETYPES } from '../src/game/game.js';
 import { GATES } from '../src/game/gates/index.js';
 
@@ -39,6 +39,19 @@ import { GATES } from '../src/game/gates/index.js';
  * `jumpVel` moved.
  */
 const JUMP_RESERVE_MIN = 0.25;
+
+/**
+ * Clearance a stacked ledge must leave beyond the hunter's own height — a
+ * small epsilon, not `crossing()`'s own 0.4 apex allowance, which answers a
+ * different question (room for a jump's peak, not room to stand under a
+ * ledge). The `prototype/vertical-traversal` branch's `?vtest` gate
+ * validated a 3-unit rise with `thickness: 1.2` by actually playing it: the
+ * upper segment's underside sits at `top - thickness` = `6 - 1.2` = 4.8, the
+ * lower segment's top is 3, so the proven-climbable clearance is `4.8 - 3` =
+ * 1.8 against the hunter's 1.7-unit body — a 0.1 margin. This has to stay at
+ * or below that or the check flags the one config already shown to work.
+ */
+const HEADROOM_MARGIN = 0.05;
 
 const row = (gate, check, ok, detail) => ({ gate, check, ok, detail });
 
@@ -95,21 +108,48 @@ function bodyOf(gate, s) {
 const barriersOf = (enc) => (enc.lock ? [enc.lock[0], enc.lock[1]] : []);
 
 /**
+ * Whether the lower of two x-overlapping, differently-tiered segments leaves
+ * room for the hunter to actually stand there.
+ *
+ * `edge()`'s x-overlap branch used to wave any rise through as a free step —
+ * right when the segments merely touch at a point, wrong once they genuinely
+ * overlap in x. The upper segment's solid body reaches down to `top -
+ * thickness`, and a `thickness` left at its default (5) extends well below
+ * the lower segment's own floor: the lower platform's headroom is gone
+ * before the hunter ever stands on it, and a mezzanine authored without an
+ * explicit thin `thickness` reads to the collision resolver as a wall, not a
+ * ledge to climb onto.
+ */
+function headroomClear(low, high) {
+  const shared0 = Math.max(low.x0, high.x0);
+  const shared1 = Math.min(low.x1, high.x1);
+  if (shared1 <= shared0 + 0.001) return true; // touching, not stacked
+  const underside = high.top - (high.thickness ?? 5);
+  return underside - low.top >= PLAYER.hh * 2 + HEADROOM_MARGIN;
+}
+
+/**
  * Whether the hunter can get from one platform to another in a single move, and
  * what that move costs them.
  *
- * Platforms overlapping in x are a step apart — up if the arc reaches, and
- * dropping down is always free. Platforms with a gap between them are a jump
- * apart if an arc covers it, and the cheapest arc that does is the one the
- * crossing is measured against, because the reserve of a crossing is the
- * reserve of the move it actually asks for.
+ * Platforms overlapping in x are a step apart — up if the arc reaches and the
+ * lower one leaves headroom to stand under the upper one, and dropping down
+ * is always free. Platforms with a gap between them are a jump apart if an
+ * arc covers it, and the cheapest arc that does is the one the crossing is
+ * measured against, because the reserve of a crossing is the reserve of the
+ * move it actually asks for.
  */
 function edge(s, t, arcs) {
   const rise = t.top - s.top;
   const [left, right] = s.x0 <= t.x0 ? [s, t] : [t, s];
   const gap = right.x0 - left.x1;
   if (gap <= 0.01) {
-    return rise <= arcs.runningDouble.height - 0.4 ? { crossing: null } : null;
+    if (rise > arcs.runningDouble.height - 0.4) return null;
+    if (Math.abs(rise) > 0.001) {
+      const [low, high] = s.top <= t.top ? [s, t] : [t, s];
+      if (!headroomClear(low, high)) return null;
+    }
+    return { crossing: null };
   }
   const single = crossing(gap, rise, arcs.running);
   const double = crossing(gap, rise, arcs.runningDouble);
@@ -476,6 +516,10 @@ const TELLS = [
   // reasoning as the four bosses below — the row that has to be answered is
   // the enraged one, not the base 1.0s.
   { archetype: 'shakuni', tell: 'die, enraged', windup: SHAKUNI.die.windup * SHAKUNI.enrageWindupMul },
+  // Bakasura's two windups both shorten on enrage, same reasoning as Shakuni
+  // above — the row that has to clear the floor is the enraged one.
+  { archetype: 'bakasura', tell: 'grab, enraged', windup: BAKASURA.grab.windup * BAKASURA.enrageWindupMul },
+  { archetype: 'bakasura', tell: 'tackle, enraged', windup: BAKASURA.tackle.windup * BAKASURA.enrageWindupMul },
   ...Object.entries(GUARDIAN.attacks).map(([name, a]) => ({
     archetype: 'guardian',
     tell: `${name}, enraged`,
