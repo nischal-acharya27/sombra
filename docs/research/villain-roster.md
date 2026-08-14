@@ -825,14 +825,134 @@ There is no combat, no boon-loophole, no monster form, and no antagonist
 death anywhere in her story. Of everything on this list, casting her as a
 boss to be fought is the largest invention relative to the source.
 
-**Iconography (procedural).** None available from the text — she has no
-monstrous form, no weapon, no supernatural trait. Any physical boss rig
-built for her is authored whole-cloth rather than drawn from iconography,
-which is itself the tell that she may not belong in a moveset-and-arena
-format at all (see cut recommendation #1 above). If kept, the honest design
-move is probably *not* a combat gate in the usual sense — something closer
-to a dialogue/consequence encounter reusing the touch/verb budget
-differently, which is a bigger structural ask than "reskin a Warden."
+**Cut-vs-keep, resolved.** Issue #40 already settled the either/or this
+entry originally posed: **kept**, not cut — "her gate gets a structure of
+its own (a dialogue/consequence encounter, not a standard boss/Warden
+fight) rather than an invented combat resolution the source doesn't
+support." What follows, resolved via `/grilling` during her villain design
+handoff (`docs/agents/villain-handoff.md`), is what that structure actually
+is — the one piece #40 named but didn't design.
+
+**Iconography (procedural).** A grieving human queen, not a monster —
+against one reference image, a Ramayana-adaptation court portrait: deep
+wine-red bridal/coronation attire, heavy layered gold jewelry, an ornate
+paisley-shaped crown with a single teardrop ruby, a red veil over loose
+dark wavy hair, heavy kohl, an expression that reads as weighted rather
+than triumphant or cruel. The reference's red-and-gold register is kept
+rather than shifted to a different hue family — unlike Hiranyakashipu's
+break from "gold and dark red" (a guess in the original research note, not
+tied to an image), this reference is a specific, real depiction, and
+inventing a different palette here would be less honest to source, not
+more.
+
+The overlap this creates is real, though: Shurpanakha's already-locked
+human-disguise palette is also "gold jewelry... a red drape, heavy kohl"
+(her own entry, above), and both are Ramayana-act human/human-scale women
+appearing close together in the campaign. Differentiated through
+silhouette rather than hue: a large gold nose ring (nath — unclaimed
+elsewhere on the roster), a cascading multi-strand gold coin-necklace
+reaching the waist (opulent in a specifically bridal/coronation register,
+distinct from Shurpanakha's simpler "gold jewelry"), the paisley-crown-
+and-teardrop-ruby silhouette (distinct from Duryodhana's tiered jeweled
+crown and Ravana's ten-head arc), and loose wavy hair under the veil —
+Shurpanakha's own hair is bound and ornate under her headdress, a
+concrete, checkable difference rather than a mood contrast.
+
+Silhouette and scale: `hw ≈ 0.36, hh ≈ 0.85` — hunter-scale, barely
+distinct from the hunter's own `0.34/0.85`, following Shakuni's precedent
+rather than either tyrant-king's bulk (Duryodhana `0.68/1.35`, Kamsa
+`0.58/1.05`): every oversized human figure on the roster earns its scale
+from being a physical threat, and Kaikeyi is never that in any version of
+this design — scaling her up would silently reintroduce the "boss" read
+this whole session works to remove.
+
+Signature weapon/feature: none — and not "bare-handed" the way
+Hiranyakashipu's absence of a weapon still reads as combat-ready; she
+carries nothing because nothing in this encounter is a weapon.
+
+New Kaikeyi-specific palette entries in `palette.js`: `kaikeyiRobe` (deep
+wine-maroon, a distinct register from Ravana's vermillion `lankaRobe` and
+Shurpanakha's red drape — darker and more muted, closer to dried wine than
+fresh crimson), `kaikeyiGold` (a brighter, jewelry-toned gold distinct
+from Duryodhana's armor-toned `kuruPlate` and Hiranyakashipu's muted
+`hiranyaGold` — hers is ornament, not armor, and should read that way),
+and `kaikeyiSkin` (a warm mid-brown human tone, distinct from
+`hunterSkin`, `mathuraSkin` and `lankaSkin`). No `Core` telegraph color:
+nothing in her kit does damage, so there is no "incoming hit" for a core
+flare to signal — the first entry on the roster to skip that field
+entirely, honestly, rather than assign one out of template habit.
+
+**Kit shape.** `no-combat-form` — the handoff template's own fourth listed
+option (`docs/agents/villain-handoff.md`), used for the first time. No
+`Enemy`/`Boss` state machine at all: the hunter stays silent, preserving
+Mahishasura's "speaks exactly once in the whole campaign" claim rather than
+spending a second exception the very next session, and "answers" Kaikeyi
+entirely through movement. Only three of the seven verbs carry meaning
+here — `move`/`jump`/`dash` — deliberately excluding `light`/`heavy`/
+`magic`/`pukar`: every attack verb's vocabulary everywhere else in the
+campaign means *hurt something*, and wiring an attack button to "here is my
+answer to your grief" would undercut the point of building a gate with
+nothing to fight in the first place.
+
+The gate is a linear sequence of four beats, each staged as a two-path
+fork — a low route and a route requiring a jump, or a left/right split —
+resolved by whichever trigger volume the hunter's own position crosses
+first, reusing the same zone-entry mechanism every other gate's
+`enter`/`cleared` triggers already are (no new collision primitive; #41's
+traversal prototype already validated stacked ledges, gaps and alternate
+routes for exactly this shape). The gate is deliberately no-fail: there is
+no wrong fork and no retry state, because Kaikeyi is not a gate to be won
+through — like every other Warden she is an unjudged soul the stopped
+Wheel is holding in place, not a lock the hunter needs the right answer to
+open.
+
+**Beat sequence** (in place of a phase-transition flag — there is no
+rig-swap reveal, and "phase" implies an HP threshold that doesn't exist
+here). Four beats, chronological, each keyed to her real *Ayodhya Kanda*
+arc rather than an invented generic structure, the same commitment to
+staying close to documented source every other entry makes: (1) **the boon
+owed** — framed as a legitimate transaction she was owed, not a scheme;
+(2) **Manthara's manipulation** — naming directly that the malice was
+supplied to her, not by her; (3) **the invocation and its cost** — Bharata
+crowned, Rama exiled, Dasharatha dead of grief; (4) **her regret** — the
+ending the source already grants her in most tellings, arrived at rather
+than caused by the hunter. Four beats is an explicit, named exception to
+the locked "once, or twice with a phase beat" dialogue budget
+(`docs/DECISIONS.md`), the same exception Mahishasura's own session already
+named for the same reason — not a number reused quietly.
+
+Which fork the hunter takes at each beat shapes what she says next — more
+anger, more grief, which memory she dwells on — but never whether she
+reaches beat four. This is the "witnessing, not winning" call the
+respectful-treatment note below is built around: the encounter is not the
+hunter's to solve.
+
+Staging: she stands at one fixed point past the far end of the arena,
+visible for the whole gate rather than repositioning between beats — the
+hunter is always walking toward her, the same "walking toward the exit"
+shape every other gate already has. A handful of authored idle/reactive
+poses (a turn of the head, a shift in posture) fire with each beat, on the
+same pre-built-rig/`visible`-flag pattern the allocate-nothing rule already
+requires elsewhere; nothing about her rig moves under its own logic.
+
+**Technical flags for implementation** (raised here, not resolved —
+matching #41's own flag of the `edge()` headroom gap left for #40's gates
+to inherit):
+
+- `_fireBeats` (built in #42) currently only knows three trigger types —
+  `enter`, `cleared`, `phase-transition` — all either a gate boundary or an
+  HP threshold. This gate needs a new linear trigger, firing in sequence
+  off fork-resolution rather than either of those (something like
+  `at: 'choice-made'`), before it can actually be built.
+- The build-tier system in `docs/agents/villain-handoff.md` ("every
+  villain gets exactly one of these three") was provably incomplete — 
+  amended in the same commit as this write-up to a fourth tier.
+
+**Tier call.** 0 — a new category, added to `docs/agents/villain-handoff.md`
+this session: a static/reactive figure with no `Enemy`/`Boss` ancestry at
+all, built the same procedural way as every other rig but driven only by
+the beat sequence firing rather than any chase/telegraph/attack state
+machine. The first villain on the roster with no fight to build a tier for.
 
 **Respectful-treatment note.** High flag, differently from Shurpanakha's:
 Kaikeyi is a grieving, manipulated human mother whose real fault (per
@@ -844,6 +964,20 @@ justified voice are common). Building her as a "villain" to defeat risks
 being read as flattening a figure many current tellings are actively
 working to *un-flatten*, which is close to exactly the reductive treatment
 `SPEC-CAMPAIGN.md`'s closing note commits to avoiding.
+
+Resolved via `/grilling` during this handoff: the risk above turns out to
+apply just as much to a non-combat "convince her" framing as to a combat
+one. A version of this gate where the hunter's good answers *cause* her to
+relent still casts her arc as something the player accomplishes — a
+subtler flattening than a boss fight, but the same shape. This design
+closes that gap directly rather than leaving it as an unused caveat: the
+no-fail structure is not just a difficulty call, it is the
+respectful-treatment answer made mechanical. Passage was never the
+hunter's to win, and her regret — real in most tellings — is dramatized as
+already hers, arrived at on her own timeline, not produced by the hunter's
+choices. The hunter's silence does the same work from the other side: this
+is not a debate the hunter wins with the right words, because the hunter
+never gets words at all.
 
 ---
 

@@ -4,11 +4,20 @@ How a villain's visual intent (reference images + written description)
 becomes procedural three.js geometry, honoring the no-asset-files rule —
 nothing here is ever imported; every model is built in code.
 
-## The three build tiers
+## The build tiers
 
 Every villain gets exactly one of these, decided during the handoff session
-below, not inferred later during implementation:
+below, not inferred later during implementation. Originally scoped as three
+tiers, all of which assume the villain has something to fight; Kaikeyi's
+handoff added a fourth, below tier 1, once that assumption held for 14 of
+15 villains and broke on the fifteenth.
 
+0. **Static/reactive figure.** No `Enemy`/`Boss` ancestry at all — a rig
+   built the same procedural way as every other tier, but driven only by a
+   beat sequence firing (idle/reactive pose swaps tied to story beats), with
+   no chase/telegraph/attack state machine of any kind. Use when the
+   villain has no combat form to build a kit for — see Kaikeyi's entry in
+   `docs/research/villain-roster.md` for the one precedent so far.
 1. **Reskin.** An existing `buildX()` in `src/render/models.js` takes a new
    `skin` object (see `buildCharger`, `buildKawach` for the pattern) — new
    palette, zero new geometry. Use when the villain's iconography doesn't
@@ -44,7 +53,7 @@ of this is already there.
 - **Phase-transition flag** — a reveal or transform moment (human-disguise →
   monster, buffalo ↔ human), reusing the existing boss-enrage palette/pose
   swap precedent, or none.
-- **Tier call** — 1, 2, or 3, from the section above.
+- **Tier call** — 0, 1, 2, or 3, from the section above.
 - **Respectful-treatment note** — carried over from the research doc; don't
   drop it during retrofit.
 
