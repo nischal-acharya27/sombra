@@ -137,11 +137,21 @@ export class HUD {
     }, 1900);
   }
 
-  /** Builds a `.sys-window` element from `{title, big, body, lines, glitch}`; does not attach it. */
-  _buildWindowEl({ title, big, body, lines, glitch = false }) {
-    const el = document.createElement('div');
+  /**
+   * Writes `{title, big, body, lines, glitch}` into `el` — a fresh element if
+   * none is given, or an existing `.sys-window` reused in place otherwise.
+   *
+   * The reuse path is what keeps `window()`/`storyWindow()` from ever having
+   * two elements live in `#windows` at once for what is, to the player, one
+   * ongoing box. `#windows` is a flex column, so a second element appended
+   * while the first is still mid-fade-out lands *below* it — not on top of
+   * it — and only slides up into the first's place once that fade finishes
+   * and removes it. That slide was the actual bug: not any one card's look,
+   * but a new one arriving as a sibling instead of a replacement. Writing
+   * into the same node sidesteps it entirely — there is never a second node.
+   */
+  _fillWindowEl(el, { title, big, body, lines, glitch = false }) {
     el.className = glitch ? 'sys-window glitch' : 'sys-window';
-
     let html = `<h3>${title}</h3><div class="divider"></div>`;
     if (big) html += `<div class="big">${big}</div>`;
     if (body) html += `<p>${body}</p>`;
@@ -159,16 +169,33 @@ export class HUD {
    * `glitch` marks the window as the System failing to report cleanly, rather
    * than the game failing to render — see `.sys-window.glitch` in the CSS.
    * Returns a promise that resolves when it closes, so callers can sequence.
+   *
+   * A call arriving while a previous `window()` is still on screen — timed
+   * out and fading, or not — reuses that same element (see `_fillWindowEl`)
+   * instead of stacking a second one, and restarts the duration clock on the
+   * new content. Nothing in this codebase awaits the promise for sequencing
+   * today, so a reused call resolving on its own timer rather than the
+   * superseded call's is a real but harmless simplification, not a contract
+   * anything depends on.
    */
   window({ title, big, body, lines, glitch = false, duration }) {
-    const el = this._buildWindowEl({ title, big, body, lines, glitch });
-    this.el.windows.appendChild(el);
+    clearTimeout(this._windowOutTimer);
+    clearTimeout(this._windowRemoveTimer);
+    const reused = this._windowEl;
+    const el = this._fillWindowEl(reused ?? document.createElement('div'), { title, big, body, lines, glitch });
+    if (reused) {
+      el.classList.remove('out');
+    } else {
+      this.el.windows.appendChild(el);
+      this._windowEl = el;
+    }
 
     return new Promise((resolve) => {
-      setTimeout(() => {
+      this._windowOutTimer = setTimeout(() => {
         el.classList.add('out');
-        setTimeout(() => {
+        this._windowRemoveTimer = setTimeout(() => {
           el.remove();
+          if (this._windowEl === el) this._windowEl = null;
           resolve();
         }, 260);
       }, duration);
@@ -183,25 +210,34 @@ export class HUD {
    * `Game.restResume` does the moment the hunter accepts the RESUME prompt
    * `bossRestPrompt` lands right underneath it.
    *
-   * `HUD` shows one beat at a time; `Game` owns the queue behind it. Self-
-   * clearing here (rather than only at each call site) is what keeps a second
-   * beat from orphaning the first in `#windows` — the bug this queue exists
-   * to fix. `onNext`, if given, renders a NEXT button that hands control back
-   * to `Game` to show the next queued beat.
+   * `HUD` shows one beat at a time; `Game` owns the queue behind it. Paging
+   * to the next beat reuses the same element (`_fillWindowEl`) rather than
+   * closing and reopening one — the fix for the same stack-then-slide bug
+   * `window()`'s own doc comment describes, and the more visible case of it:
+   * this is the window a player pages through several times in a row.
+   * `onNext`, if given, renders a NEXT button that hands control back to
+   * `Game` to show the next queued beat.
    */
   storyWindow({ title, big, body, glitch = false, onNext }) {
-    this.hideStoryWindow();
-    const el = this._buildWindowEl({ title, big, body, glitch });
+    const reused = this._storyWindowEl;
+    const el = this._fillWindowEl(reused ?? document.createElement('div'), { title, big, body, glitch });
+    if (reused) {
+      el.classList.remove('out');
+    } else {
+      this.el.windows.appendChild(el);
+      this._storyWindowEl = el;
+    }
+    // Toggled, not just added: reusing `el` means a beat with no NEXT
+    // (the last one in a queue) has to be able to shed a `paging` a prior
+    // beat left set, not just gain it.
+    el.classList.toggle('paging', !!onNext);
     if (onNext) {
-      el.classList.add('paging');
       const btn = document.createElement('button');
       btn.className = 'cta';
       btn.textContent = 'NEXT';
       btn.addEventListener('click', onNext);
       el.appendChild(btn);
     }
-    this.el.windows.appendChild(el);
-    this._storyWindowEl = el;
   }
 
   hideStoryWindow() {

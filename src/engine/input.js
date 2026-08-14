@@ -34,6 +34,12 @@ const BINDINGS = {
   magic: ['KeyL', 'KeyC'],
   pause: ['Escape'],
   restart: ['KeyR'],
+  // Not read by any move — only by `Game._pollAdvanceInput`, so a paged
+  // story beat has a keyboard confirm the way the title/death screen
+  // already does via `main.js`'s own separate Enter listener. Bound here
+  // too, rather than left to that listener alone, so it goes through the
+  // same buffer `pressed()`/`peek()` semantics as every other action.
+  enter: ['Enter'],
 };
 
 export class Input {

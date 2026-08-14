@@ -414,6 +414,31 @@ export class Game {
     this.freeze = Math.max(0, this.freeze - dt);
   }
 
+  /**
+   * While a resting-driven prompt holds `this._advance`, any of the game's
+   * own action buttons — not only a mouse click on NEXT/BEGIN/RESUME —
+   * fires it. `peek()` rather than `pressed()`: deciding whether to advance
+   * has to look at every action before consuming any of them, since a
+   * short-circuiting `||` chain of `pressed()` calls would leave a second,
+   * unrelated buffered action sitting unconsumed for the fight this beat is
+   * about to release the player back into. `clearBuffer()` on the frame an
+   * advance actually fires answers that instead: whatever combination of
+   * keys or touch buttons triggered it, nothing carries over as a swing the
+   * instant `resting` drops.
+   *
+   * Called from `render()`, not `update()` — `update()` returns immediately
+   * while `resting` holds, and this has to run on exactly the frames that
+   * early return skips.
+   */
+  _pollAdvanceInput() {
+    if (!this._advance) return;
+    const i = this.input;
+    const wants = ['jump', 'dash', 'light', 'heavy', 'magic', 'enter'].some((a) => i.peek(a));
+    if (!wants) return;
+    i.clearBuffer();
+    this._advance();
+  }
+
   // -- fixed-step simulation ------------------------------------------------
 
   update(dt) {
@@ -513,6 +538,7 @@ export class Game {
 
   render(dt) {
     this.decayFreeze(dt);
+    if (this.resting) this._pollAdvanceInput();
 
     const focus = this.boss && !this.boss.dead ? this.boss : null;
     this.cam.update(dt, this.player, focus);
@@ -870,17 +896,31 @@ export class Game {
   _startEncounter(e) {
     e.started = true;
     // A Warden encounter whose gate authors an 'intro' beat pages through it,
-    // hard-frozen, before anything spawns — `docs/DECISIONS.md` § "Boss/Warden
-    // dialogue returns" reversed the 2026-08-09 cut for exactly this boundary.
-    // Gated on the gate actually carrying one, so gates authored before this
-    // (2–10, no `beats` entry at `at: 'intro'` yet) fall straight through to
-    // `_beginEncounter` and keep today's toast/window behaviour unchanged.
+    // hard-frozen, before the fight itself starts — `docs/DECISIONS.md` §
+    // "Boss/Warden dialogue returns" reversed the 2026-08-09 cut for exactly
+    // this boundary. The Warden itself is the one thing that does spawn
+    // ahead of the beats, below. Gated on the gate actually carrying one, so
+    // gates authored before this (2–10, no `beats` entry at `at: 'intro'`
+    // yet) fall straight through to `_beginEncounter` and keep today's
+    // toast/window behaviour unchanged.
     const hasIntroBeat =
       e.intro && e.spawns.some((s) => s.type === 'warden') && this.gate.beats?.some((b) => b.at === 'intro');
     if (!hasIntroBeat) {
       this._beginEncounter(e, false);
       return;
     }
+    // The Warden has to already be standing in the world for the hunter to
+    // be talking to, not summoned by the fight starting a beat later — spawned
+    // directly here rather than queued through `pendingSpawns`/`delay`.
+    // `_spawn` already sets `this.boss`, which is all `render()`'s camera
+    // focus needs to start framing both of them for the whole conversation;
+    // nothing else about the camera or HUD had to change. `_wardenPreSpawned`
+    // tells `_beginEncounter` below not to spawn it a second time once the
+    // fight actually starts.
+    for (const s of e.spawns) {
+      if (s.type === 'warden') this._spawn({ ...s, encounter: e.id });
+    }
+    e._wardenPreSpawned = true;
     this.resting = true;
     this._fireBeats('intro', () => {
       this._advance = () => this._beginWardenFight(e);
@@ -904,6 +944,9 @@ export class Game {
       this.cam.setBounds({ x0: e.lock[0], x1: e.lock[1] });
     }
     for (const s of e.spawns) {
+      // Already standing there — `_startEncounter` spawned it ahead of the
+      // paged intro so the hunter could see who was talking.
+      if (e._wardenPreSpawned && s.type === 'warden') continue;
       this.pendingSpawns.push({ ...s, encounter: e.id, t: s.delay });
     }
     if (introHandled) {
