@@ -242,6 +242,27 @@ export class HUD {
     this._bossRestEl = null;
   }
 
+  /**
+   * The CTA a Warden's last `'intro'` beat holds on — `bossRestPrompt`'s same
+   * bare card-plus-button shape, minus the name header: the story window
+   * above it already carries the Warden's name, so repeating it here would
+   * just be the same word twice. `onBegin` is `Game._beginWardenFight`;
+   * clearing it is `hideRestPrompts`, unchanged — it already only cares that
+   * `_bossRestEl` and the open story window both exist, not which prompt put
+   * them there.
+   */
+  beginPrompt(onBegin) {
+    const el = document.createElement('div');
+    el.className = 'sys-window boss-rest';
+    const btn = document.createElement('button');
+    btn.className = 'cta';
+    btn.textContent = 'BEGIN';
+    btn.addEventListener('click', onBegin);
+    el.appendChild(btn);
+    this.el.windows.appendChild(el);
+    this._bossRestEl = el;
+  }
+
   /** Tears down the boss-rest beat: the RESUME prompt and the story window under it. */
   hideRestPrompts() {
     this.hideBossRestPrompt();

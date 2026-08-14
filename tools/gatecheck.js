@@ -25,7 +25,7 @@
 // descriptor is authored correctly, that one asks whether `Level` built what
 // the descriptor said.
 
-import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR } from '../src/game/config.js';
+import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR } from '../src/game/config.js';
 import { ARCHETYPES } from '../src/game/game.js';
 import { GATES } from '../src/game/gates/index.js';
 
@@ -381,19 +381,26 @@ function enemyTypes(gate) {
  * meet it too, and this check will not be what notices if they are not.
  */
 /** The only boundaries `Game._fireBeats` knows how to fire on. */
-const BEAT_BOUNDARIES = new Set(['enter', 'cleared']);
+const BEAT_BOUNDARIES = new Set(['enter', 'intro', 'cleared']);
 
 /**
- * A story beat is authored to be read at a glance — `docs/PLAYTEST.md` round 3
- * is what the alternative cost — and only ever fires at a boundary
- * `Game._fireBeats` recognises. Both are properties of the descriptor, so both
- * are cheap to hold to on every run rather than trusted to authoring care.
+ * A story beat only ever fires at a boundary `Game._fireBeats` recognises —
+ * that part is still cheap to hold to on every run rather than trusted to
+ * authoring care.
  *
- * The word budget is not derived from anything measured, unlike the jump
- * reserve or the telegraph floor: it is a generous ceiling meant to catch a
- * beat that grew into a paragraph, not to tune prose.
+ * The word budget itself was tighter once (16) and defended as a "read at a
+ * glance" ceiling — `docs/PLAYTEST.md` round 3 is what a wall of text
+ * competing with a live fight cost. `docs/DECISIONS.md` § "A Warden's intro
+ * and defeat are a scene, not a line" is why that reasoning no longer binds
+ * a single card: `storyWindow` holds until the player clicks NEXT, so
+ * nothing here is ever racing a fixed timer or a fight underneath it the way
+ * the cut window was. Elaborate content now lives in beat *count*, not in
+ * cramming one card — Shakuni's scene is 21 beats, none of them long. This
+ * stays a real ceiling, not a removed one, so a beat that grew into an
+ * actual paragraph — the failure mode this always existed to catch — still
+ * goes red.
  */
-const BEAT_WORD_LIMIT = 16;
+const BEAT_WORD_LIMIT = 30;
 
 function storyBeats(gate) {
   const bad = [];
@@ -464,6 +471,11 @@ const TELLS = [
   { archetype: 'kawach', tell: 'bash', windup: KAWACH.bash.windup },
   { archetype: 'bhootBatti', tell: 'bolt', windup: BHOOT_BATTI.shoot.windup },
   { archetype: 'tantrik', tell: 'summon', windup: TANTRIK.summon.windup },
+  // Shakuni's own windup shortens on enrage (`docs/research/villain-roster.md`:
+  // "escalation comes from the die's telegraphs tightening"), so — same
+  // reasoning as the four bosses below — the row that has to be answered is
+  // the enraged one, not the base 1.0s.
+  { archetype: 'shakuni', tell: 'die, enraged', windup: SHAKUNI.die.windup * SHAKUNI.enrageWindupMul },
   ...Object.entries(GUARDIAN.attacks).map(([name, a]) => ({
     archetype: 'guardian',
     tell: `${name}, enraged`,

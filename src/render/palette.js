@@ -123,5 +123,18 @@ export const P = {
   wheelCore: 0xc25cff,
   wheelBloom: 0xff9a5c,
 
+  // Act 1 (Mahabharata) — Shakuni. Per docs/research/villain-roster.md: aged
+  // cloth, bone, dull gold, none of the roster's violet/iron/crimson
+  // supernatural registers. `crimson` (above) carries the die's one danger
+  // accent, reused rather than a new saturated hue for the same reason.
+  shakuniRobe: 0x8a7a5a,
+  shakuniRobeDark: 0x564a36,
+  shakuniGold: 0x9c8a4a,
+  // The beard: the one detail that reads "aged courtier" rather than "a
+  // smaller grunt" at a glance, per the handoff's "slight through
+  // proportion, not stature". Ash-grey rather than another warm court tone,
+  // so it separates from `bone`'s skin and `shakuniRobe` in silhouette.
+  shakuniBeard: 0x9a9488,
+
   outline: 0x0a0813,
 };

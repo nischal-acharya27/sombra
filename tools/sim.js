@@ -164,6 +164,15 @@ class Bot {
         this.queued.splice(i, 1);
       }
     }
+    // A resting-driven prompt (a paged intro/cleared beat, then its
+    // BEGIN/RESUME card) holds `Game.update` itself — see `resting` — so
+    // without this a bot walking into any beat-bearing encounter would just
+    // sit at the trigger for the rest of `maxSeconds`. `game._advance` is
+    // always whatever a click on the *currently* open prompt would do; a
+    // human reads at their own pace and clicks once, a bot clicks every
+    // frame, and both end up at the same place since each click only ever
+    // advances one step.
+    if (this.g.resting) this.g._advance?.();
     // Mirrors `Loop`: the fixed-step accumulator only advances while
     // `timeScale()` is nonzero, and `freeze` only decays in `render()`, which
     // the suite never calls. Driving `update` unconditionally would make a
@@ -488,6 +497,7 @@ function walkGate(game, input, { maxSeconds = 400, readTells = false, carryChaya
   let attackCd = 0;
   let magicCd = 0;
   let dashCd = 0;
+  let meleeCount = 0;
   let stuckAt = p.x;
   let stuckFor = 0;
   let chasing = false;
@@ -591,7 +601,16 @@ function walkGate(game, input, { maxSeconds = 400, readTells = false, carryChaya
       bot.hold('left', false);
       p.facing = target.x > p.x ? 1 : -1;
       if (attackCd <= 0) {
-        bot.press('light');
+        // Mostly the light chain, but a heavy often enough in the rotation
+        // that an armoured target — `Kawach.takeHit`'s shrug below
+        // `armorBreakLaunch`, see config.js — is not fought with a move that
+        // can never mark it. Every light in the game plants `launch: 0` or
+        // `3.5`, both under the 13.0 floor, so a bot that only ever pressed
+        // `light` would read as "stuck" against anything armoured — a gap in
+        // this rotation, not in the level, once gate 1's court guards made it
+        // the very first thing met wearing one.
+        bot.press(meleeCount % 4 === 3 ? 'heavy' : 'light');
+        meleeCount++;
         attackCd = 0.2;
       }
     } else if (
@@ -763,22 +782,37 @@ function giveChaya(game, bot) {
 
 function bossFight(game, input, strategy, { maxSeconds = 240, carryChaya = false, latency = REACTION } = {}) {
   hardStart(game);
+
+  // Gate 1 no longer hosts a boss-tier Warden: docs/SPEC-CAMPAIGN.md moves
+  // the four locked bosses to their own gates (Duryodhana, Ravana,
+  // Hiranyakashipu, Mahishasura), and gate 1's own Warden (Shakuni) is not
+  // one of them. Find whichever gate still has a `boss: true` encounter,
+  // generically, rather than assuming index 0 — this probe's own "reads any
+  // gate's descriptor, not gate 1's names" intent already covered everything
+  // below except which gate to load in the first place.
+  const bossGateIndex = game.gates.findIndex((g) => g.encounters.some((e) => e.boss));
+  if (bossGateIndex < 0) throw new Error('bossFight: no gate in the campaign has a boss encounter');
+  game._enterGate(bossGateIndex);
+
   const bot = new Bot(game, input, latency);
   const p = game.player;
 
   // Walk in carrying a chaya, when asked. Set up at the spawn point *before*
-  // the teleport, because nothing has triggered there yet — the first encounter
-  // is at x=40 — so the setup cannot disturb an encounter mid-flight. The ally
-  // re-forms beside the hunter when it is left behind, which is the same rule
-  // that carries it through a sealed barrier in ordinary play.
+  // the teleport, because nothing has triggered there yet, so the setup
+  // cannot disturb an encounter mid-flight. The ally re-forms beside the
+  // hunter when it is left behind, which is the same rule that carries it
+  // through a sealed barrier in ordinary play.
   const carried = carryChaya ? giveChaya(game, bot) : false;
 
   // Skip to the arena rather than replaying the gate for each strategy. Mark
   // everything that is not the Warden fight as done — by the flag rather than
-  // by an encounter id, so this reads any gate's descriptor and not gate 1's
-  // names.
-  p.x = 178;
-  p.y = 3.2;
+  // by an encounter id, so this reads any gate's descriptor and not one
+  // gate's names. Positioned off the boss encounter's own trigger rather
+  // than a literal x — the old literal was gate 1's own arena, back when
+  // gate 1 was always the gate under test.
+  const bossEnc = game.gate.encounters.find((e) => e.boss);
+  p.x = bossEnc.trigger + 6;
+  p.y = game.gate.arenaTop + 0.2;
   for (const e of game.encounters) {
     if (!e.boss) {
       e.started = true;

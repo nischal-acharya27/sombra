@@ -1,197 +1,164 @@
-// Gate 1 — "Hollow of the Kneeling Stone".
+// Gate 1 — "The Loaded Sabha" (Mahabharata, Sabha Parva).
 //
 // A gate is a descriptor. This file holds everything that makes this gate this
-// gate — its geometry, its encounters, its own constants, its realm's palette
-// and its Warden — and nothing that knows how any of it is built. `Level` turns
-// a descriptor into geometry and answers collision queries against it; `Game`
-// reads every per-gate number from the descriptor it was handed rather than
-// importing one.
+// gate — its geometry, its encounters, its own constants, its act's palette
+// and its Warden — and nothing that knows how any of it is built. `Level`
+// turns a descriptor into geometry and answers collision queries against it;
+// `Game` reads every per-gate number from the descriptor it was handed rather
+// than importing one.
 //
-// Gate 1 came through that seam number for number, before gate 2 existed. It is
-// the only content in the project with four playtest rounds behind it, which
-// makes it the only usable control: change the shape that holds content and
-// author new content in the same step and a failure has two candidate causes.
-// See docs/SPEC-CAMPAIGN.md § Further Notes.
+// This is gate 1 under the fifteen-gate redesign (docs/SPEC-CAMPAIGN.md):
+// Shakuni, not the retired Guardian/Dwar-Rakshak, and a royal dice hall in
+// place of the old chasm-and-bridge geometry. "Mostly flat — verticality
+// would obscure his die's telegraph" is the spec's own call for this gate, so
+// unlike the build it replaces there is no chasm and no climb here: every
+// segment below is contiguous with the next, a genuinely flat hall rather
+// than a series of jumps.
 
-import { GUARDIAN } from '../config.js';
+import { SHAKUNI } from '../config.js';
 import { STRINGS } from '../../ui/strings.js';
-
-/** The arena floor. The Warden spawns on it and the exit arch stands on it. */
-const ARENA_TOP = 3;
+import { P } from '../../render/palette.js';
 
 /**
- * The realm's palette: fog, sky and ground.
- *
- * `docs/DECISIONS.md` § Art direction darkens these left to right across a gate.
- * The endpoints belong to the realm rather than to the campaign, so each realm
- * moves across its own length instead of ten gates fading to black together.
- *
- * Lighting stays in `render/palette.js`. `skyFill` is also every toon material's
- * default rim, so it is not a realm's to own — the line is that a realm holds
- * what the hunter looks *at*, and the palette holds what lights it and what the
- * System, the chaya and the characters are made of.
+ * Act 1's palette register — "Court/mortal: bronze, iron, regal-but-grounded"
+ * per docs/SPEC-CAMPAIGN.md's per-act table. The campaign's one purely human
+ * act gets the one register with nothing supernatural in it: no violet, no
+ * crimson-cored monster, just warm bronze court light going to shadow at the
+ * hall's far end.
  */
 const REALM = {
-  sky: { zenith: 0x140b2e, mid: 0x3a2160, horizon: 0x8a5a86 },
-  // Fog matches the horizon so distance dissolves rather than clipping.
-  fog: { color: 0x5c3f68, near: 26, far: 132 },
+  sky: { zenith: 0x241a0f, mid: 0x6b4a24, horizon: 0xc79a4e },
+  fog: { color: 0x8a6a2e, near: 26, far: 132 },
 
-  grass: 0x7fae7a,
-  grassBlade: 0x8fc48c,
-  grassBladeTip: 0xd8e9a8,
-  rock: 0x6d6a7d,
-  rockDark: 0x3f3d4d,
-  rockMoss: 0x5d7a5e,
-  stone: 0x8b869a,
-  crystal: 0x9d5cff,
+  grass: 0x6b5a34,
+  grassBlade: 0x7a6a3e,
+  grassBladeTip: 0xd8c48a,
+  rock: 0x5c4526,
+  rockDark: 0x2b2013,
+  rockMoss: 0x4a3a1e,
+  stone: 0x8f8060,
+  crystal: 0xf2b23c,
 
-  // Two mist bands: one behind the play plane, one in front of it.
-  mist: { back: 0xc9a3ff, front: 0x8a5a86 },
-  // Parallax ridges, nearest first. The fog does the aerial perspective, so
-  // each layer only has to be lighter than the one in front of it.
-  ridges: [0x3f3d4d, 0x4a3f60, 0x5d5077],
+  mist: { back: 0xc9a35c, front: 0x8a6a2e },
+  ridges: [0x2b2013, 0x3f2f1a, 0x5c4526],
 };
 
 /**
- * Solid ground, left to right. Gaps between segments are real gaps — the
- * traversal beats of the gate are the spaces this list leaves out.
- *
- * Every gap is 3.8. A crossing therefore needs 4.48 of the measured 6.08-unit
- * running jump — 26% in reserve. That reserve is the whole point: at 4.5-unit
- * gaps the margin was small enough that the jump had to start within a few
- * centimetres of the lip, and both scripted bots died there repeatedly.
- *
- * The chasm was authored at 3.8 for that reason and the rest of the gate was
- * not — the approach, the climb and the bridge were laid out at 4.0 before the
- * reasoning existed, which is 23% and under the 25% the touch budget in
- * `docs/SPEC-CAMPAIGN.md` asks for. The tier-1 checks are what noticed; five
- * take-off lips moved 0.2 to the right and nothing else changed. Landing lips
- * stayed where they were, so no lock, trigger or spawn was authored against a
- * number that has since moved.
+ * The hall floor, left to right — one continuous run. `docs/SPEC-CAMPAIGN.md`
+ * calls gate 1 "mostly flat" specifically so Shakuni's die reads clearly: a
+ * gap or a climb here would be traversal texture competing with the one tell
+ * this gate exists to teach. Every `x1` below equals the next segment's `x0`,
+ * so there is no void between them at all — the boundaries below are purely
+ * where the decoration (and the encounters) change, not where the ground
+ * does.
  */
 const SEGMENTS = [
-  // Approach: wide, safe, nothing to fight. Room to learn the controls.
-  { x0: -6, x1: 30.2, top: 0, trees: 3, crystals: 2, boulders: 3, pillars: 2 },
+  // The colonnade approach: wide, safe, nothing to fight yet.
+  { x0: -6, x1: 40, top: 0, barren: true, depth: 8, pillars: 4 },
 
-  // First blood — a shallow bowl you cannot leave until it is clear.
-  { x0: 34, x1: 68.2, top: 0, trees: 2, boulders: 4, crystals: 1, pillars: 1 },
+  // The court guards' floor.
+  { x0: 40, x1: 84, top: 0, barren: true, depth: 8, pillars: 2 },
 
-  // The climb. Three steps, each a committed jump.
-  { x0: 72, x1: 80.2, top: 1.6, boulders: 1, crystals: 1 },
-  { x0: 84, x1: 91.2, top: 3.4, boulders: 1 },
-  { x0: 95, x1: 103, top: 5.2, crystals: 2, boulders: 1 },
+  // The short walk toward Shakuni's own end of the hall.
+  { x0: 84, x1: 100, top: 0, barren: true, depth: 8, pillars: 1 },
 
-  // The chasm: small islands over the void, patrolled by bhoot-battis. The drop below
-  // is what makes it read as dangerous; the gap width only decides whether it
-  // is *fair*, and it is the same 3.8 the rest of the gate now uses.
-  { x0: 106.8, x1: 111.8, top: 5.2, barren: true, depth: 5 },
-  { x0: 115.6, x1: 120.6, top: 6.4, barren: true, depth: 5 },
-  { x0: 124.4, x1: 129.4, top: 5.0, barren: true, depth: 5 },
-
-  // The bridge, and the ambush on it.
-  { x0: 133.2, x1: 162.2, top: 4.2, boulders: 3, pillars: 3, crystals: 2, trees: 1 },
-
-  // The Warden's arena — long, flat, no cover, nowhere to run.
-  { x0: 166, x1: 204, top: ARENA_TOP, depth: 9, boulders: 2, pillars: 2, thickness: 6 },
+  // Shakuni's floor: long, flat, no cover — clear sightlines for a kit that
+  // lives on being read at range, and nowhere for a hunter who ignores the
+  // die's telegraph to blame the geometry instead of the read.
+  { x0: 100, x1: 156, top: 0, barren: true, depth: 9, pillars: 3, thickness: 6 },
 ];
 
 /**
- * The gate's Warden: an archetype, a title, and the numbers it is elevated to.
- *
- * Gate 1's is a boss — bespoke and multi-phase — so its archetype is a class of
- * its own rather than a raakchyas with a bigger health bar. The stats still
- * arrive this way, because `Guardian` reads every number from the block it is
- * handed exactly as `Raakchyas` does, and that is what makes the next nine Wardens
- * configuration instead of nine more files.
+ * Kawach, reskinned as the hall's own court guards rather than Naraka's
+ * iron — bronze plate and a gold eye-tell, Act 1's own register, per
+ * docs/SPEC-CAMPAIGN.md's gate-01 table ("Kawach → court guards"). Passed
+ * through `Game._spawn`'s `s.skin`, not `w.skin`: they are the regular
+ * enemy here, not the Warden.
+ */
+const COURT_GUARD_SKIN = { body: P.manavPlate, dark: P.manavPlateDark, eye: P.manavCore };
+
+/**
+ * The gate's Warden: an archetype, a title, and the numbers it is elevated
+ * to. Shakuni is tier 2 (`docs/agents/villain-handoff.md`) — a new rig, but
+ * `Shakuni` in `enemies.js` reads every number from the block it is handed
+ * exactly as `Kawach`/`Raakchyas` do, the same seam that makes the other ten
+ * Wardens configuration instead of ten more files.
  */
 const WARDEN = {
-  archetype: 'guardian',
+  archetype: 'shakuni',
   title: STRINGS.GATE1_WARDEN_TITLE,
-  stats: GUARDIAN,
+  stats: SHAKUNI,
 };
 
 /**
- * Encounters. `lock` seals the fight between two x positions until every enemy
- * it spawned is dead.
+ * Encounters. `lock` seals the fight between two x positions until every
+ * enemy it spawned is dead.
  */
 const ENCOUNTERS = [
   {
-    id: 'first-blood',
-    trigger: 40,
-    lock: [35, 67],
-    // The one rule the whole combat design rests on, stated once, the first
-    // time the player meets something that can hurt them — and stated *in the
-    // intro window*, not after it.
-    //
-    // It used to be a second window: 37 words, opening at 1.7 s, for 4.2 s.
-    // Raakchyas spawn at 0 s, 0.5 s and 1.4 s, so it arrived with all three
-    // already on the player and left before any of them was dead. Round 3:
-    // "too much text, for a short period of time... reading the texts while
-    // fighting them is not very feasible." A rule nobody can read is a rule
-    // nobody was taught, and if you believe touching a raakchyas hurts, crowding
-    // reads as chip damage, backing off reads as correct, and the fight you are
-    // actually being offered never starts.
-    //
-    // One line, on screen from 0 s, short enough to take in at a glance.
+    id: 'court-guards',
+    trigger: 44,
+    lock: [42, 82],
     intro: {
-      title: STRINGS.GATE1_FIRSTBLOOD_TITLE,
-      body: STRINGS.GATE1_FIRSTBLOOD_BODY,
-      note: STRINGS.GATE1_FIRSTBLOOD_NOTE,
+      title: STRINGS.GATE1_GUARDS_TITLE,
+      body: STRINGS.GATE1_GUARDS_BODY,
+      note: STRINGS.GATE1_GUARDS_NOTE,
     },
     spawns: [
-      { type: 'raakchyas', x: 52, delay: 0 },
-      { type: 'raakchyas', x: 60, delay: 0.5 },
-      { type: 'raakchyas', x: 46, delay: 1.4 },
+      { type: 'kawach', x: 60, delay: 0, skin: COURT_GUARD_SKIN },
+      { type: 'kawach', x: 70, delay: 0.6, skin: COURT_GUARD_SKIN },
     ],
   },
   {
-    id: 'the-chasm',
-    trigger: 105,
-    // No lock: the chasm's threat is the fall, not the fight.
-    spawns: [
-      // Spawn altitude is the bhoot-batti's home altitude, and it only ranges a
-      // few units either side of it — so these have to sit near where the
-      // hunter will actually be, not far overhead.
-      // Positioned over the *islands*, not the gaps. A bhoot-batti hovering
-      // above a gap baits the player into jumping at it instead of across, and
-      // the punishment for taking that bait is the void. Fights belong on floor.
-      { type: 'bhootBatti', x: 109.3, y: 7.0, delay: 0 },
-      { type: 'bhootBatti', x: 118.1, y: 8.2, delay: 0.3 },
-      { type: 'bhootBatti', x: 126.9, y: 6.8, delay: 0.9 },
-    ],
-  },
-  {
-    id: 'the-bridge',
-    trigger: 136,
-    lock: [134, 161],
-    intro: { title: STRINGS.GATE1_BRIDGE_TITLE, body: STRINGS.GATE1_BRIDGE_BODY },
-    // Six enemies, but spread over seven seconds rather than dropped at once.
-    // Arriving together, four raakchyas pounce often enough to out-damage the
-    // hunter's entire health bar before the first one dies; arriving in waves,
-    // the same six are a fight you can actually work through. The count is the
-    // spectacle, the spacing is the difficulty.
-    // Spawns stay clear of the barriers at 134 and 161. A body that
-    // materialises overlapping one has to be ejected by the collision solver,
-    // and "wherever the solver puts it" is not a spawn point.
-    spawns: [
-      { type: 'raakchyas', x: 147, delay: 0 },
-      { type: 'raakchyas', x: 155, delay: 1.4 },
-      { type: 'bhootBatti', x: 151, y: 6.2, delay: 2.8 },
-      { type: 'raakchyas', x: 141, delay: 4.2 },
-      { type: 'bhootBatti', x: 145, y: 6.6, delay: 5.6 },
-      { type: 'raakchyas', x: 157, delay: 7.0 },
-    ],
-  },
-  {
-    id: 'guardian',
-    trigger: 172,
-    lock: [167, 203],
-    boss: true,
-    intro: { title: STRINGS.GATE1_GUARDIAN_TITLE, body: WARDEN.title },
+    id: 'shakuni',
+    trigger: 104,
+    lock: [102, 154],
+    intro: {
+      title: STRINGS.GATE1_SHAKUNI_TITLE,
+      body: WARDEN.title,
+    },
     // `warden` rather than an archetype name: which enemy that is belongs to
     // the gate's Warden block, so the encounter does not have to say it twice.
-    spawns: [{ type: 'warden', x: 190, delay: 0.9 }],
+    spawns: [{ type: 'warden', x: 130, delay: 0.8 }],
   },
+];
+
+/**
+ * `docs/DECISIONS.md` § "A Warden's intro and defeat are a scene, not a
+ * line" — Shakuni is the worked example: thirteen paged 'intro' beats (who
+ * he is, what was done to his family, why he has never stopped playing,
+ * ending on his signature line and the mechanical tell) and eight paged
+ * 'cleared' beats once he loses. `docs/SPEC-CAMPAIGN.md`'s line 78 giving
+ * him "no authored phase-transition line" is unchanged — his escalation is
+ * still the die's own telegraphs tightening, not a rig or palette swap —
+ * but that only ever ruled out a mid-fight beat, not a real scene at the
+ * two boundaries every Warden already opens.
+ */
+const introBeat = (big, body) => ({ at: 'intro', title: STRINGS.GATE1_WARDEN_TITLE, big, body });
+const clearedBeat = (big, body) => ({ at: 'cleared', title: STRINGS.GATE1_WARDEN_TITLE, big, body });
+
+const BEATS = [
+  introBeat(STRINGS.GATE1_SHAKUNI_INTRO_1_BIG, STRINGS.GATE1_SHAKUNI_INTRO_1_BODY),
+  introBeat(STRINGS.GATE1_SHAKUNI_INTRO_2_BIG, STRINGS.GATE1_SHAKUNI_INTRO_2_BODY),
+  introBeat(STRINGS.GATE1_SHAKUNI_INTRO_3_BIG, STRINGS.GATE1_SHAKUNI_INTRO_3_BODY),
+  introBeat(STRINGS.GATE1_SHAKUNI_INTRO_4_BIG, STRINGS.GATE1_SHAKUNI_INTRO_4_BODY),
+  introBeat(STRINGS.GATE1_SHAKUNI_INTRO_5_BIG, STRINGS.GATE1_SHAKUNI_INTRO_5_BODY),
+  introBeat(STRINGS.GATE1_SHAKUNI_INTRO_6_BIG, STRINGS.GATE1_SHAKUNI_INTRO_6_BODY),
+  introBeat(STRINGS.GATE1_SHAKUNI_INTRO_7_BIG, STRINGS.GATE1_SHAKUNI_INTRO_7_BODY),
+  introBeat(STRINGS.GATE1_SHAKUNI_INTRO_8_BIG, STRINGS.GATE1_SHAKUNI_INTRO_8_BODY),
+  introBeat(STRINGS.GATE1_SHAKUNI_INTRO_9_BIG, STRINGS.GATE1_SHAKUNI_INTRO_9_BODY),
+  introBeat(STRINGS.GATE1_SHAKUNI_INTRO_10_BIG, STRINGS.GATE1_SHAKUNI_INTRO_10_BODY),
+  introBeat(STRINGS.GATE1_SHAKUNI_INTRO_11_BIG, STRINGS.GATE1_SHAKUNI_INTRO_11_BODY),
+  introBeat(STRINGS.GATE1_SHAKUNI_INTRO_12_BIG, STRINGS.GATE1_SHAKUNI_INTRO_12_BODY),
+  introBeat(STRINGS.GATE1_SHAKUNI_INTRO_13_BIG, STRINGS.GATE1_SHAKUNI_INTRO_13_BODY),
+  clearedBeat(STRINGS.GATE1_SHAKUNI_DEFEAT_1_BIG, STRINGS.GATE1_SHAKUNI_DEFEAT_1_BODY),
+  clearedBeat(STRINGS.GATE1_SHAKUNI_DEFEAT_2_BIG, STRINGS.GATE1_SHAKUNI_DEFEAT_2_BODY),
+  clearedBeat(STRINGS.GATE1_SHAKUNI_DEFEAT_3_BIG, STRINGS.GATE1_SHAKUNI_DEFEAT_3_BODY),
+  clearedBeat(STRINGS.GATE1_SHAKUNI_DEFEAT_4_BIG, STRINGS.GATE1_SHAKUNI_DEFEAT_4_BODY),
+  clearedBeat(STRINGS.GATE1_SHAKUNI_DEFEAT_5_BIG, STRINGS.GATE1_SHAKUNI_DEFEAT_5_BODY),
+  clearedBeat(STRINGS.GATE1_SHAKUNI_DEFEAT_6_BIG, STRINGS.GATE1_SHAKUNI_DEFEAT_6_BODY),
+  clearedBeat(STRINGS.GATE1_SHAKUNI_DEFEAT_7_BIG, STRINGS.GATE1_SHAKUNI_DEFEAT_7_BODY),
+  clearedBeat(STRINGS.GATE1_SHAKUNI_DEFEAT_8_BIG, STRINGS.GATE1_SHAKUNI_DEFEAT_8_BODY),
 ];
 
 export const GATE_1 = {
@@ -202,18 +169,21 @@ export const GATE_1 = {
   spawnX: 4,
   /** Below this you have fallen out of the world. */
   voidY: -26,
-  arenaTop: ARENA_TOP,
-  exitX: 196,
-  end: 204,
+  /** Every segment is `top: 0`, so the Warden's own floor height is trivial. */
+  arenaTop: 0,
+  exitX: 150,
+  end: 156,
 
   /**
-   * The Kneeling Stone. Scenery, not a fight — the gate is named after it
-   * because it is the one silhouette visible from the entrance, and the title
-   * camera drifts across it.
+   * The fallen die: scenery, not a fight. It stands in for the "one
+   * silhouette visible from the entrance" gate 1's original landmark was —
+   * Shakuni's own signature weapon, at colossal scale, tipped among the
+   * hall's broken pillars.
    */
-  landmark: { kind: 'kneeling-stone', x: 172, y: -0.5, z: -19, rotY: -0.42 },
+  landmark: { kind: 'fallen-die', x: 128, y: -0.5, z: -19, rotY: -0.4 },
 
   segments: SEGMENTS,
   encounters: ENCOUNTERS,
   warden: WARDEN,
+  beats: BEATS,
 };

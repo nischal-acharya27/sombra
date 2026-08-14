@@ -38,8 +38,10 @@ export const STRINGS = {
   // -- the System's windows -------------------------------------------------
   SYS_TITLE: 'THE SYSTEM',
   WARN_TITLE: 'WARNING',
-  ENRAGE_BIG: 'THE CORE IGNITES',
-  ENRAGE_BODY: 'The Dwar-Rakshak has entered its second phase.',
+  // Shared by every boss and Warden's enrage threshold — generic on purpose,
+  // since the HUD boss bar already names whoever just crossed it.
+  ENRAGE_BIG: 'ESCALATING',
+  ENRAGE_BODY: 'It has entered its second phase.',
   REMNANT_BIG: 'A REMNANT REMAINS',
   /** The touch phrasing names the control that is actually on screen. */
   REMNANT_CLAIM_TOUCH: (heavyLabel) =>
@@ -81,15 +83,60 @@ export const STRINGS = {
   TOUCH_DASH: 'DASH',
   TOUCH_MAGIC: 'AAGO',
 
-  // -- gate 1: Hollow of the Kneeling Stone ------------------------------------
-  GATE1_NAME: 'Hollow of the Kneeling Stone',
-  GATE1_WARDEN_TITLE: 'DWAR-RAKSHAK',
-  GATE1_FIRSTBLOOD_TITLE: 'THREAT DETECTED',
-  GATE1_FIRSTBLOOD_BODY: 'Raakchyas × 3',
-  GATE1_FIRSTBLOOD_NOTE: 'Their bodies cannot harm you — only the <b>pounce</b>, and it announces itself.',
-  GATE1_BRIDGE_TITLE: 'AMBUSH',
-  GATE1_BRIDGE_BODY: 'Raakchyas × 4  ·  Bhoot-Batti × 2',
-  GATE1_GUARDIAN_TITLE: 'GATE BOSS',
+  // -- gate 1: The Loaded Sabha (Mahabharata, Shakuni) -------------------------
+  GATE1_NAME: 'The Loaded Sabha',
+  GATE1_WARDEN_TITLE: 'SHAKUNI',
+  GATE1_GUARDS_TITLE: 'THREAT DETECTED',
+  GATE1_GUARDS_BODY: 'Kawach × 2',
+  GATE1_GUARDS_NOTE: 'Their bodies cannot harm you — only the <b>bash</b>, and it plants its feet first.',
+  GATE1_SHAKUNI_TITLE: 'GATE WARDEN',
+  // `docs/DECISIONS.md` § "A Warden's intro and defeat are a scene, not a
+  // line" — thirteen paged 'intro' beats, eight paged 'cleared' beats.
+  // `_BIG`/`_BODY` is authoring shorthand for "two sentences of one line,"
+  // not two visual tiers any more — `HUD._buildWindowEl` renders both in the
+  // same dialogue font, per that entry's visual-convention amendment.
+  GATE1_SHAKUNI_INTRO_1_BIG: 'Another one, come to spoil the game.',
+  GATE1_SHAKUNI_INTRO_1_BODY: "Sit. You're already better company than my nephews.",
+  GATE1_SHAKUNI_INTRO_2_BIG: 'Shakuni, they called me. Once, of Gandhara.',
+  GATE1_SHAKUNI_INTRO_2_BODY: 'Now? Just the man who still deals the dice.',
+  GATE1_SHAKUNI_INTRO_3_BIG: 'A licensed killer, sent to clear a debt.',
+  GATE1_SHAKUNI_INTRO_3_BODY: 'How tidy. Gandhara was never tidy.',
+  GATE1_SHAKUNI_INTRO_4_BIG: "My father was a king, before Bhishma's cell.",
+  GATE1_SHAKUNI_INTRO_4_BODY: 'A hundred of us went into the dark.',
+  GATE1_SHAKUNI_INTRO_5_BIG: 'One bowl of rice, for a hundred sons.',
+  GATE1_SHAKUNI_INTRO_5_BODY: 'My brothers gave theirs to me. All of them.',
+  GATE1_SHAKUNI_INTRO_6_BIG: 'I carved these from the last of my father.',
+  GATE1_SHAKUNI_INTRO_6_BODY: 'He said: make them count for something.',
+  GATE1_SHAKUNI_INTRO_7_BIG: 'I have had decades to practice this game.',
+  GATE1_SHAKUNI_INTRO_7_BODY: "You? A license, and however long you've got.",
+  GATE1_SHAKUNI_INTRO_8_BIG: 'I did not lift a blade. I lifted dice.',
+  GATE1_SHAKUNI_INTRO_8_BODY: 'A throne changed hands on a loaded roll.',
+  GATE1_SHAKUNI_INTRO_9_BIG: 'A queen was shamed at that same table.',
+  GATE1_SHAKUNI_INTRO_9_BODY: 'I have not forgiven myself that part.',
+  GATE1_SHAKUNI_INTRO_10_BIG: 'It ended in a war that swallowed a generation.',
+  GATE1_SHAKUNI_INTRO_10_BODY: "I'm told to regret it. I do.",
+  GATE1_SHAKUNI_INTRO_11_BIG: 'And yet, here I still am.',
+  GATE1_SHAKUNI_INTRO_11_BODY: 'No one has ever called the game finished.',
+  GATE1_SHAKUNI_INTRO_12_BIG: 'You have the look of someone who finishes things.',
+  GATE1_SHAKUNI_INTRO_12_BODY: "Prove it, then. Sit down. Let's play.",
+  GATE1_SHAKUNI_INTRO_13_BIG: 'Watch where it lands before you flinch.',
+  GATE1_SHAKUNI_INTRO_13_BODY: 'Clear the ground it claims before it resolves.',
+  GATE1_SHAKUNI_DEFEAT_1_BIG: '...Ah. There it is.',
+  GATE1_SHAKUNI_DEFEAT_1_BODY: 'I always wondered what that felt like.',
+  GATE1_SHAKUNI_DEFEAT_2_BIG: 'No trick left to play. Imagine that.',
+  GATE1_SHAKUNI_DEFEAT_2_BODY: 'Decades, and I never once considered losing.',
+  GATE1_SHAKUNI_DEFEAT_3_BIG: 'I do not miss the dice, loaded or fair.',
+  GATE1_SHAKUNI_DEFEAT_3_BODY: 'I miss the brothers I built them for.',
+  GATE1_SHAKUNI_DEFEAT_4_BIG: 'A hundred of us starved in that cell.',
+  GATE1_SHAKUNI_DEFEAT_4_BODY: "A generation died after, because I couldn't stop.",
+  GATE1_SHAKUNI_DEFEAT_5_BIG: 'I have dealt this hand more times than I can count.',
+  GATE1_SHAKUNI_DEFEAT_5_BODY: "You're the first to take it.",
+  GATE1_SHAKUNI_DEFEAT_6_BIG: 'Perhaps that means something moved, somewhere far off.',
+  GATE1_SHAKUNI_DEFEAT_6_BODY: 'Or perhaps I am owed nothing. Fair enough.',
+  GATE1_SHAKUNI_DEFEAT_7_BIG: 'Let an old man rest, then. Finally.',
+  GATE1_SHAKUNI_DEFEAT_7_BODY: "Take your time leaving. I've had nothing but time.",
+  GATE1_SHAKUNI_DEFEAT_8_BIG: 'One thing, before you go.',
+  GATE1_SHAKUNI_DEFEAT_8_BODY: 'This table will be set again, somewhere ahead.',
 
   // -- gate 2: The Crossing -----------------------------------------------
   GATE2_NAME: 'The Crossing',

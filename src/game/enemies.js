@@ -8,8 +8,8 @@
 
 import * as THREE from 'three';
 import { Actor, boxHit } from './actor.js';
-import { buildRaakchyas, buildCharger, buildKawach, buildBhootBatti, buildTantrik } from '../render/models.js';
-import { RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, PHYS, JUGGLE } from './config.js';
+import { buildRaakchyas, buildCharger, buildKawach, buildBhootBatti, buildTantrik, buildShakuni } from '../render/models.js';
+import { RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, PHYS, JUGGLE } from './config.js';
 import { P } from '../render/palette.js';
 import { clamp, damp, lerp, rand } from '../engine/mathx.js';
 
@@ -1190,6 +1190,193 @@ export class Tantrik extends Enemy {
     n.head.rotation.z = lerp(n.head.rotation.z, headZ, k);
     n.shoulderL.rotation.z = lerp(n.shoulderL.rotation.z, shLz, k);
     n.shoulderR.rotation.z = lerp(n.shoulderR.rotation.z, shRz, k);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Shakuni — gate 1's Warden (Sabha Parva)
+// ---------------------------------------------------------------------------
+
+/**
+ * A courtier, not a warrior — see `docs/research/villain-roster.md`'s
+ * handoff (`dfed2a1`). Grounded keep-distance, walked rather than flown
+ * (`BhootBatti`'s ring-hold arithmetic, adapted to `moveAndCollide` instead
+ * of free flight — see `_pace` below), and a ranged/summoned-hazard kit: a
+ * die cast at the player's own position, shown during a windup, resolving
+ * into a zone the hunter has to have already left.
+ *
+ * The die's *visual* landing point is drawn directly in world space by
+ * `vfx.shockRing`, not carried by a prop parented under this rig — see the
+ * note on `buildShakuni` for why a child of a yaw-tilted root cannot mark a
+ * distant world point honestly. `this.dieX/dieY` are Shakuni's own source of
+ * truth for where the zone is; `ctx.shockwaveFromBoss` (despite its name, a
+ * plain ctx-level point-radius hit against the player/chaya — see its
+ * definition in `game.js`) reads those same numbers at resolve.
+ */
+export class Shakuni extends Enemy {
+  static stats = SHAKUNI;
+
+  constructor(level, ctx, x, y, cfg = SHAKUNI) {
+    super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
+    this.root = buildShakuni();
+    this.n = this.root.userData.nodes;
+    this.finishSetup();
+    this.state = 'chase';
+    this.cooldown = rand(cfg.die.interval * 0.4, cfg.die.interval);
+    this.phase = 0;
+    this.enraged = false;
+    this.pulseCd = 0;
+    this.dieX = x;
+    this.dieY = y;
+    this.dieRadius = cfg.die.radiusRange[0];
+    this.leavesCorpse = true;
+  }
+
+  takeHit(hit) {
+    const landed = super.takeHit(hit);
+    if (landed && !this.dead && !this.enraged && this.hp <= this.maxHp * this.cfg.enrageAt) this._enrage();
+    return landed;
+  }
+
+  _enrage() {
+    this.enraged = true;
+    this.ctx.onEnrage?.();
+    this.ctx.audio?.play('enrage');
+  }
+
+  /** Never a melee threat — every hit he deals lands through `shockwaveFromBoss` at resolve. */
+  attackBox() {
+    return null;
+  }
+
+  _pace(dt, player, canSee) {
+    const D = this.cfg;
+    if (!canSee) {
+      this.vx = damp(this.vx, 0, 0.001, dt);
+      return;
+    }
+    this.faceToward(player.x);
+    const dx = player.x - this.x;
+    const dist = Math.abs(dx);
+    let want = 0;
+    if (dist > D.keepDistance + 1.5) want = Math.sign(dx) * D.speed;
+    else if (dist < D.keepDistance - 1.5) want = -Math.sign(dx) * D.speed;
+    const ahead = this.x + Math.sign(want || 1) * 0.9;
+    if (want !== 0 && !this.level.hasFloorAhead(ahead, this.y)) want = 0;
+    this.vx = damp(this.vx, want, 0.001, dt);
+  }
+
+  update(dt, player) {
+    this.t += dt;
+    this.hitFlash -= dt;
+    this._flash(dt);
+
+    if (this.state === 'dying') return this._dieAnim(dt);
+    if (this.spawnT > 0) this._spawnAnim(dt);
+
+    const D = this.cfg.die;
+    const dx = player.x - this.x;
+    const dist = Math.abs(dx);
+    const canSee = dist < this.cfg.chaseRange && Math.abs(player.y - this.y) < 6;
+
+    if (this.stagger > 0) {
+      this.stagger -= dt;
+      if (this.stagger <= 0 && this.state === 'hurt') this.state = 'chase';
+    }
+
+    switch (this.state) {
+      case 'chase':
+        this._pace(dt, player, canSee);
+        this.cooldown -= dt;
+        if (canSee && this.cooldown <= 0) {
+          this.state = 'cast';
+          this.phase = D.cast;
+          this.ctx.audio?.play('growl');
+        }
+        break;
+
+      case 'cast':
+        this.vx = damp(this.vx, 0, 0.0005, dt);
+        this.faceToward(player.x);
+        this.phase -= dt;
+        if (this.phase <= 0) {
+          // Read at the moment the die leaves his hand, not a frame later —
+          // the target is where the hunter chose to stand, not a predicted
+          // lead the way `Guardian._slamLand` aims its own leap.
+          this.dieX = player.x;
+          this.dieY = this.level.groundAt(this.dieX) + 0.05;
+          const face = 1 + Math.floor(rand(0, 6));
+          this.dieRadius = lerp(D.radiusRange[0], D.radiusRange[1], (face - 1) / 5);
+          this.state = 'windup';
+          this.phase = D.windup * (this.enraged ? this.cfg.enrageWindupMul : 1);
+          this.pulseCd = 0;
+          this.ctx.audio?.play('wispShot');
+        }
+        break;
+
+      case 'windup':
+        this.vx = damp(this.vx, 0, 0.0005, dt);
+        this.phase -= dt;
+        this.pulseCd -= dt;
+        if (this.pulseCd <= 0) {
+          this.ctx.vfx.shockRing(this.dieX, this.dieY, this.dieRadius, P.crimson);
+          this.pulseCd = 0.18;
+        }
+        if (this.phase <= 0) {
+          this.state = 'recover';
+          this.phase = 0.4;
+          this.ctx.shockwaveFromBoss(this.dieX, this.dieY, {
+            radius: this.dieRadius,
+            damage: D.damage,
+            knock: D.knock,
+          });
+          this.ctx.vfx.groundBurst(this.dieX, this.dieY, this.dieRadius * 0.6);
+          this.ctx.vfx.shockRing(this.dieX, this.dieY, this.dieRadius, P.crimson);
+          this.ctx.shake?.(0.16);
+          this.ctx.audio?.play('slam');
+        }
+        break;
+
+      case 'recover':
+        this.vx = damp(this.vx, 0, 0.001, dt);
+        this.phase -= dt;
+        if (this.phase <= 0) {
+          this.state = 'chase';
+          this.cooldown = D.interval * (this.enraged ? this.cfg.enrageIntervalMul : 1);
+        }
+        break;
+
+      case 'hurt':
+        this.vx = damp(this.vx, 0, 0.06, dt);
+        break;
+    }
+
+    this.applyGravity(dt, PHYS.gravity);
+    this.moveAndCollide(dt);
+    this._animate(dt);
+    this.syncRig();
+  }
+
+  _animate(dt) {
+    const n = this.n;
+    const k = 1 - Math.pow(0.0002, dt);
+    let bodyZ = 0;
+    let armZ = 0;
+
+    if (this.state === 'cast' || this.state === 'windup') {
+      const D = this.cfg.die;
+      const total = this.state === 'cast' ? D.cast : D.windup * (this.enraged ? this.cfg.enrageWindupMul : 1);
+      const u = clamp(1 - this.phase / total, 0, 1);
+      bodyZ = -0.05 - u * 0.08;
+      armZ = -0.3 - u * 0.5;
+    } else if (this.state === 'hurt') {
+      bodyZ = 0.16;
+    } else if (Math.abs(this.vx) > 0.3) {
+      bodyZ = Math.sin(this.t * 5) * 0.03;
+    }
+
+    n.robe.rotation.z = lerp(n.robe.rotation.z, bodyZ, k);
+    n.shoulderR.rotation.z = lerp(n.shoulderR.rotation.z, armZ, k);
   }
 }
 

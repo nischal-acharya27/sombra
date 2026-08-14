@@ -46,17 +46,22 @@ text surface. A genre convention, not a character.
 _Avoid_: HUD, UI, narrator, interface
 
 **Warden**:
-The named antagonist that ends a gate, built by parameterising a common
-archetype with elevated stats, a title, and one signature addition to its
-moveset. Every gate has exactly one.
+The named antagonist that ends a gate, built either by parameterising a
+common archetype with elevated stats, a title and one signature addition to
+its moveset, or — starting with gate 1's Shakuni — a wholly new rig on a new
+but still-configuration-driven behaviour class (`docs/agents/villain-handoff.md`'s
+tier 2). Every gate has exactly one.
 _Avoid_: Mini-boss, elite, sub-boss, lieutenant
 
 **Boss**:
 A Warden of the highest order — bespoke, multi-phase, with its own arena
-behaviour rather than parameterised numbers. Four of the ten Wardens are
-bosses. Every boss is a Warden; most Wardens are not bosses.
-_Avoid_: Guardian (the code's archetype name for gate 1's boss, not its
-title — the boss's name is Dwar-Rakshak), raid boss, final boss
+behaviour rather than parameterised numbers. Reserved for the four locked
+bosses named in `docs/SPEC-CAMPAIGN.md` (Duryodhana, Ravana, Hiranyakashipu,
+Mahishasura); every boss is a Warden, most Wardens are not bosses.
+_Avoid_: Guardian/Goru-Mukh/Hakim/Chiranjivi/Maun-Ankur (the old ten-gate
+build's boss archetype names, retired gate by gate as the fifteen-gate
+roster in `docs/SPEC-CAMPAIGN.md` replaces them — not currently any gate's
+title), raid boss, final boss
 
 **Charger**:
 The enemy that punishes standing still: it plants its feet, announces the

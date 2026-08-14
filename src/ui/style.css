@@ -373,14 +373,22 @@ html, body {
   background: linear-gradient(90deg, transparent, var(--panel-edge), transparent);
   margin: 10px 0 12px;
 }
-.sys-window p { font-size: 15px; line-height: 1.5; letter-spacing: 0.04em; }
-.sys-window .big {
-  font-size: 27px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  margin: 6px 0;
-  text-shadow: 0 0 22px var(--cyan);
+/* `docs/DECISIONS.md` § "A Warden's intro and defeat are a scene, not a
+ * line" — `.big` used to render as an oversized, glowing headline against
+ * `p`'s plain paragraph, so a two-sentence beat read as a title plus a
+ * caption. `h3` above is the only element in this window still allowed a
+ * distinct treatment — it names who is speaking, once, per window. Every
+ * sentence of what they actually say, however many a beat carries, renders
+ * identically: this rule, not just this one selector. */
+.sys-window p, .sys-window .big {
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+  margin: 0 0 6px;
+  text-shadow: none;
 }
+.sys-window p:last-child, .sys-window .big:last-child { margin-bottom: 0; }
 .sys-window ul { list-style: none; font-family: var(--mono); font-size: 13px; }
 .sys-window li { display: flex; justify-content: space-between; padding: 3px 0; }
 .sys-window li span { color: #8fb4cc; }

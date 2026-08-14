@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { Level } from './level.js';
 import { Player } from './player.js';
-import { Raakchyas, Charger, Kawach, BhootBatti, Tantrik, Bolt } from './enemies.js';
+import { Raakchyas, Charger, Kawach, BhootBatti, Tantrik, Shakuni, Bolt } from './enemies.js';
 import { Corpse } from './shadow.js';
 import { Guardian, GoruMukh, Hakim, Chiranjivi, MaunAnkur } from './boss.js';
 import { GameCamera } from './camera.js';
@@ -49,6 +49,7 @@ export const ARCHETYPES = {
   kawach: Kawach,
   bhootBatti: BhootBatti,
   tantrik: Tantrik,
+  shakuni: Shakuni,
   guardian: Guardian,
   goruMukh: GoruMukh,
   hakim: Hakim,
@@ -161,6 +162,8 @@ export class Game {
      * exactly what it always meant); this only gates `update()`.
      */
     this.resting = false;
+    /** Whatever a click on the currently open resting-driven prompt does. See `_showBeatQueue`. */
+    this._advance = null;
     this.freeze = 0;
     this.t = 0;
     this.runTime = 0;
@@ -271,6 +274,7 @@ export class Game {
     this.activeEncounter = null;
     this.wayOpen = false;
     this.resting = false;
+    this._advance = null;
     this.state = 'playing';
 
     this.player.reset(this.gate.spawnX, 0.2);
@@ -328,8 +332,9 @@ export class Game {
   }
 
   /**
-   * Fire every story beat this gate has queued at boundary `at` — 'enter' or
-   * 'cleared' today, more as the campaign grows.
+   * Fire every story beat this gate has queued at boundary `at` — 'enter',
+   * 'intro' (a Warden's own gate, ahead of its fight) or 'cleared' today,
+   * more as the campaign grows.
    *
    * The one rule this whole ticket exists to hold: a beat never opens while an
    * encounter is live. `docs/PLAYTEST.md` round 3 is what happens otherwise —
@@ -359,7 +364,18 @@ export class Game {
     this._showBeatQueue(queue, onDrained);
   }
 
-  /** Shows the next queued beat, or calls `onDrained` once none are left. */
+  /**
+   * Shows the next queued beat, or calls `onDrained` once none are left.
+   *
+   * `this._advance` always holds whatever a click on the *currently open*
+   * prompt would do — the NEXT button mid-queue, or nothing here once the
+   * queue drains (the caller's `onDrained` takes over and sets its own).
+   * `tools/sim.js`'s `Bot.step()` reads it to click through a resting-driven
+   * prompt every frame, the same job a human's actual click does; without a
+   * generic hook a bot walking into any beat-bearing encounter would just
+   * hang for the rest of `maxSeconds`, since `Game.update` no-ops while
+   * `resting` — see `docs/DECISIONS.md`.
+   */
   _showBeatQueue(queue, onDrained) {
     const b = queue.shift();
     if (!b) {
@@ -368,16 +384,18 @@ export class Game {
     }
     this.audio.play('systemOpen');
     const isLast = queue.length === 0;
+    const onNext = isLast ? undefined : () => this._showBeatQueue(queue, onDrained);
+    this._advance = onNext ?? null;
     this.hud.storyWindow({
       title: b.title,
       big: b.big,
       body: b.body,
       glitch: b.glitch,
-      onNext: isLast ? undefined : () => this._showBeatQueue(queue, onDrained),
+      onNext,
     });
     // The last beat behaves exactly like today's only beat: no NEXT button,
-    // and whatever comes after the queue (bossRestPrompt) lands in the same
-    // tick rather than waiting on a click that will never come.
+    // and whatever comes after the queue (bossRestPrompt/beginPrompt) lands
+    // in the same tick rather than waiting on a click that will never come.
     if (isLast) onDrained?.();
   }
 
@@ -851,6 +869,35 @@ export class Game {
 
   _startEncounter(e) {
     e.started = true;
+    // A Warden encounter whose gate authors an 'intro' beat pages through it,
+    // hard-frozen, before anything spawns — `docs/DECISIONS.md` § "Boss/Warden
+    // dialogue returns" reversed the 2026-08-09 cut for exactly this boundary.
+    // Gated on the gate actually carrying one, so gates authored before this
+    // (2–10, no `beats` entry at `at: 'intro'` yet) fall straight through to
+    // `_beginEncounter` and keep today's toast/window behaviour unchanged.
+    const hasIntroBeat =
+      e.intro && e.spawns.some((s) => s.type === 'warden') && this.gate.beats?.some((b) => b.at === 'intro');
+    if (!hasIntroBeat) {
+      this._beginEncounter(e, false);
+      return;
+    }
+    this.resting = true;
+    this._fireBeats('intro', () => {
+      this._advance = () => this._beginWardenFight(e);
+      this.hud.beginPrompt(this._advance);
+    });
+  }
+
+  /** The hunter accepts the intro's last beat: the story window closes and the fight actually starts. */
+  _beginWardenFight(e) {
+    this.resting = false;
+    this._advance = null;
+    this.hud.hideRestPrompts();
+    this._beginEncounter(e, true);
+  }
+
+  /** Everything a triggered encounter does besides announcing itself — spawns, locks, camera. */
+  _beginEncounter(e, introHandled) {
     this.activeEncounter = e;
     if (e.lock) {
       this.level.setBarriers(e.id, true);
@@ -859,7 +906,9 @@ export class Game {
     for (const s of e.spawns) {
       this.pendingSpawns.push({ ...s, encounter: e.id, t: s.delay });
     }
-    if (e.intro && e.boss) {
+    if (introHandled) {
+      // Already announced via the paged story window `_startEncounter` opened.
+    } else if (e.intro && e.boss) {
       // Bosses stay an exception to "no dialogue" — a Warden still gets a
       // System window a grunt does not — but only the name survives: the
       // flavor label (`e.intro.title`, "GATE BOSS"/"GATE WARDEN", the same
@@ -869,6 +918,14 @@ export class Game {
       // window's own title rather than a line underneath one.
       this.audio.play('systemOpen');
       this.hud.window({ title: e.intro.body, duration: SYS_WINDOW.bossName });
+    } else if (e.intro && e.spawns.some((s) => s.type === 'warden') && e.intro.quote) {
+      // A non-boss Warden whose gate was authored against
+      // `docs/SPEC-CAMPAIGN.md`'s "every Warden/boss intro carries a quote
+      // alongside the mechanical tell `note`", but not yet against a real
+      // `beats` entry — the interim timed window, kept for gates 2–10 until
+      // each gets its own `at: 'intro'` beat.
+      this.audio.play('systemOpen');
+      this.hud.window({ title: e.intro.body, big: e.intro.quote, body: e.intro.note, duration: SYS_WINDOW.wardenIntro });
     } else if (e.intro) {
       // A grunt encounter gets the archetype's name and nothing else — no
       // freeze, no flavor title, no teaching note. `e.intro.body` is already
@@ -916,6 +973,7 @@ export class Game {
       // reads every beat before the way out even opens. See `restResume`.
       this.resting = true;
       this._fireBeats('cleared', () => {
+        this._advance = () => this.restResume();
         this.hud.bossRestPrompt(this.gate.warden.title, () => this.restResume());
       });
     } else if (e.lock) {
@@ -942,7 +1000,12 @@ export class Game {
     const w = s.type === 'warden' ? this.gate.warden : null;
     const Archetype = ARCHETYPES[w ? w.archetype : s.type];
     if (!Archetype) return;
-    const e = new Archetype(this.level, this.ctx, s.x, w ? this.gate.arenaTop : y, w?.stats);
+    // A per-spawn `skin` reskins a regular grunt (e.g. gate 1's `Kawach` as
+    // court guards); `w?.skin` would do the same for a Warden built by
+    // elevating an existing rig rather than a new one. Every reskinnable
+    // class's constructor already takes `skin` as its final, defaulted
+    // param — this is what actually calls it with one.
+    const e = new Archetype(this.level, this.ctx, s.x, w ? this.gate.arenaTop : y, w?.stats, s.skin ?? w?.skin);
     if (w) {
       this.boss = e;
       this.hud.boss(true, 1, w.title);
@@ -1182,6 +1245,7 @@ export class Game {
   restResume() {
     if (!this.resting) return;
     this.resting = false;
+    this._advance = null;
     this.hud.hideRestPrompts();
     this._openTheWay();
   }

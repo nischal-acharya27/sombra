@@ -732,6 +732,153 @@ export function buildTantrik(skin = null) {
 }
 
 // ---------------------------------------------------------------------------
+// Shakuni — gate 1's Warden (Sabha Parva)
+// ---------------------------------------------------------------------------
+
+/**
+ * Slight through proportion, not stature — an aged courtier at roughly
+ * player scale, per `docs/research/villain-roster.md`'s handoff. A skirt-hem
+ * rather than jointed legs, the same call `buildTantrik` makes for a figure
+ * that paces a ring instead of running, and unarmored throughout: nothing on
+ * the body reaches for the roster's violet/iron/crimson supernatural
+ * registers.
+ *
+ * The die itself never travels: it rides his own right hand (`n.dieProp`)
+ * for the "cast" flourish, and the zone it resolves into is read off the
+ * ground marker `Shakuni.update` drives through `vfx.shockRing`, not off a
+ * second copy of the die repositioned to the target. A prop parented under a
+ * rig that yaws toward the camera (`TILT` in `actor.js`) drifts off the
+ * world point it is meant to mark as the offset grows — the ring is drawn
+ * directly in world space by `Game`/`VFX` and has no such problem, so it is
+ * where "read it before it commits" actually happens; the held die is
+ * flavour, not the telegraph.
+ */
+export function buildShakuni() {
+  const root = new THREE.Group();
+  const n = {};
+
+  const body = new THREE.Group();
+  body.position.y = 0.60;
+  root.add(body);
+  n.body = body;
+
+  // Narrower than a grunt's torso and permanently stooped a few degrees —
+  // "slight through proportion, not stature" per the handoff. The stoop
+  // lives on its own wrapper rather than on `n.robe` directly: `Shakuni
+  // .update`'s `_animate` lerps `n.robe.rotation.z` toward a windup/hurt
+  // target that defaults to 0 whenever he's merely idle or chasing, so a
+  // rotation set here on that same node would be animated back to upright
+  // within a few frames of play — an old man's posture doesn't reset
+  // between casts the way a fighting stance does.
+  const stoop = new THREE.Group();
+  stoop.rotation.z = -0.07;
+  body.add(stoop);
+
+  const robe = part(0.26, 0.46, 0.26, P.shakuniRobe, { pivot: 'bottom', outline: 0.026 });
+  stoop.add(robe);
+  n.robe = robe;
+
+  // A skirt-hem, not jointed legs — he paces a ring, he does not run. Feet
+  // peek out past the hem's own hem so the silhouette reads as cloth *over*
+  // a standing body, not a torso that simply stops at the waist.
+  const hem = part(0.36, 0.24, 0.34, P.shakuniRobeDark, { pivot: 'top', outline: 0.024 });
+  hem.position.y = 0;
+  robe.add(hem);
+  n.hem = hem;
+
+  for (const side of [-1, 1]) {
+    const foot = part(0.12, 0.06, 0.13, P.shakuniRobeDark, { pivot: 'top', outline: 0.014 });
+    foot.position.set(0.05, -0.24, side * 0.08);
+    hem.add(foot);
+  }
+
+  const sash = part(0.29, 0.07, 0.27, P.shakuniGold, { outline: 0.02 });
+  sash.position.y = 0.20;
+  robe.add(sash);
+
+  const head = new THREE.Group();
+  head.position.y = 0.50;
+  robe.add(head);
+  n.head = head;
+
+  // Narrower than a grunt's skull, to match the torso's own taper.
+  const skull = part(0.18, 0.22, 0.19, P.bone, { pivot: 'bottom', outline: 0.02 });
+  head.add(skull);
+  n.skull = skull;
+
+  // The beard: the single detail that reads "aged courtier" at a glance
+  // rather than "a smaller Kawach" — every other change here is proportion,
+  // this one is silhouette. Hangs from the jaw line, ahead of the +X face
+  // the model is built to and the camera's own three-quarter yaw favours.
+  const beard = part(0.14, 0.15, 0.15, P.shakuniBeard, { pivot: 'top', outline: 0.016 });
+  beard.position.set(0.035, 0.03, 0);
+  head.add(beard);
+
+  const wrap = part(0.21, 0.09, 0.21, P.shakuniGold, { pivot: 'bottom', outline: 0.018 });
+  wrap.position.y = 0.16;
+  head.add(wrap);
+
+  // Plain, dark eyes — deliberately not a glowing tell. His menace never
+  // reads off his own body; it reads off the die.
+  for (const side of [-1, 1]) {
+    const eye = decal(0.04, 0.026, P.outline);
+    eye.position.set(0.10, 0.09, side * 0.05);
+    eye.rotation.y = Math.PI / 2;
+    head.add(eye);
+    n[side < 0 ? 'eyeL' : 'eyeR'] = eye;
+  }
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const shoulder = new THREE.Group();
+    shoulder.position.set(0, 0.40, side * 0.15);
+    robe.add(shoulder);
+    n['shoulder' + key] = shoulder;
+
+    const upper = part(0.08, 0.22, 0.08, P.shakuniRobeDark, { pivot: 'top', outline: 0.015 });
+    shoulder.add(upper);
+
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.22;
+    shoulder.add(elbow);
+    n['elbow' + key] = elbow;
+
+    const fore = part(0.07, 0.20, 0.07, P.bone, { pivot: 'top', outline: 0.013 });
+    elbow.add(fore);
+
+    // A hand, closing the arm the way `buildHunter`'s own does — without it
+    // the forearm just ends in mid-air and reads as a stump rather than a
+    // limb, the single biggest reason the old rig read as boxes wearing a
+    // robe instead of a body.
+    const hand = part(0.08, 0.08, 0.09, P.bone, { pivot: 'top', outline: 0.012 });
+    hand.position.y = -0.20;
+    elbow.add(hand);
+    n['hand' + key] = hand;
+
+    // The die, carried in the right hand — parented to the hand itself now,
+    // not the elbow, so it visibly sits *in* his grip rather than floating
+    // off the forearm. `P.bone`: "the one tradition says was carved from his
+    // father's bones." A single crimson pip marks its up-face — the kit's
+    // one saturated danger accent, shared with the ground zone it reads
+    // rather than inventing a second hue.
+    if (key === 'R') {
+      const dieProp = part(0.17, 0.17, 0.17, P.bone, { outline: 0.018 });
+      dieProp.position.set(0.05, -0.05, 0);
+      hand.add(dieProp);
+      n.dieProp = dieProp;
+
+      const pip = decal(0.05, 0.05, P.crimson);
+      pip.position.set(0.05, 0.035, 0);
+      pip.rotation.x = -Math.PI / 2;
+      hand.add(pip);
+    }
+  }
+
+  root.userData.nodes = n;
+  return root;
+}
+
+// ---------------------------------------------------------------------------
 // Dwar-Rakshak — the level's boss
 // ---------------------------------------------------------------------------
 

@@ -640,6 +640,50 @@ export const AMAR_YODDHA = {
   contactDamage: 0,
 };
 
+/**
+ * Shakuni — gate 1's Warden, per `docs/research/villain-roster.md`'s handoff
+ * (`dfed2a1`): a courtier, not a warrior, so his kit is a summoned hazard
+ * rather than a melee state machine. `hw`/`hh` sit at player scale (slight
+ * through proportion, not stature — the handoff's own call). Tier 2: a new
+ * rig in `models.js`, but the class extends `Enemy` directly rather than
+ * copying `BhootBatti`'s flight — Shakuni is grounded and walks a keep-
+ * distance ring the way `Kawach` paces, not the way `BhootBatti` hovers.
+ *
+ * `die.windup` is how long the die sits at its landing point showing a face
+ * before the zone it read resolves — the "read it before it commits" the
+ * handoff calls his kit's honest answer to the roster's hardest entry. Face
+ * (1–6, rolled at cast) scales `die.radius` between `dieRadiusRange` — a
+ * bigger face is a wider zone to clear, so reading the face is not flavor.
+ * `die.damage`/`die.knock` stay flat across faces: only the read changes,
+ * not the punishment for missing it.
+ */
+export const SHAKUNI = {
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hw: 0.34,
+  hh: 0.85,
+  speed: 2.2,
+  chaseRange: 22,
+  keepDistance: 8.5, // holds well back — a courtier, not a brawler
+  die: {
+    interval: 3.0, // cooldown between casts
+    cast: 0.32, // raise-and-throw flourish before the die is in flight
+    windup: 1.0, // die down, face showing — the readable window
+    radiusRange: [1.6, 3.6], // face 1 -> 1.6, face 6 -> 3.6
+    damage: 16,
+    knock: 9,
+  },
+  exp: 260,
+  contactDamage: 0,
+  // No rig-swap, no reveal — per the handoff, escalation is the die's own
+  // telegraphs tightening, not a palette or pose change. Implemented locally
+  // (see `Shakuni._enrage` in enemies.js), the same call Shurpanakha's
+  // handoff makes for a tier-2 Warden rather than waiting on the campaign's
+  // shared `phases`/`Boss`-only enrage machinery.
+  enrageAt: 0.5,
+  enrageWindupMul: 0.68,
+  enrageIntervalMul: 0.75,
+};
+
 export const GUARDIAN = {
   hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 1.5,
@@ -877,9 +921,16 @@ export const SYS_WINDOW = {
    * halts the fight to give it more time than that.
    */
   bossName: 1600,
+  /**
+   * A non-boss Warden's name, note and quote together — more to read than
+   * `bossName` carries alone, so it gets longer on screen. See gate 1's
+   * Shakuni for the first user; falls back to `bossName`'s plain toast for
+   * any Warden whose `intro` has no `quote` yet.
+   */
+  wardenIntro: 2600,
   /** The first-remnant teaching line: the longest window in the game. */
   remnantTeach: 3400,
-  /** The Guardian's enrage warning. */
+  /** Any boss or Warden's enrage warning — generic, not tied to one name. */
   enrage: 1800,
   /** Level-up. */
   levelUp: 2100,

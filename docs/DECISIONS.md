@@ -2866,3 +2866,152 @@ The implementing session wires the boundary(ies) and decides how much
 dialogue content each boss carries; today's session only records the
 directional call and names Taraka's transformation as the first beat that
 needs it.
+
+## A Warden's intro and defeat are a scene, not a line — "once, or twice" was a budget on presence, not on words
+
+Settled 2026-08-14. The `'intro'` boundary landed since the entry above and
+gate 1 is built against it — one beat, Shakuni's quote paired with the
+mechanical tell (`gate1.js`'s `BEATS`). Read back against the ambition the
+entry above already stated — "this is a game that wants to tell a story
+through dialogue-fight-dialogue beats" — one line is not that. A Warden who
+says a single sentence before the hunter kills them has been named, not
+written: no self-introduction, no stated reason they are the one standing at
+this breach, nothing said once they lose. This entry corrects course before a
+second gate gets built on the one-line pattern rather than after five gates
+have to be revisited.
+
+**The direct ask, recorded because it is more specific than "more dialogue"
+and should stay that specific:** a Warden introduces themselves, states their
+motivation, and says why they are here guarding this gate — the anime-fight
+convention of an opponent who won't shut up before or after a fight, not a
+single portentous line. That shape wants both halves: something said walking
+in, and something said dying.
+
+**Nothing in `game.js` needs to change, and that is worth stating plainly
+rather than assumed.** `_fireBeats(at)` already collects *every* `BEATS`
+entry matching a boundary into a queue and pages through it one beat at a
+time on NEXT (`_showBeatQueue`) — built for exactly this, just never
+authored past one entry per boundary. A four-beat introduction is four
+`{ at: 'intro', ... }` objects in one gate's `BEATS` array; nothing about the
+mechanism assumed one. `'cleared'` already fires unconditionally from
+`_clearEncounter`'s Warden branch, empty queue or not — so a defeat scene at
+that boundary needs no new wiring either, only content, and no gate has to
+be revisited to *get* the capability, only to *use* it.
+
+**What actually changes is the reading of "once-per-gate, or twice with a
+phase beat" from the entry above and Mahishasura's roster write-up.** That
+line was about how many times the modal *opens* — the boundaries a fight
+touches — not about how many beats play once it has. A Warden still opens
+dialogue at `'intro'` and at `'cleared'` (a mid-fight `'threshold'`-style
+boundary stays the exception it already was, for a phase-transition Warden
+specifically), but each of those openings is now authored as a short paged
+sequence — self-introduction, the grievance or history behind it, why they
+have not moved on from this exact moment — rather than a single card.
+Mahishasura's four-beat write-up is no longer the outlier that entry called
+it; it is the first instance of the shape every Warden now gets, and what
+stays special about his fight is giving the *hunter* lines too, not the
+villain speaking more than once.
+
+**The per-beat word budget does not move.** `tools/gatecheck.js`'s
+`BEAT_WORD_LIMIT` (16 words, `big` + `body`) stays exactly as it is — it was
+never a budget on how much a Warden gets to say, only on how much one card
+can hold before it stops being readable at a glance. A monologue is several
+glances in sequence, paged on the player's own click, not one card holding a
+paragraph; that pacing is what a fixed-timer window (the thing the
+2026-08-09 cut actually killed) could never have supported and what
+`storyWindow`'s no-timer, player-advanced design was built for.
+
+**Worked example: Shakuni.** His gate now carries four `'intro'` beats and
+three `'cleared'` beats in place of the one-line quote-plus-note pair
+(`gate1.js`, `strings.js`). The shape, in order:
+
+- *Intro 1–2* — who he is and what was done to his family, compressed to the
+  two facts the popular backstory turns on (a prince, a starved cell) without
+  staging the starvation itself, per the roster's own respectful-treatment
+  note for him.
+- *Intro 3* — not "why guard the gate" literally, since Wardens are not
+  guards in the fiction; the honest answer for every one of them is closer
+  to Shurpanakha's write-up ("an unjudged soul the stopped Wheel is holding
+  in place, not a lock the hunter needs the right answer to open"). Shakuni's
+  version: he has not stopped playing the dice game since the day it ended
+  the world he knew. This is the one line doing quiet foreshadowing work —
+  it never names the Wheel or Yama, gate 6's reveal stays gate 6's — but it
+  answers "why is he still at this table" honestly, in his own voice, rather
+  than leaving the premise for the System to explain later.
+- *Intro 4* — his existing "Sit down. Let's play." plus the existing
+  mechanical tell, unchanged, now landing as the scene's punchline instead of
+  its entire content.
+- *Defeat 1–3* — not a boast undone, a person's reaction: relief that the
+  game finally has an end, an admission of what he actually misses (not the
+  dice, his brothers), and a dry, characteristically indirect request to be
+  let go. No mechanic term crosses into his voice — no "remnant," no
+  "PUKAR" — the escort framing stays implicit, the same restraint
+  Shurpanakha's own defeat framing already commits to.
+
+**This is now the default expectation for every future villain handoff, not
+a one-gate rewrite.** `docs/agents/villain-handoff.md`'s template already
+asks for a phase-transition call and a respectful-treatment note per
+villain; a handoff session should now also sketch the shape of both the
+`'intro'` and `'cleared'` sequences (how many beats, what each one is *for*)
+the same way it already sketches the kit — final line-by-line text can still
+wait for a gate-content session, per Ravana's and Mahishasura's own
+precedent for what a handoff commits to versus hands off, but "one line" is
+no longer an acceptable default to hand off.
+
+**Amended 2026-08-14, same day, after Shakuni's own script was actually
+drafted and reviewed rather than sketched in the abstract.** Two things
+changed once real content met the pattern above, both game-wide rather than
+Shakuni-local, and both binding on every Warden/boss written from here on —
+not just the ones with a phase-transition flag or a Mahishasura-scale
+exception.
+
+**The visual shape was wrong, independent of how much a beat says.**
+`HUD._buildWindowEl` (`src/ui/hud.js`) rendered `big` at 27px, bold, glowing,
+and `body` at 15px plain underneath it — a title-plus-caption pair inside a
+single beat, on top of `h3` already carrying the speaker's name above both.
+That is two visual tiers doing the job title already does once. Fixed in
+`src/ui/style.css`: `.sys-window .big` now shares `.sys-window p`'s exact
+rule (15px, regular weight, no glow) — the only element in the window still
+allowed to look different is `h3`, the speaker name, once, per window.
+Everything a character actually says — however many sentences a beat
+carries — is one dialogue font from here on. This is not a Shakuni-specific
+change: it is `HUD`'s shared window-building code, so it retroactively
+applies to the System's own windows and to every other gate's already-
+written `enter`/`cleared` beats (`GATE2_BEAT_CLEARED_BIG`/`_BODY` and the
+rest) without their content needing to change at all — only how the same two
+fields render. `_BIG`/`_BODY` survive in `strings.js` and `BEATS` as
+authoring shorthand for "the first sentence, the second sentence" of one
+beat, not as a signal to `HUD` about which one matters more.
+
+**The word budget's own justification had already been cut out from under
+it, and nobody had gone back to check.** `BEAT_WORD_LIMIT` (16,
+`tools/gatecheck.js`) was defended explicitly as a *glance* budget — text
+that has to be readable before a fixed-duration window auto-dismissed it
+mid-fight, per `docs/PLAYTEST.md` round 3. That window is the one this
+document's own "Boss/Warden dialogue returns" section replaced with
+`storyWindow`, which holds until the player clicks NEXT and freezes the
+simulation while it does. Nothing about a `storyWindow` beat is ever raced
+against a timer or a live fight any more — the constraint that produced 16
+specifically stopped applying the moment that section landed, and this
+session is the first time content was actually written long enough to hit
+the old ceiling and notice. Raised to 30: still a real ceiling — a beat that
+grows into an actual paragraph should still go red, which is what the
+number always existed to catch — just no longer tuned to a threat that was
+already gone. The elaborateness a scene wants lives in beat *count*
+(Shakuni's runs to 21), not in how much one card holds.
+
+**Shakuni's worked example is now the actual shipped script, not the
+sketch above.** Thirteen `'intro'` beats — self-introduction and taunt,
+the Gandhara backstory in three beats (the cell, the starved brothers, the
+bone dice), a taunt breaking up the exposition, what the dice game actually
+cost (a throne, a queen's dignity — named without staging either), the war
+it caused, the "stuck replaying it" hook, and his signature line plus the
+mechanical tell as the closing beat — and eight `'cleared'` beats: the
+immediate reaction, a dry joke at his own expense, what he actually
+mourns (not the dice, his brothers), the war's cost restated from the
+losing side, the "you're the first to actually take it" beat, a soft
+unnamed-Wheel hint, the request to be let go, and a closing line that
+gestures at every other gate holding a soul in the same kind of loop
+without naming Yama or the Wheel — gate 6's and gate 9's reveals stay
+theirs. `docs/research/villain-roster.md`'s Shakuni entry is unchanged;
+this is gate-content, the layer that entry always deferred.
