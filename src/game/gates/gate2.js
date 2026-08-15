@@ -140,12 +140,14 @@ const ENCOUNTERS = [
 
 /**
  * `docs/DECISIONS.md` § "A Warden's intro and defeat are a scene, not a
- * line" — six paged 'intro' beats (who he is, the town's own bargain with
- * him, Bhima's cart, ending on his signature line and the mechanical tell)
- * and four paged 'cleared' beats once he loses. Per
- * `docs/SPEC-CAMPAIGN.md`'s dialogue table, Bakasura carries no authored
- * phase-transition line — only the ordinary generic enrage warning
- * (`Bakasura._enrage` in enemies.js) — so there is no mid-fight beat here.
+ * line" — thirteen paged 'intro' beats (the town's bargain, the lots drawn
+ * house by house, the Brahmin family whose turn it was, the stranger who
+ * ate the cart and then beat him bare-handed, ending on his signature line
+ * and the mechanical tell) and eight paged 'cleared' beats once he loses.
+ * Per `docs/SPEC-CAMPAIGN.md`'s dialogue table, Bakasura carries no
+ * authored phase-transition line — only the ordinary generic enrage
+ * warning (`Bakasura._enrage` in enemies.js) — so there is no mid-fight
+ * beat here.
  */
 const introBeat = (big, body) => ({ at: 'intro', title: STRINGS.GATE2_BAKASURA_TITLE, big, body });
 const clearedBeat = (big, body) => ({ at: 'cleared', title: STRINGS.GATE2_BAKASURA_TITLE, big, body });
@@ -157,10 +159,21 @@ const BEATS = [
   introBeat(STRINGS.GATE2_BAKASURA_INTRO_4_BIG, STRINGS.GATE2_BAKASURA_INTRO_4_BODY),
   introBeat(STRINGS.GATE2_BAKASURA_INTRO_5_BIG, STRINGS.GATE2_BAKASURA_INTRO_5_BODY),
   introBeat(STRINGS.GATE2_BAKASURA_INTRO_6_BIG, STRINGS.GATE2_BAKASURA_INTRO_6_BODY),
+  introBeat(STRINGS.GATE2_BAKASURA_INTRO_7_BIG, STRINGS.GATE2_BAKASURA_INTRO_7_BODY),
+  introBeat(STRINGS.GATE2_BAKASURA_INTRO_8_BIG, STRINGS.GATE2_BAKASURA_INTRO_8_BODY),
+  introBeat(STRINGS.GATE2_BAKASURA_INTRO_9_BIG, STRINGS.GATE2_BAKASURA_INTRO_9_BODY),
+  introBeat(STRINGS.GATE2_BAKASURA_INTRO_10_BIG, STRINGS.GATE2_BAKASURA_INTRO_10_BODY),
+  introBeat(STRINGS.GATE2_BAKASURA_INTRO_11_BIG, STRINGS.GATE2_BAKASURA_INTRO_11_BODY),
+  introBeat(STRINGS.GATE2_BAKASURA_INTRO_12_BIG, STRINGS.GATE2_BAKASURA_INTRO_12_BODY),
+  introBeat(STRINGS.GATE2_BAKASURA_INTRO_13_BIG, STRINGS.GATE2_BAKASURA_INTRO_13_BODY),
   clearedBeat(STRINGS.GATE2_BAKASURA_DEFEAT_1_BIG, STRINGS.GATE2_BAKASURA_DEFEAT_1_BODY),
   clearedBeat(STRINGS.GATE2_BAKASURA_DEFEAT_2_BIG, STRINGS.GATE2_BAKASURA_DEFEAT_2_BODY),
   clearedBeat(STRINGS.GATE2_BAKASURA_DEFEAT_3_BIG, STRINGS.GATE2_BAKASURA_DEFEAT_3_BODY),
   clearedBeat(STRINGS.GATE2_BAKASURA_DEFEAT_4_BIG, STRINGS.GATE2_BAKASURA_DEFEAT_4_BODY),
+  clearedBeat(STRINGS.GATE2_BAKASURA_DEFEAT_5_BIG, STRINGS.GATE2_BAKASURA_DEFEAT_5_BODY),
+  clearedBeat(STRINGS.GATE2_BAKASURA_DEFEAT_6_BIG, STRINGS.GATE2_BAKASURA_DEFEAT_6_BODY),
+  clearedBeat(STRINGS.GATE2_BAKASURA_DEFEAT_7_BIG, STRINGS.GATE2_BAKASURA_DEFEAT_7_BODY),
+  clearedBeat(STRINGS.GATE2_BAKASURA_DEFEAT_8_BIG, STRINGS.GATE2_BAKASURA_DEFEAT_8_BODY),
 ];
 
 export const GATE_2 = {
