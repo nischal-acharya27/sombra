@@ -363,4 +363,64 @@ export const STRINGS = {
   // -- title screen -------------------------------------------------------
   /** `n` is 1-based; `name` is the resumed gate's own name. */
   TITLE_TAG: (n, name) => `GATE ${n} — ${name}`,
+
+  // -- gate 03 (new campaign): Kurukshetra + the lake, Duryodhana (Mahabharata,
+  // Shalya Parva) — content prep only. Per docs/SPEC-CAMPAIGN.md, Duryodhana is
+  // a bespoke `Boss` subclass, not a Warden, and has not been wired into a gate
+  // file yet; the old GATE3 keys above (Naraka/Goru-Mukh) are the currently
+  // live gate 3 and are untouched by this block. Expanded past the spec's
+  // originally-locked two-line minimum into a full intro/defeat scene, matching
+  // Shakuni's and Bakasura's treatment, per an explicit call to do so —
+  // SPEC-CAMPAIGN.md's dialogue table and reasoning should be updated to match
+  // before this ships.
+  GATE3_DURYODHANA_WARDEN_TITLE: 'DURYODHANA',
+  GATE3_DURYODHANA_TITLE: 'GATE BOSS',
+
+  GATE3_DURYODHANA_INTRO_1_BIG: "You found the lake. Most don't think to look at water.",
+  GATE3_DURYODHANA_INTRO_1_BODY: 'I have been still down here long enough to forget the sound of my own name.',
+  GATE3_DURYODHANA_INTRO_2_BIG: 'Eighteen days, and everyone I called brother is already gone.',
+  GATE3_DURYODHANA_INTRO_2_BODY: 'I counted them leaving one by one. I did not count myself as next.',
+  GATE3_DURYODHANA_INTRO_3_BIG: 'I was the eldest son of a king. That should have been the whole story.',
+  GATE3_DURYODHANA_INTRO_3_BODY: 'Instead a cousin born the same season got called heir, and I got called envious.',
+  GATE3_DURYODHANA_INTRO_4_BIG: 'Yudhishthira never asked to be preferred. It happened to him anyway.',
+  GATE3_DURYODHANA_INTRO_4_BODY: 'It happened to me too, in the other direction. No one wrote songs about that.',
+  GATE3_DURYODHANA_INTRO_5_BIG: "I put a woman's honor on a dice table once. I have never once pretended otherwise.",
+  GATE3_DURYODHANA_INTRO_5_BODY: 'Shakuni rolled. I gave the order. Both of those are mine to carry.',
+  GATE3_DURYODHANA_INTRO_6_BIG: 'Five villages. That was the whole of what they asked for, in the end.',
+  GATE3_DURYODHANA_INTRO_6_BODY: "I told Krishna himself I would not give land enough for a needle's point.",
+  GATE3_DURYODHANA_INTRO_7_BIG: 'A war swallowed everyone I built this kingdom for.',
+  GATE3_DURYODHANA_INTRO_7_BODY: 'My hundred brothers. My son. Karna, who never once asked what my cause was worth.',
+  GATE3_DURYODHANA_INTRO_8_BIG: 'I have been down here since the eighteenth day, and the water kept me whole.',
+  GATE3_DURYODHANA_INTRO_8_BODY: 'Whole, and hiding. I know exactly what that looks like from outside.',
+  GATE3_DURYODHANA_INTRO_9_BIG: "Yudhishthira called me out himself. Said hiding wasn't a kingly death.",
+  GATE3_DURYODHANA_INTRO_9_BODY: 'He was right. I came up anyway, because he was right.',
+  GATE3_DURYODHANA_INTRO_10_BIG: 'One weapon, one opponent, my own choosing. That was the offer.',
+  GATE3_DURYODHANA_INTRO_10_BODY: 'I chose the mace. I chose Bhima. I have wanted this exact match for years.',
+  GATE3_DURYODHANA_INTRO_11_BIG: 'He swore an oath over that dice table, to break these legs of mine.',
+  GATE3_DURYODHANA_INTRO_11_BODY: 'An oath is a debt like any other. I intend to make him work for collection.',
+  GATE3_DURYODHANA_INTRO_12_BIG: 'Balarama taught us both this weapon. He will not enjoy watching either of us use it.',
+  GATE3_DURYODHANA_INTRO_12_BODY: 'Watch him leave, if it comes to that. It will tell you which of us he expected to win.',
+  GATE3_DURYODHANA_INTRO_13_BIG: 'I hid because the war was already lost. I do not hide from you.',
+  GATE3_DURYODHANA_INTRO_13_BODY: 'Whatever happens here happens standing up. Come and make it happen.',
+
+  /** Fires at the enrage HP threshold — no rig-swap for Duryodhana, so this line carries the whole escalation. */
+  GATE3_DURYODHANA_ENRAGE_BIG: 'I was the eldest son.',
+  GATE3_DURYODHANA_ENRAGE_BODY: 'No dice were needed to take what should have been given.',
+
+  GATE3_DURYODHANA_DEFEAT_1_BIG: '...Below the waist. Even now, that was beneath you.',
+  GATE3_DURYODHANA_DEFEAT_1_BODY: 'Gada Yuddha has a rule. Bhima broke it. Krishna signaled him to.',
+  GATE3_DURYODHANA_DEFEAT_2_BIG: 'I trained for this exact weapon since I was a boy.',
+  GATE3_DURYODHANA_DEFEAT_2_BODY: 'I did not train against a blow no rule permits.',
+  GATE3_DURYODHANA_DEFEAT_3_BIG: 'I gave an order at a dice table once, and never took it back.',
+  GATE3_DURYODHANA_DEFEAT_3_BODY: "Draupadi's shame is not confused for anyone else's guilt in my head. It is mine.",
+  GATE3_DURYODHANA_DEFEAT_4_BIG: 'A hundred brothers. A son. Karna, who died for a cause he never once questioned.',
+  GATE3_DURYODHANA_DEFEAT_4_BODY: 'I am the reason that list exists. I have made my peace with owning it.',
+  GATE3_DURYODHANA_DEFEAT_5_BIG: 'Yudhishthira gets his kingdom, finally, over a field this empty.',
+  GATE3_DURYODHANA_DEFEAT_5_BODY: 'I hope it is worth what it cost him too. I mean that, more than I expected to.',
+  GATE3_DURYODHANA_DEFEAT_6_BIG: 'I lived as a king and I die on a battlefield, standing, weapon in hand.',
+  GATE3_DURYODHANA_DEFEAT_6_BODY: "Ask any Kshatriya which of those deaths he'd choose. It was never the wrong one.",
+  GATE3_DURYODHANA_DEFEAT_7_BIG: 'Tell Krishna I saw exactly what he signaled. I want that written down somewhere.',
+  GATE3_DURYODHANA_DEFEAT_7_BODY: "Not for pity. For the record. Some things should just be true, even if they don't matter.",
+  GATE3_DURYODHANA_DEFEAT_8_BIG: 'Go on, then. The lake will be still again by morning.',
+  GATE3_DURYODHANA_DEFEAT_8_BODY: 'It kept me whole for eighteen days. It will keep my name a while longer than that.',
 };
