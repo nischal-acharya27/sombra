@@ -8,8 +8,8 @@
 
 import * as THREE from 'three';
 import { Actor, boxHit } from './actor.js';
-import { buildRaakchyas, buildCharger, buildKawach, buildBhootBatti, buildTantrik, buildShakuni, buildBakasura } from '../render/models.js';
-import { RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, PHYS, JUGGLE } from './config.js';
+import { buildRaakchyas, buildCharger, buildKawach, buildBhootBatti, buildTantrik, buildShakuni, buildBakasura, buildTaraka } from '../render/models.js';
+import { RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, PHYS, JUGGLE } from './config.js';
 import { P } from '../render/palette.js';
 import { clamp, damp, lerp, rand } from '../engine/mathx.js';
 
@@ -387,9 +387,15 @@ export class Raakchyas extends Enemy {
 export class Charger extends Enemy {
   static stats = CHARGER;
 
-  constructor(level, ctx, x, y, cfg = CHARGER, skin = null) {
+  /**
+   * `buildRig` lets a subclass reuse this whole chase → telegraph → charge →
+   * recover skeleton under a genuinely new silhouette (see `Taraka` below)
+   * without a throwaway `buildCharger` rig getting built and discarded first
+   * — the constructor asks for the model it actually wants, once.
+   */
+  constructor(level, ctx, x, y, cfg = CHARGER, skin = null, buildRig = buildCharger) {
     super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
-    this.root = buildCharger(skin);
+    this.root = buildRig(skin);
     this.n = this.root.userData.nodes;
     this.finishSetup();
     this.phase = 0;
@@ -868,9 +874,9 @@ export class Kawach extends Enemy {
 export class BhootBatti extends Enemy {
   static stats = BHOOT_BATTI;
 
-  constructor(level, ctx, x, y) {
+  constructor(level, ctx, x, y, cfg = BHOOT_BATTI, skin = null) {
     super(level, ctx, BHOOT_BATTI, { x, y, hw: BHOOT_BATTI.hw, hh: BHOOT_BATTI.hh, maxHp: BHOOT_BATTI.hp });
-    this.root = buildBhootBatti();
+    this.root = buildBhootBatti(skin);
     this.n = this.root.userData.nodes;
     this.finishSetup();
     this.baseY = y;
@@ -1700,6 +1706,116 @@ export class Bakasura extends Enemy {
     for (const key of ['L', 'R']) {
       const g = n['handGlow' + key];
       g.material.opacity = lerp(g.material.opacity, 0.35 + glow * 0.65, k);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Taraka
+// ---------------------------------------------------------------------------
+
+/**
+ * Gate 4's Warden — a curse victim whose whole threat is "lightning speed"
+ * made literal. Extends `Charger` directly rather than copying its own
+ * chase → telegraph → charge → recover skeleton: a claw-pounce is that
+ * shape already, reskinned as a swipe hitbox instead of a body check, per
+ * the handoff's own kit-shape call. `_animate` is the one thing this class
+ * has to override in full — the base `Charger._animate` drives a
+ * quadruped's neck/tail/four legs, and `buildTaraka`'s rig is a biped.
+ */
+export class Taraka extends Charger {
+  static stats = TARAKA;
+
+  constructor(level, ctx, x, y, cfg = TARAKA, skin = null) {
+    super(level, ctx, x, y, cfg, skin, buildTaraka);
+    this.forms = this.root.userData.forms;
+    this.form = 'beautiful';
+    this.n = this.forms.beautiful.nodes;
+    /** Fires once, at the HP threshold — see `takeHit` below. */
+    this.phaseFired = false;
+  }
+
+  /**
+   * The curse-reveal: an HP threshold rather than the ordinary generic
+   * enrage warning `Shakuni`/`Bakasura` fire, because this one is staged as
+   * a held story beat (`Game.firePhaseBeat`) that pauses the fight for a
+   * writhe/contort animation and a pained sound cue, not a toast. Kit and
+   * hitbox never change here — only `this.form`/`this.n` do, once the beat
+   * drains.
+   */
+  takeHit(hit) {
+    const landed = super.takeHit(hit);
+    if (landed && !this.dead && !this.phaseFired && this.hp <= this.maxHp * this.cfg.phaseAt) {
+      this.phaseFired = true;
+      this.ctx.firePhaseBeat?.(() => this._curseReveal());
+    }
+    return landed;
+  }
+
+  /** Swaps the visible rig and the node table `_animate`/`syncRig` read. */
+  _curseReveal() {
+    this.form = 'monstrous';
+    this.forms.beautiful.root.visible = false;
+    this.forms.monstrous.root.visible = true;
+    this.n = this.forms.monstrous.nodes;
+    this.ctx.audio?.play('curseTransform');
+    this.syncRig();
+  }
+
+  _animate(dt) {
+    const n = this.n;
+    const k = 1 - Math.pow(0.0002, dt);
+    const C = this.cfg.charge;
+    const windupMul = this.phaseFired ? this.cfg.phaseWindupMul : 1;
+    let bodyZ = 0;
+    let bodyY = 0;
+    let armZ = 0;
+    let glow = 0;
+    let legSwing = 0;
+
+    if (this.state === 'telegraph') {
+      // Crouched low onto the claws, not reared back — a pounce reads as a
+      // gather, not a rock-back, the same distinction `Bakasura`'s grab
+      // windup draws against `Charger`'s own.
+      const u = 1 - this.phase / (C.windup * windupMul);
+      bodyZ = -0.14 - u * 0.16;
+      bodyY = -0.1 - u * 0.08;
+      armZ = 0.15 + u * 0.55;
+      glow = 0.3 + u * 0.7;
+      this.legPhase += dt * 14;
+      legSwing = Math.sin(this.legPhase) * 0.3;
+    } else if (this.state === 'charging') {
+      bodyZ = 0.2;
+      bodyY = -0.1;
+      armZ = -0.5;
+      glow = 1;
+      this.legPhase += dt * 30;
+      legSwing = Math.sin(this.legPhase) * 0.9;
+      if (Math.random() < 0.5) this.ctx.vfx.dust(this.x - this.facing * 0.5, this.y, 1);
+    } else if (this.state === 'recover') {
+      const u = clamp(this.phase / C.recover, 0, 1);
+      bodyZ = 0.2 * u;
+      bodyY = -0.12 * u;
+    } else if (this.state === 'hurt') {
+      bodyZ = -0.22;
+    } else if (this.state === 'chase' && Math.abs(this.vx) > 0.3) {
+      this.legPhase += dt * (7 + Math.abs(this.vx));
+      legSwing = Math.sin(this.legPhase) * 0.55;
+      bodyY = Math.abs(Math.cos(this.legPhase)) * 0.05;
+    } else {
+      bodyY = Math.sin(this.t * 1.6) * 0.03;
+    }
+
+    n.torso.rotation.z = lerp(n.torso.rotation.z, bodyZ, k);
+    n.body.position.y = lerp(n.body.position.y, n.baseY + bodyY, k);
+    n.shoulderL.rotation.z = lerp(n.shoulderL.rotation.z, -armZ, k);
+    n.shoulderR.rotation.z = lerp(n.shoulderR.rotation.z, armZ, k);
+    n.hipL.rotation.z = lerp(n.hipL.rotation.z, legSwing, k);
+    n.hipR.rotation.z = lerp(n.hipR.rotation.z, -legSwing, k);
+
+    for (const key of ['L', 'R']) {
+      const g = n['handGlow' + key];
+      g.material.opacity = lerp(g.material.opacity, 0.3 + glow * 0.7, k);
     }
   }
 }

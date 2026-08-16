@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { Level } from './level.js';
 import { Player } from './player.js';
-import { Raakchyas, Charger, Kawach, BhootBatti, Tantrik, Shakuni, Bakasura, Bolt } from './enemies.js';
+import { Raakchyas, Charger, Kawach, BhootBatti, Tantrik, Shakuni, Bakasura, Taraka, Bolt } from './enemies.js';
 import { Corpse } from './shadow.js';
 import { Guardian, GoruMukh, Hakim, Chiranjivi, MaunAnkur } from './boss.js';
 import { GameCamera } from './camera.js';
@@ -51,6 +51,7 @@ export const ARCHETYPES = {
   tantrik: Tantrik,
   shakuni: Shakuni,
   bakasura: Bakasura,
+  taraka: Taraka,
   guardian: Guardian,
   goruMukh: GoruMukh,
   hakim: Hakim,
@@ -117,6 +118,7 @@ export class Game {
       shockwave: (x, y, d) => this.playerShockwave(x, y, d),
       shockwaveFromBoss: (x, y, d) => this.bossShockwave(x, y, d),
       onEnrage: () => this.onEnrage(),
+      firePhaseBeat: (onComplete) => this.firePhaseBeat(onComplete),
       onTelegraph: (name) => this.onTelegraph(name),
       styleMul: () => STYLE.mpRegenByRank[this.styleRank()] ?? 1,
       nearestCorpse: (x, y) => this.nearestCorpse(x, y),
@@ -1217,6 +1219,42 @@ export class Game {
 
   onEnrage() {
     this.hud.window({ title: STRINGS.WARN_TITLE, big: STRINGS.ENRAGE_BIG, body: STRINGS.ENRAGE_BODY, duration: SYS_WINDOW.enrage });
+  }
+
+  /**
+   * A Warden's own mid-fight boundary — `docs/DECISIONS.md` § "Boss/Warden
+   * dialogue returns" names this as the gap that boundary's `'intro'`/
+   * `'cleared'` wiring left, and Taraka's curse-reveal (`Taraka._curseReveal`
+   * in `enemies.js`) is its first concrete use. Reuses `_showBeatQueue`
+   * exactly as `'intro'`/`'cleared'` do — the same no-timer, player-advanced
+   * paging — but is called directly by the enemy mid-fight rather than from
+   * `_fireBeats`, since firing while `activeEncounter` is still set is the
+   * whole point here, not the "never opens while an encounter is live" case
+   * that guards grunt toasts.
+   *
+   * `beats` filters `this.gate.beats` at `at: 'phase'` itself, same as
+   * `_fireBeats` does for its own boundaries — a gate with none queues
+   * nothing and `onComplete` fires straight away, so an archetype reusing
+   * this hook without authoring a beat still behaves.
+   */
+  firePhaseBeat(onComplete) {
+    const beats = (this.gate.beats ?? []).filter((b) => b.at === 'phase');
+    if (!beats.length) {
+      onComplete?.();
+      return;
+    }
+    this.resting = true;
+    this._wardenIntro = true;
+    this._showBeatQueue([...beats], () => {
+      this._advance = () => {
+        this.resting = false;
+        this._wardenIntro = false;
+        this.hud.hideRestPrompts();
+        this._advance = null;
+        onComplete?.();
+      };
+      this.hud.beginPrompt(this._advance, STRINGS.CTA_CONTINUE);
+    });
   }
 
   // -- progression ----------------------------------------------------------

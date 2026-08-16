@@ -614,18 +614,19 @@ export function buildShard() {
 // Bhoot-Batti — the floating ranged enemy
 // ---------------------------------------------------------------------------
 
-export function buildBhootBatti() {
+export function buildBhootBatti(skin = null) {
+  const c = skin || { core: P.bhootBattiCore, halo: P.cyanDeep, shard: P.raakchyasBody };
   const root = new THREE.Group();
   const n = {};
 
-  const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.20, 0), glowMaterial({ color: P.bhootBattiCore }));
+  const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.20, 0), glowMaterial({ color: c.core }));
   root.add(core);
   n.core = core;
 
   const halo = new THREE.Mesh(
     new THREE.IcosahedronGeometry(0.34, 0),
     new THREE.MeshBasicMaterial({
-      color: P.cyanDeep,
+      color: c.halo,
       transparent: true,
       opacity: 0.30,
       fog: false,
@@ -642,7 +643,7 @@ export function buildBhootBatti() {
   n.ring = ring;
   for (let i = 0; i < 5; i++) {
     const a = (i / 5) * Math.PI * 2;
-    const shard = part(0.09, 0.20, 0.05, P.raakchyasBody, { outline: 0.014 });
+    const shard = part(0.09, 0.20, 0.05, c.shard, { outline: 0.014 });
     shard.position.set(Math.cos(a) * 0.42, Math.sin(a) * 0.12, Math.sin(a) * 0.42);
     shard.rotation.set(a, a * 1.7, a * 0.5);
     ring.add(shard);
@@ -1074,6 +1075,183 @@ export function buildBakasura(skin = null) {
   }
 
   root.userData.nodes = n;
+  return root;
+}
+
+// ---------------------------------------------------------------------------
+// Taraka — gate 4's Warden, two curse-phase rigs sharing one node vocabulary
+// ---------------------------------------------------------------------------
+
+/**
+ * One biped skeleton, built twice at different proportions and palettes —
+ * once beautiful, once monstrous — so `Taraka._animate` in `enemies.js` can
+ * drive whichever is currently visible through the identical node names
+ * (`shoulderL`/`shoulderR`, `hipL`/`hipR`, `eyeL`/`eyeR`) without knowing
+ * which form it is looking at. The monstrous form is taller and narrower
+ * than `BAKASURA`'s round-bellied giant (`hh ≈ 1.3`, `hw ≈ 0.78` per the
+ * handoff, an athletic rather than heavy-bellied read) and carries claws at
+ * the hand the beautiful form does not; both wear the same raw-hide pelt,
+ * so the swap reads as violence done *to* a person rather than a costume
+ * change.
+ */
+function buildTarakaForm(monstrous, c) {
+  const skin = monstrous ? c.monsterSkin : c.beautySkin;
+  const dark = monstrous ? c.monsterDark : c.beautyHair;
+  const s = monstrous ? 1 : 0.7; // scale everything below off one factor
+
+  const root = new THREE.Group();
+  const n = {};
+
+  const body = new THREE.Group();
+  body.position.y = 0.62 * s + (monstrous ? 0.3 : 0);
+  root.add(body);
+  n.body = body;
+  /** `_animate`'s idle-bob baseline — read back rather than re-derived, so the two forms never drift out of sync with what was actually built. */
+  n.baseY = body.position.y;
+
+  const torso = part(0.5 * s, 0.62 * s, 0.4 * s, skin, { pivot: 'bottom', outline: 0.03 });
+  body.add(torso);
+  n.torso = torso;
+
+  // The raw-hide pelt, slung low across the hip — identity in both forms,
+  // per the handoff's explicit call against skull/bone jewelry (Bakasura's
+  // own motif, dropped here so the two giants don't repeat each other).
+  const pelt = part(0.44 * s, 0.2 * s, 0.46 * s, c.pelt, { pivot: 'top', outline: 0.02 });
+  pelt.position.y = 0.03;
+  torso.add(pelt);
+
+  const head = new THREE.Group();
+  head.position.y = 0.6 * s;
+  torso.add(head);
+  n.head = head;
+
+  const skull = part(0.32 * s, 0.3 * s, 0.3 * s, skin, { pivot: 'bottom', outline: 0.026 });
+  head.add(skull);
+
+  if (monstrous) {
+    // A distorted, jutting jaw and a row of teeth — "prominent teeth and an
+    // enraged expression" per the reference description, built rather than
+    // referenced since no image survived for this form.
+    const jaw = part(0.2, 0.14, 0.22, dark, { pivot: 'top', outline: 0.02 });
+    jaw.position.set(0.14, -0.02, 0);
+    skull.add(jaw);
+    for (let i = -1; i <= 1; i++) {
+      const fang = part(0.02, 0.05, 0.02, P.bone, { pivot: 'top', outline: 0.006 });
+      fang.position.set(0.22, -0.02, i * 0.05);
+      skull.add(fang);
+    }
+  } else {
+    // Loose, human hair — the one detail the monstrous form sheds entirely.
+    const hair = part(0.26, 0.22, 0.26, dark, { pivot: 'top', outline: 0.022 });
+    hair.position.set(-0.06, 0.2, 0);
+    skull.add(hair);
+  }
+
+  for (const side of [-1, 1]) {
+    const eye = decal(monstrous ? 0.09 : 0.05, monstrous ? 0.06 : 0.04, c.eye, { opacity: monstrous ? 1 : 0.75 });
+    eye.position.set(0.16 * s, 0.14 * s, side * 0.1 * s);
+    eye.rotation.y = Math.PI / 2;
+    skull.add(eye);
+    n[side < 0 ? 'eyeL' : 'eyeR'] = eye;
+  }
+
+  // Arms — claws only on the monstrous form; the beautiful form's hands are
+  // bare, per the handoff's "contrast, not corruption" call for this pair.
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const shoulder = new THREE.Group();
+    shoulder.position.set(0.06 * s, 0.44 * s, side * 0.28 * s);
+    torso.add(shoulder);
+    n['shoulder' + key] = shoulder;
+
+    const upper = part(0.16 * s, 0.32 * s, 0.16 * s, skin, { pivot: 'top', outline: 0.024 });
+    shoulder.add(upper);
+
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.32 * s;
+    shoulder.add(elbow);
+    n['elbow' + key] = elbow;
+
+    const fore = part(0.15 * s, 0.3 * s, 0.15 * s, skin, { pivot: 'top', outline: 0.022 });
+    elbow.add(fore);
+
+    const hand = part(0.14 * s, 0.16 * s, 0.14 * s, skin, { pivot: 'top', outline: 0.02 });
+    hand.position.y = -0.3 * s;
+    elbow.add(hand);
+    n['hand' + key] = hand;
+
+    if (monstrous) {
+      for (let i = -1; i <= 1; i++) {
+        const claw = part(0.03, 0.16, 0.03, P.bone, { pivot: 'top', outline: 0.008 });
+        claw.position.set(0.09, -0.38 * s, i * 0.06);
+        elbow.add(claw);
+      }
+    }
+
+    // The claw-swipe telegraph flare — `P.amber`, the roster's shared
+    // damage-signal accent (Bakasura's hands, Shurpanakha's and
+    // Kumbhakarna's eyes), not a fourth invented hue.
+    const glow = decal(0.2 * s, 0.2 * s, c.eye, { opacity: 0.5 });
+    glow.position.set(0.1, -0.3 * s, 0);
+    glow.rotation.y = Math.PI / 2;
+    elbow.add(glow);
+    n['handGlow' + key] = glow;
+  }
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const hip = new THREE.Group();
+    hip.position.set(0, 0, side * 0.16 * s);
+    body.add(hip);
+    n['hip' + key] = hip;
+
+    const thigh = part(0.2 * s, 0.36 * s, 0.2 * s, dark, { pivot: 'top', outline: 0.026 });
+    hip.add(thigh);
+
+    const knee = new THREE.Group();
+    knee.position.y = -0.36 * s;
+    hip.add(knee);
+    n['knee' + key] = knee;
+
+    const shin = part(0.17 * s, 0.32 * s, 0.17 * s, dark, { pivot: 'top', outline: 0.022 });
+    knee.add(shin);
+
+    const foot = part(0.2 * s, 0.1 * s, 0.24 * s, dark, { pivot: 'top', outline: 0.018 });
+    foot.position.set(0.05, -0.32 * s, 0);
+    knee.add(foot);
+  }
+
+  root.userData.nodes = n;
+  return root;
+}
+
+/**
+ * Both curse-phase rigs, pre-built and toggled by `visible` — the same
+ * gate-transition pattern `Game` already uses, never rebuilt mid-run.
+ * `Taraka.constructor` reads `root.userData.forms` to swap `visible` and its
+ * own `this.n` reference at the HP-threshold reveal.
+ */
+export function buildTaraka(skin = null) {
+  const c = skin || {
+    beautySkin: P.tarakaSkin,
+    beautyHair: P.tarakaHair,
+    monsterSkin: P.tarakaMoss,
+    monsterDark: P.tarakaMossDark,
+    pelt: P.tarakaPelt,
+    eye: P.tarakaEye,
+  };
+  const root = new THREE.Group();
+
+  const beautiful = buildTarakaForm(false, c);
+  const monstrous = buildTarakaForm(true, c);
+  monstrous.visible = false;
+  root.add(beautiful, monstrous);
+
+  root.userData.forms = {
+    beautiful: { root: beautiful, nodes: beautiful.userData.nodes },
+    monstrous: { root: monstrous, nodes: monstrous.userData.nodes },
+  };
+  root.userData.nodes = beautiful.userData.nodes;
   return root;
 }
 

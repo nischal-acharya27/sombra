@@ -152,5 +152,27 @@ export const P = {
   bakasuraHand: 0xdb5a3c,
   bakasuraHair: 0x2e2318,
 
+  // Act 2 — Taraka. Per docs/research/villain-roster.md: a clean two-state
+  // curse, warm and human before it, forest-demon-coded moss-green-to-black
+  // after — kept apart from every existing violet/iron/slate demon on the
+  // roster. `tarakaEye` reuses the roster's shared damage-signal `amber`
+  // (Bakasura's hands, Shurpanakha's and Kumbhakarna's eyes) rather than
+  // inventing a fourth telegraph hue.
+  tarakaSkin: 0xc9926a,
+  tarakaHair: 0x3a2416,
+  tarakaMoss: 0x445934,
+  tarakaMossDark: 0x1e2416,
+  tarakaBark: 0x4a3420,
+  // Raw hide/pelt — the reference's other half, carried into both forms as
+  // identity rather than corruption.
+  tarakaPelt: 0x8a6a42,
+  tarakaEye: 0xffb347,
+  // Gate 4's `BhootBatti` reskin — forest wisps, per docs/SPEC-CAMPAIGN.md's
+  // gate-04 table. A sickly pale green rather than the crossing's cyan, so
+  // they read as belonging to the curse-touched canopy rather than as the
+  // same light relocated.
+  forestWispCore: 0xc9f08a,
+  forestWispHalo: 0x6a9a3e,
+
   outline: 0x0a0813,
 };

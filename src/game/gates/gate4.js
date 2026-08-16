@@ -1,136 +1,172 @@
-// Gate 4 — Preta-lok.
+// Gate 4 — Tataka-vana (Ramayana, Bala Kanda).
 //
-// The hungry ghosts. `docs/SPEC-CAMPAIGN.md` is explicit about the register:
-// pale and bright, deliberately, against Naraka's dark, and pretas are drawn
-// sympathetically — waiting for something that stopped coming, not malice.
+// This is gate 4 under the fifteen-gate redesign (docs/SPEC-CAMPAIGN.md):
+// Taraka, not the retired Preta-lok/Atripta. Act 2's first gate, and its own
+// table's call — "Moderate — canopy-level stacked rises, flat at the fight"
+// — mirrors gate 2's traversal texture rather than inventing a new shape:
+// the hunter climbs into curse-touched canopy instead of walking a road, but
+// the stacked-ledge geometry underneath is the same validated rise gate 2
+// already proved (`?vtest`'s 4-unit x-overlap, `thickness: 1.0`), then
+// flattens for the one grunt encounter and for Taraka's own arena, since her
+// claw-pounce kit needs open room the way Bakasura's grab did.
 //
-// Two new things arrive here. Tantrik, the summoner whose entire threat is
-// the queue of raakchyas it keeps raising — met alone first, same shape as
-// gate 3's Kawach, so `GATE4_TANTRIK_NOTE` teaches "prioritise it" before it
-// is ever inferred out of a crowd. And Atripta — The Unfilled — Preta-lok's
-// Warden: an elevated Tantrik per `docs/SPEC-CAMPAIGN.md`'s "Wardens are
-// configuration, not code," not a fourth boss (only gates 3, 6, 8 and 10 are
-// boss-tier).
+// One new thing arrives here: the roster's first phase-transition, wired
+// through `Game.firePhaseBeat` (see `docs/DECISIONS.md` § "Boss/Warden
+// dialogue returns"). Taraka is fought in her beautiful, human-scale-looking
+// rig from the first hit — hitbox and kit are already the monstrous form's,
+// per the handoff, so the swap is never a fairness change — and the curse
+// reveals itself at an HP threshold as a held, wordless story beat: a
+// writhe/contort animation and a pained sound cue, not a toast.
 //
-// Flat throughout, like the crossing and Naraka: the same 3.8-unit gap, the
-// same measured 26% reserve against this build's running jump.
+// Single-archetype throughout, per docs/SPEC-CAMPAIGN.md's Act 2 call:
+// Taraka and Kaikeyi both stay single-archetype/no-combat, so the act's
+// first combination encounter waits for Shurpanakha's gate. `BhootBatti`,
+// reskinned as forest wisps, is the one grunt this gate spends.
 
-import { ATRIPTA } from '../config.js';
+import { TARAKA } from '../config.js';
 import { STRINGS } from '../../ui/strings.js';
+import { P } from '../../render/palette.js';
 
 const ARENA_TOP = 0;
 
 /**
- * Pale dust, washed out — per `docs/SPEC-CAMPAIGN.md`'s table, and
- * deliberately the opposite register from gate 3's iron and red-black. The
- * sigil's own pale lavender (`P.tantrikSigil`) doubles as the one accent
- * colour, the same trick every realm's crystal plays.
+ * Act 2's palette register — "Rakshasa/forest tones, moving toward regal
+ * gold approaching Ravana" per docs/SPEC-CAMPAIGN.md's per-act table. This
+ * is the act's first gate, so the register sits at its greenest, furthest
+ * from the gold the act only reaches near gate 8 — deep canopy, not yet
+ * court.
  */
 const REALM = {
-  sky: { zenith: 0xcfd6e8, mid: 0xd8ceb8, horizon: 0xe8dcc4 },
-  fog: { color: 0xd4c9ae, near: 24, far: 122 },
+  sky: { zenith: 0x0a1408, mid: 0x1e3418, horizon: 0x4a6a2c },
+  fog: { color: 0x2c4a1e, near: 20, far: 110 },
 
-  // Ash-pale ground rather than cinder or turf — a floor nothing is fed by.
-  grass: 0xbdb49c,
-  grassBlade: 0xa89f86,
-  grassBladeTip: 0xe4d9ff,
-  rock: 0x9a927c,
-  rockDark: 0x6e6558,
-  rockMoss: 0x8a8268,
-  stone: 0xaba296,
-  crystal: 0xe4d9ff,
+  grass: 0x2e4420,
+  grassBlade: 0x3a5828,
+  grassBladeTip: 0x8ac25a,
+  rock: 0x3a3020,
+  rockDark: 0x1c1810,
+  rockMoss: 0x445a2a,
+  stone: 0x4a4030,
+  crystal: 0x9adf6a,
 
-  mist: { back: 0xe4dbc4, front: 0xc9bd9e },
-  ridges: [0x8a8268, 0xa89f86, 0xbdb49c],
+  mist: { back: 0x5a7a3e, front: 0x2c4a1e },
+  ridges: [0x1c1810, 0x2a2418, 0x3a3020],
 };
 
 /**
- * Four chambers, the same 3.8 gap gates 1–3 measured their reserve against.
- * Flat throughout: a realm of waiting has no summit to offer.
+ * Canopy climb, left to right: two stacked ledges up, a matching descent,
+ * one real gap, then flat ground the rest of the way — the exact shape and
+ * measurements gate 2's own `SEGMENTS` validated (`tools/gatecheck.js`'s
+ * `edge()` headroom check holds these to the same clearance), re-dressed as
+ * bare canopy stone rather than a road.
  */
 const SEGMENTS = [
-  // Approach: nothing to fight yet, room to read the realm.
-  { x0: -6, x1: 28, top: 0, boulders: 2, pillars: 2, crystals: 1 },
+  // The way in from the last gate: forest floor, nothing climbing yet.
+  { x0: -6, x1: 14, top: 0, trees: 3, boulders: 2 },
 
-  // Tantrik's chamber: sealed, and nothing else spawns in it — the same
-  // isolation gate 3 gave Kawach.
-  { x0: 31.8, x1: 64, top: 0, boulders: 2, pillars: 3, crystals: 1 },
+  // Two stacked ledges climbing into the canopy.
+  { x0: 10, x1: 22, top: 3, barren: true, depth: 5, thickness: 1.0, boulders: 1 },
+  { x0: 18, x1: 32, top: 6, barren: true, depth: 5, thickness: 1.0, boulders: 1 },
 
-  // The waiting chamber: Tantrik alongside what gate 1 already taught.
-  { x0: 67.8, x1: 104, top: 0, boulders: 3, pillars: 2, crystals: 2 },
+  // The descent, mirroring the climb.
+  { x0: 28, x1: 40, top: 3, barren: true, depth: 5, thickness: 1.0 },
+  { x0: 36, x1: 56, top: 0, trees: 2, boulders: 2 },
 
-  // Atripta's arena — long, flat, nowhere for a queue to hide.
-  { x0: 107.8, x1: 150, top: ARENA_TOP, boulders: 2, pillars: 2, crystals: 2, thickness: 6 },
+  // The one real gap — 3.8 wide, the same figure every gate's own gap is
+  // measured against per docs/DECISIONS.md's "6.08-unit running jump" entry.
+  { x0: 59.8, x1: 96, top: 0, trees: 2, boulders: 2, pillars: 1 },
+
+  // Taraka's arena — flat, no cover, room for a claw-pounce to be read.
+  { x0: 96, x1: 152, top: 0, barren: true, depth: 9, boulders: 2, thickness: 6 },
 ];
 
 /**
- * Preta-lok's Warden: an existing archetype, elevated. `ATRIPTA` extends
- * `TANTRIK` in `src/game/config.js` — the same relationship `KEVAT` has to
- * `CHARGER` — so the archetype named here is `tantrik`, not a fourth boss.
+ * `BhootBatti` reskinned as forest wisps — "slow and floating against her
+ * own fast, committal ground melee," per docs/SPEC-CAMPAIGN.md's gate-04
+ * table. Only the glow colours move; the hover/shoot behaviour underneath
+ * is the archetype's own, unchanged, the same reskin discipline gate 2's
+ * village-rakshasa skin follows.
+ */
+const FOREST_WISP_SKIN = { core: P.forestWispCore, halo: P.forestWispHalo, shard: P.forestWispHalo };
+
+/**
+ * The gate's Warden: Taraka is tier 2 (`docs/agents/villain-handoff.md`) —
+ * a new rig, but `Taraka` in `enemies.js` reads every number from the block
+ * it is handed exactly as `Bakasura`/`Shakuni` do.
  */
 const WARDEN = {
-  archetype: 'tantrik',
+  archetype: 'taraka',
   title: STRINGS.GATE4_WARDEN_TITLE,
-  stats: ATRIPTA,
+  stats: TARAKA,
 };
 
 /**
- * Three encounters: Tantrik alone, Tantrik alongside a raakchyas pair already
- * taught in gate 1, then the Warden. `tools/gatecheck.js`'s `soloDebut` check
- * makes "alone" a fact rather than an intention.
+ * Two encounters: the forest wisps met alone, then Taraka herself. Single
+ * archetype per encounter throughout, per Act 2's own "Taraka and Kaikeyi
+ * stay single-archetype" call — `tools/gatecheck.js`'s `soloDebut` check
+ * makes the wisps' solo debut a fact rather than an intention.
  */
 const ENCOUNTERS = [
   {
-    id: 'tantrik-alone',
-    trigger: 40,
-    lock: [33, 62],
+    id: 'forest-wisps',
+    trigger: 68,
+    lock: [64, 94],
     intro: {
-      title: STRINGS.GATE4_TANTRIK_TITLE,
-      body: STRINGS.GATE4_TANTRIK_BODY,
-      note: STRINGS.GATE4_TANTRIK_NOTE,
-    },
-    spawns: [{ type: 'tantrik', x: 50, delay: 0.3 }],
-  },
-  {
-    id: 'the-waiting',
-    trigger: 76,
-    lock: [69, 102],
-    intro: {
-      title: STRINGS.GATE4_WAITING_TITLE,
-      body: STRINGS.GATE4_WAITING_BODY,
+      title: STRINGS.GATE4_WISP_TITLE,
+      body: STRINGS.GATE4_WISP_BODY,
+      note: STRINGS.GATE4_WISP_NOTE,
     },
     spawns: [
-      { type: 'tantrik', x: 85, delay: 0 },
-      { type: 'raakchyas', x: 80, delay: 1.0 },
-      { type: 'raakchyas', x: 92, delay: 1.8 },
+      { type: 'bhootBatti', x: 78, delay: 0.3, skin: FOREST_WISP_SKIN },
+      { type: 'bhootBatti', x: 88, delay: 0.9, skin: FOREST_WISP_SKIN },
     ],
   },
   {
-    id: 'atripta',
-    trigger: 120,
-    lock: [109, 149],
-    boss: true,
-    intro: { title: STRINGS.GATE4_ATRIPTA_TITLE, body: WARDEN.title },
-    spawns: [{ type: 'warden', x: 135, delay: 0.9 }],
+    id: 'taraka',
+    trigger: 106,
+    lock: [100, 150],
+    intro: { title: STRINGS.GATE4_TARAKA_TITLE, body: WARDEN.title },
+    spawns: [{ type: 'warden', x: 128, delay: 0.8 }],
   },
 ];
 
 /**
- * Two boundary beats, the same shape gates 2 and 3 use.
+ * `docs/DECISIONS.md` § "A Warden's intro and defeat are a scene, not a
+ * line": thirteen paged 'intro' beats (who she was, Sunda, Agastya's curse,
+ * the forest that carries her name, and her own signature line) and eight
+ * paged 'cleared' beats once she loses. Between them, one 'phase' beat —
+ * the roster's first — fired by `Taraka.takeHit` in `enemies.js` through
+ * `Game.firePhaseBeat` at her HP threshold: no text, per
+ * `docs/SPEC-CAMPAIGN.md`'s own dialogue table ("no line — writhe/contort
+ * animation and pained sound cue carry it"), just the held window and the
+ * rig swap underneath it.
  */
+const introBeat = (big, body) => ({ at: 'intro', title: STRINGS.GATE4_TARAKA_TITLE, big, body });
+const clearedBeat = (big, body) => ({ at: 'cleared', title: STRINGS.GATE4_TARAKA_TITLE, big, body });
+
 const BEATS = [
-  {
-    at: 'enter',
-    title: STRINGS.GATE4_BEAT_ENTER_TITLE,
-    big: STRINGS.GATE4_BEAT_ENTER_BIG,
-    body: STRINGS.GATE4_BEAT_ENTER_BODY,
-  },
-  {
-    at: 'cleared',
-    title: STRINGS.GATE4_BEAT_CLEARED_TITLE,
-    big: STRINGS.GATE4_BEAT_CLEARED_BIG,
-    body: STRINGS.GATE4_BEAT_CLEARED_BODY,
-  },
+  introBeat(STRINGS.GATE4_TARAKA_INTRO_1_BIG, STRINGS.GATE4_TARAKA_INTRO_1_BODY),
+  introBeat(STRINGS.GATE4_TARAKA_INTRO_2_BIG, STRINGS.GATE4_TARAKA_INTRO_2_BODY),
+  introBeat(STRINGS.GATE4_TARAKA_INTRO_3_BIG, STRINGS.GATE4_TARAKA_INTRO_3_BODY),
+  introBeat(STRINGS.GATE4_TARAKA_INTRO_4_BIG, STRINGS.GATE4_TARAKA_INTRO_4_BODY),
+  introBeat(STRINGS.GATE4_TARAKA_INTRO_5_BIG, STRINGS.GATE4_TARAKA_INTRO_5_BODY),
+  introBeat(STRINGS.GATE4_TARAKA_INTRO_6_BIG, STRINGS.GATE4_TARAKA_INTRO_6_BODY),
+  introBeat(STRINGS.GATE4_TARAKA_INTRO_7_BIG, STRINGS.GATE4_TARAKA_INTRO_7_BODY),
+  introBeat(STRINGS.GATE4_TARAKA_INTRO_8_BIG, STRINGS.GATE4_TARAKA_INTRO_8_BODY),
+  introBeat(STRINGS.GATE4_TARAKA_INTRO_9_BIG, STRINGS.GATE4_TARAKA_INTRO_9_BODY),
+  introBeat(STRINGS.GATE4_TARAKA_INTRO_10_BIG, STRINGS.GATE4_TARAKA_INTRO_10_BODY),
+  introBeat(STRINGS.GATE4_TARAKA_INTRO_11_BIG, STRINGS.GATE4_TARAKA_INTRO_11_BODY),
+  introBeat(STRINGS.GATE4_TARAKA_INTRO_12_BIG, STRINGS.GATE4_TARAKA_INTRO_12_BODY),
+  introBeat(STRINGS.GATE4_TARAKA_INTRO_13_BIG, STRINGS.GATE4_TARAKA_INTRO_13_BODY),
+  { at: 'phase', title: STRINGS.GATE4_TARAKA_TITLE },
+  clearedBeat(STRINGS.GATE4_TARAKA_DEFEAT_1_BIG, STRINGS.GATE4_TARAKA_DEFEAT_1_BODY),
+  clearedBeat(STRINGS.GATE4_TARAKA_DEFEAT_2_BIG, STRINGS.GATE4_TARAKA_DEFEAT_2_BODY),
+  clearedBeat(STRINGS.GATE4_TARAKA_DEFEAT_3_BIG, STRINGS.GATE4_TARAKA_DEFEAT_3_BODY),
+  clearedBeat(STRINGS.GATE4_TARAKA_DEFEAT_4_BIG, STRINGS.GATE4_TARAKA_DEFEAT_4_BODY),
+  clearedBeat(STRINGS.GATE4_TARAKA_DEFEAT_5_BIG, STRINGS.GATE4_TARAKA_DEFEAT_5_BODY),
+  clearedBeat(STRINGS.GATE4_TARAKA_DEFEAT_6_BIG, STRINGS.GATE4_TARAKA_DEFEAT_6_BODY),
+  clearedBeat(STRINGS.GATE4_TARAKA_DEFEAT_7_BIG, STRINGS.GATE4_TARAKA_DEFEAT_7_BODY),
+  clearedBeat(STRINGS.GATE4_TARAKA_DEFEAT_8_BIG, STRINGS.GATE4_TARAKA_DEFEAT_8_BODY),
 ];
 
 export const GATE_4 = {
@@ -140,10 +176,12 @@ export const GATE_4 = {
   beats: BEATS,
 
   spawnX: 2,
-  voidY: -26,
-  arenaTop: ARENA_TOP,
-  exitX: 140,
-  end: 150,
+  /** Below the climb and the gap both. */
+  voidY: -24,
+  /** Every arena segment is `top: 0`. */
+  arenaTop: 0,
+  exitX: 148,
+  end: 154,
 
   segments: SEGMENTS,
   encounters: ENCOUNTERS,

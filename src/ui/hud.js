@@ -302,12 +302,12 @@ export class HUD {
    * `_bossRestEl` and the open story window both exist, not which prompt put
    * them there.
    */
-  beginPrompt(onBegin) {
+  beginPrompt(onBegin, label = 'BEGIN') {
     const el = document.createElement('div');
     el.className = 'sys-window boss-rest';
     const btn = document.createElement('button');
     btn.className = 'cta';
-    btn.textContent = 'BEGIN';
+    btn.textContent = label;
     btn.addEventListener('click', onBegin);
     el.appendChild(btn);
     this.el.windows.appendChild(el);

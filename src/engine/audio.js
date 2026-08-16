@@ -247,6 +247,16 @@ export class Audio {
         this._tone({ freq: 90, freq2: 20, type: 'square', gain: 0.2, a: 0.02, d: 2.4 });
         this._noise({ gain: 0.26, a: 0.02, d: 2.0, filter: 'lowpass', freq: 1400, freq2: 80, send: 0.6 });
         break;
+      case 'curseTransform':
+        // A pained, human cry curdling into something else — descending and
+        // rough, distinct from the flat animal 'growl' every quadruped
+        // charger already uses. Taraka's curse-reveal beat, not a monster
+        // roar: this is the moment the hunter is meant to read as done *to*
+        // her rather than chosen by her.
+        this._tone({ freq: 480, freq2: 90, type: 'sawtooth', gain: 0.22, a: 0.01, d: 0.9, send: 0.5 });
+        this._tone({ freq: 640, freq2: 140, type: 'sine', gain: 0.14, a: 0.01, d: 0.7 });
+        this._noise({ gain: 0.18, a: 0.02, d: 0.8, filter: 'bandpass', freq: 1200, freq2: 300, q: 1.6, send: 0.4 });
+        break;
       case 'enrage':
         this._tone({ freq: 60, freq2: 240, type: 'sawtooth', gain: 0.3, a: 0.02, d: 0.9, send: 0.5 });
         this._noise({ gain: 0.2, a: 0.02, d: 0.9, filter: 'highpass', freq: 400, send: 0.4 });

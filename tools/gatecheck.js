@@ -25,7 +25,7 @@
 // descriptor is authored correctly, that one asks whether `Level` built what
 // the descriptor said.
 
-import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR } from '../src/game/config.js';
+import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR } from '../src/game/config.js';
 import { ARCHETYPES } from '../src/game/game.js';
 import { GATES } from '../src/game/gates/index.js';
 
@@ -420,8 +420,15 @@ function enemyTypes(gate) {
  * nothing else in the gate at all; gates 3 and 4 will have to be authored to
  * meet it too, and this check will not be what notices if they are not.
  */
-/** The only boundaries `Game._fireBeats` knows how to fire on. */
-const BEAT_BOUNDARIES = new Set(['enter', 'intro', 'cleared']);
+/**
+ * The only boundaries a gate's `beats` can fire on. `'phase'` is not one
+ * `Game._fireBeats` itself recognises — it is read directly by
+ * `Game.firePhaseBeat`, the Warden's own mid-fight hook (`docs/DECISIONS.md`
+ * § "Boss/Warden dialogue returns") — but it is still the one other
+ * boundary a gate descriptor is allowed to author against, so it belongs in
+ * this set rather than being invisible to the check.
+ */
+const BEAT_BOUNDARIES = new Set(['enter', 'intro', 'cleared', 'phase']);
 
 /**
  * A story beat only ever fires at a boundary `Game._fireBeats` recognises —
@@ -520,6 +527,11 @@ const TELLS = [
   // above — the row that has to clear the floor is the enraged one.
   { archetype: 'bakasura', tell: 'grab, enraged', windup: BAKASURA.grab.windup * BAKASURA.enrageWindupMul },
   { archetype: 'bakasura', tell: 'tackle, enraged', windup: BAKASURA.tackle.windup * BAKASURA.enrageWindupMul },
+  // Taraka's claw-pounce windup tightens after her curse-reveal
+  // (`TARAKA.phaseWindupMul`), same reasoning as Shakuni's and Bakasura's own
+  // rows — the number that has to clear the floor is the one she fights with
+  // for the rest of the encounter, not her pre-reveal one.
+  { archetype: 'taraka', tell: 'claw, revealed', windup: TARAKA.charge.windup * TARAKA.phaseWindupMul },
   ...Object.entries(GUARDIAN.attacks).map(([name, a]) => ({
     archetype: 'guardian',
     tell: `${name}, enraged`,

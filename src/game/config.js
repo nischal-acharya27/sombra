@@ -759,6 +759,67 @@ export const BAKASURA = {
   enrageWindupMul: 0.85,
 };
 
+/**
+ * Taraka — gate 4's Warden, per `docs/research/villain-roster.md`'s handoff:
+ * a curse victim, not a birth-monster, so her kit is "lightning speed" made
+ * literal rather than a grapple or a weapon. Tier 2: a new rig in
+ * `models.js` (both curse-phase meshes, built up front and swapped by a
+ * `visible` flag — never rebuilt mid-run), but `Taraka` in `enemies.js`
+ * extends `Charger` directly per the kit-shape call: claws close the
+ * distance fast rather than wrestling for a throw, the same chase →
+ * telegraphed windup → committed lane-charge shape a charge already is,
+ * reskinned as a claw-swipe hitbox instead of a body check.
+ *
+ * `hw`/`hh` are fixed at the monstrous form's own silhouette for the whole
+ * fight, never resized at the curse-reveal swap — the handoff's own call,
+ * so the swap is cosmetic and never a fairness change. `speed` sits above
+ * the rest of the Warden pack — the roster's other giant, `BAKASURA`, is
+ * 2.3; this is faster than the base `CHARGER` itself — because "lightning
+ * speed" is the one differentiator the source gives her, and the handoff
+ * asks for it as a real stat rather than flavor text.
+ */
+export const TARAKA = {
+  ...CHARGER,
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hw: 0.78,
+  hh: 1.3,
+  speed: 4.0,
+  chaseRange: 26,
+  charge: {
+    ...CHARGER.charge,
+    // A shorter, quicker lane than the base charger's — a claw-pounce
+    // rather than a lumbering body-check, closing at a higher rate over a
+    // smaller range so "lightning speed" reads in the commit itself, not
+    // only in her footspeed between commits.
+    range: 6.5,
+    minRange: 2.2,
+    windup: 0.52,
+    speed: 21,
+    dur: 0.4,
+    recover: 1.15,
+    wallRecover: 0.4,
+    damage: 20,
+    knock: 12,
+    shake: 0.24,
+  },
+  cooldown: [0.7, 1.3],
+  exp: 62,
+  contactDamage: 0,
+  // The roster's first phase-transition: an HP threshold that fires a paged,
+  // held story beat (`Game.firePhaseBeat`) rather than an instant swap —
+  // the hunter watches the curse happen rather than reading about it. Kit
+  // and hitbox are identical before and after; `phaseWindupMul` is the one
+  // thing that actually tightens, the same "escalation is the windup, not
+  // the kit" call `SHAKUNI`/`BAKASURA` already make for their own enrages.
+  phaseAt: 0.5,
+  // Clears `tools/gatecheck.js`'s telegraph floor by a comfortable margin
+  // even at its tightest, post-reveal value (0.52 × 0.85 = 0.442s against a
+  // 0.42s floor) — deliberately, unlike the Guardian's 9ms case, since
+  // "lightning speed" is already the differentiator and the windup itself
+  // does not need to be the thing that is barely fair.
+  phaseWindupMul: 0.85,
+};
+
 export const GUARDIAN = {
   hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 1.5,
