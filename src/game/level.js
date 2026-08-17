@@ -102,9 +102,24 @@ export class Level {
       body.castShadow = true;
       this.group.add(body);
 
-      // A darker, narrower plinth reading as the cliff continuing into shadow.
-      const plinth = new THREE.Mesh(new THREE.BoxGeometry(w * 0.8, 9, depth * 0.7), rockDarkMat);
-      plinth.position.set(cx, top - 0.5 - bodyH - 4.5, 0);
+      // The underside: a tapered rock stub clamped to the real clearance
+      // below, so it never pokes through a lower segment (as the old fixed
+      // 9-unit box did on gate 2's stacked ledges) and always shows a hard
+      // edge with open air beneath it, instead of fading into a fake cliff.
+      const bottom = top - bodyH;
+      let belowTop = -Infinity;
+      for (const other of this.gate.segments) {
+        if (other === seg || other.x1 <= x0 || other.x0 >= x1) continue;
+        if (other.top <= bottom + 0.01 && other.top > belowTop) belowTop = other.top;
+      }
+      const clearance = belowTop > -Infinity ? bottom - belowTop : Infinity;
+      const plinthH = Math.max(0.8, Math.min(9, clearance - 0.4));
+      const plinthGeo = new THREE.CylinderGeometry(w * 0.32, w * 0.08, plinthH, 4, 1);
+      const plinth = new THREE.Mesh(plinthGeo, rockDarkMat);
+      plinth.rotation.y = Math.PI / 4;
+      plinth.scale.z = depth / w;
+      plinth.position.set(cx, bottom - plinthH / 2, 0);
+      plinth.castShadow = true;
       this.group.add(plinth);
 
       if (!seg.barren) scatterGrass(grassPoints, { x: cx, y: top - 0.02, w, d: depth * 0.82 });
