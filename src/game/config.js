@@ -820,6 +820,18 @@ export const TARAKA = {
   phaseWindupMul: 0.85,
 };
 
+/**
+ * Kaikeyi's gate (5) — the roster's first tier-0, no-combat build
+ * (`docs/agents/villain-handoff.md`). She has no `Enemy`/`Boss` stats block
+ * at all; the one tunable her gate needs is how far off the ground the
+ * hunter has to be, at a fork's trigger x, to read as "took the jump path"
+ * rather than "walked it" — `Game._updateForks` in `game.js`. Comfortably
+ * below `PLAYER.jumpVel`'s own apex (20.5² / (2 × 62) ≈ 3.39 units), so an
+ * incidental hop still registers, and comfortably above 0 so ordinary
+ * ground jitter never misreads as a jump.
+ */
+export const KAIKEYI_FORK = { jumpY: 0.4 };
+
 export const GUARDIAN = {
   hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 1.5,

@@ -23,6 +23,7 @@ import { P } from '../render/palette.js';
 import { toonMaterial, outlineFor } from '../render/toon.js';
 import { GrassField, scatterGrass, makeRock, makeCrystal, makeTree, makeMist, makeWater, buildBackdrop } from '../render/env.js';
 import { buildLandmark } from '../render/landmarks.js';
+import { buildFigure } from './figure.js';
 import { rand } from '../engine/mathx.js';
 import { BARRIER } from './config.js';
 
@@ -138,6 +139,7 @@ export class Level {
     }
 
     this._buildLandmark();
+    this._buildFigure();
     this._buildGateArch();
     this._buildWater();
 
@@ -216,6 +218,19 @@ export class Level {
     g.rotation.y = l.rotY;
     this.group.add(g);
     this.landmark = g;
+  }
+
+  /**
+   * The gate's tier-0 figure, if it has one — Kaikeyi, so far the only one
+   * (`docs/agents/villain-handoff.md`). Built once, here, exactly like every
+   * other body in the level; `Game._fireChoiceBeat` reaches it through
+   * `this.figure` to swap poses, the same way it reaches `this.boss`.
+   */
+  _buildFigure() {
+    const f = this.gate.figure;
+    if (!f) return;
+    this.figure = buildFigure(f.kind, f.x, f.y ?? this.groundAt(f.x), f.facing);
+    if (this.figure) this.group.add(this.figure.root);
   }
 
   /**
@@ -367,5 +382,9 @@ export class Level {
     }
     this.portal.material.opacity = 0;
     this.portal.scale.y = 1;
+    // A re-entered gate has to look like a first visit — Kaikeyi's rig is
+    // never rebuilt, so a stale pose from a beat resolved last time this
+    // gate ran would otherwise still be showing when the hunter arrives.
+    this.figure?.posture?.(null);
   }
 }

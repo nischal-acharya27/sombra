@@ -14,7 +14,7 @@ import { GameCamera } from './camera.js';
 import { VFX } from '../render/vfx.js';
 import { buildShard } from '../render/models.js';
 import { P } from '../render/palette.js';
-import { MAGIC, STYLE, PROGRESSION, PLAYER, BHOOT_BATTI, CHAYA, GATE_ARCH, SYS_WINDOW } from './config.js';
+import { MAGIC, STYLE, PROGRESSION, PLAYER, BHOOT_BATTI, CHAYA, GATE_ARCH, SYS_WINDOW, KAIKEYI_FORK } from './config.js';
 import { boxHit } from './actor.js';
 import { clamp, rand } from '../engine/mathx.js';
 import { STRINGS } from '../ui/strings.js';
@@ -192,6 +192,7 @@ export class Game {
     // Re-derived every time a gate is entered. Seeded here so that nothing
     // touching a freshly constructed `Game` — the suite does — finds it absent.
     this.encounters = this.gate.encounters.map((e) => ({ ...e, started: false, cleared: false, alive: 0 }));
+    this.forks = (this.gate.forks ?? []).map((f) => ({ ...f, resolved: false }));
     this.activeEncounter = null;
     this.moteT = 0;
     // Every story beat this run has fired or refused, in order — read by
@@ -278,6 +279,7 @@ export class Game {
     this.boss = null;
 
     this.encounters = this.gate.encounters.map((e) => ({ ...e, started: false, cleared: false, alive: 0 }));
+    this.forks = (this.gate.forks ?? []).map((f) => ({ ...f, resolved: false }));
     this.activeEncounter = null;
     this.wayOpen = false;
     this.resting = false;
@@ -342,8 +344,14 @@ export class Game {
 
   /**
    * Fire every story beat this gate has queued at boundary `at` — 'enter',
-   * 'intro' (a Warden's own gate, ahead of its fight) or 'cleared' today,
-   * more as the campaign grows.
+   * 'intro' (a Warden's own gate, ahead of its fight), 'cleared', or
+   * 'choice-made' (Kaikeyi's fork-resolution beats, gate 5) today, more as
+   * the campaign grows.
+   *
+   * `match`, when given, narrows 'choice-made' beats further — Kaikeyi
+   * authors two variants per beat, one per fork, and only the one the
+   * hunter actually resolved should queue. Every other boundary ignores it,
+   * since a plain `at` already picks out exactly the right beats for them.
    *
    * The one rule this whole ticket exists to hold: a beat never opens while an
    * encounter is live. `docs/PLAYTEST.md` round 3 is what happens otherwise —
@@ -359,14 +367,15 @@ export class Game {
    * single-beat gate (today's only shape) that happens synchronously, in this
    * same call, exactly like the old one-shot behaviour.
    */
-  _fireBeats(at, onDrained) {
+  _fireBeats(at, onDrained, match = null) {
     const beats = this.gate.beats;
     const queue = [];
     if (beats) {
       for (const b of beats) {
         if (b.at !== at) continue;
+        if (match && (b.fork !== match.fork || b.path !== match.path)) continue;
         const liveEncounter = !!this.activeEncounter;
-        this.storyBeats.push({ gate: this.gate.id, at, liveEncounter, opened: !liveEncounter });
+        this.storyBeats.push({ gate: this.gate.id, at, fork: b.fork, path: b.path, liveEncounter, opened: !liveEncounter });
         if (!liveEncounter) queue.push(b);
       }
     }
@@ -471,6 +480,7 @@ export class Game {
     this._resolveCombat(dt);
     this._updateSpawns(dt);
     this._updateEncounters();
+    this._updateForks();
     this._updateStyle(dt);
 
     // Cull
@@ -887,6 +897,65 @@ export class Game {
     const pending = this.pendingSpawns.some((s) => s.encounter === active.id);
     const alive = this.enemies.some((en) => en.encounter === active.id && !en.dead);
     if (!pending && !alive) this._clearEncounter(active);
+  }
+
+  /**
+   * Kaikeyi's four-beat fork sequence (gate 5) — the roster's first tier-0,
+   * no-combat gate (`docs/agents/villain-handoff.md`). Each fork in
+   * `this.gate.forks` is a single x trigger the hunter's own position
+   * crosses, resolved by whether they were airborne (`path: 'jump'`) or
+   * grounded (`path: 'low'`) at that instant — the "two-path fork,
+   * resolved by whichever trigger volume the hunter crosses first" the
+   * handoff calls for, without a second collision primitive: the ground
+   * stays one flat lane throughout, and the two "trigger volumes" are the
+   * same x line read against two disjoint y-bands.
+   *
+   * Reuses `_updateEncounters`'s own trigger-crossing shape deliberately —
+   * a fork is resolved exactly once, the same way an encounter starts
+   * exactly once, and `f.resolved` is this method's `e.started`.
+   */
+  _updateForks() {
+    const forks = this.forks;
+    if (!forks || !forks.length) return;
+    for (const f of forks) {
+      if (f.resolved) continue;
+      if (this.player.x < f.x) continue;
+      f.resolved = true;
+      const path = this.player.y > (f.jumpY ?? KAIKEYI_FORK.jumpY) ? 'jump' : 'low';
+      this._fireChoiceBeat(f.id, path);
+      return; // one at a time — the next fork's own trigger is still ahead.
+    }
+  }
+
+  /**
+   * Pages Kaikeyi's beat for one resolved fork, then hands control back with
+   * a CONTINUE prompt — the same paged, player-advanced shape
+   * `firePhaseBeat` already uses for a mid-scene beat, reused here rather
+   * than invented twice. A gate authored with no matching beat (or none at
+   * all) just falls through, per `_fireBeats`'s own "no beats, no queue"
+   * behaviour.
+   */
+  _fireChoiceBeat(forkId, path) {
+    // Her rig has no state machine of its own — a beat resolving is the
+    // only thing that ever moves her, per the handoff's "nothing about her
+    // rig moves under its own logic." Fires regardless of whether text is
+    // authored for this fork, so a pose never silently lags a beat.
+    this.level.figure?.posture?.(forkId);
+    const hadBeats = (this.gate.beats ?? []).some((b) => b.at === 'choice-made' && b.fork === forkId && b.path === path);
+    if (!hadBeats) return;
+    this.resting = true;
+    this._fireBeats(
+      'choice-made',
+      () => {
+        this._advance = () => {
+          this.resting = false;
+          this._advance = null;
+          this.hud.hideRestPrompts();
+        };
+        this.hud.beginPrompt(this._advance, STRINGS.CTA_CONTINUE);
+      },
+      { fork: forkId, path }
+    );
   }
 
   _startEncounter(e) {

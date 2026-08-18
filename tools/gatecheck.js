@@ -428,7 +428,7 @@ function enemyTypes(gate) {
  * boundary a gate descriptor is allowed to author against, so it belongs in
  * this set rather than being invisible to the check.
  */
-const BEAT_BOUNDARIES = new Set(['enter', 'intro', 'cleared', 'phase']);
+const BEAT_BOUNDARIES = new Set(['enter', 'intro', 'cleared', 'phase', 'choice-made']);
 
 /**
  * A story beat only ever fires at a boundary `Game._fireBeats` recognises —

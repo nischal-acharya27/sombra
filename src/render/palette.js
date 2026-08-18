@@ -174,5 +174,23 @@ export const P = {
   forestWispCore: 0xc9f08a,
   forestWispHalo: 0x6a9a3e,
 
+  // Act 2 — Kaikeyi. Per docs/research/villain-roster.md, kept close to a
+  // specific reference portrait rather than shifted to a new hue family: a
+  // grieving human queen, not a monster, in wine-red bridal/coronation
+  // attire and jewelry-toned gold. `kaikeyiRobe` sits darker and more muted
+  // than Ravana's vermillion `lankaRobe` or Shurpanakha's red drape — dried
+  // wine, not fresh crimson, distinguishing her by hue where her silhouette
+  // (nose ring, coin necklace, paisley crown) already carries most of the
+  // load against Shurpanakha's own gold-and-red disguise palette.
+  // `kaikeyiGold` is a brighter, ornament-toned gold, distinct from
+  // Duryodhana's armor-toned `kuruPlate` and Hiranyakashipu's muted
+  // `hiranyaGold`. No `kaikeyiCore` — nothing in her kit does damage, so
+  // there is no "incoming hit" for a telegraph flare to signal.
+  kaikeyiRobe: 0x5c2430,
+  kaikeyiRobeDark: 0x3a1620,
+  kaikeyiGold: 0xd9ad48,
+  kaikeyiSkin: 0xa87454,
+  kaikeyiHair: 0x241610,
+
   outline: 0x0a0813,
 };

@@ -1,165 +1,104 @@
-// Gate 5 — Tiryak-lok.
+// Gate 5 — Kaikeyi (Ramayana, Ayodhya Kanda).
 //
-// The animal realm. `docs/SPEC-CAMPAIGN.md` is explicit that no new archetype
-// arrives here: "no judgment, no speech, no negotiation," and the densest
-// beast encounters in the game. So the job this gate does is not teaching a
-// new tell — it is making raakchyas and charger, both already taught, feel
-// like a pack rather than a queue of solo fights: three grunt encounters
-// that grow denser in sequence (Raakchyas ×3, then ×2 with a Charger, then
-// ×3 with two Chargers), before the Pack-Mother — Vyaghri, Tiryak-lok's
-// Warden — closes the gate.
+// This is gate 5 under the fifteen-gate redesign (docs/SPEC-CAMPAIGN.md):
+// Kaikeyi, not the retired Tiryak-lok. The roster's first tier-0, no-combat
+// gate (docs/agents/villain-handoff.md): no `Enemy`/`Boss` ancestry, no
+// encounters, no `warden` field — `Game._enterGate` already opens the way
+// out for any gate authored without one. She has no monster form and no
+// combat-victory beat to adapt; casting her as a boss to be fought would be
+// the largest invention on the whole roster relative to the source, per
+// docs/research/villain-roster.md's own "Cut-vs-keep, resolved" note.
 //
-// Vyaghri is an existing archetype elevated, same relationship `KEVAT` has to
-// `CHARGER`, and gate 2 has already spent that pattern once — see `VYAGHRI`
-// in `src/game/config.js` for why a second elevation of the same archetype is
-// exactly what a beast-realm Warden should be, not a shortcut around
-// authoring a new one. Its `charge.chain: 3` is one commitment further than
-// the Kevat ever asks for.
+// Flat throughout, per docs/SPEC-CAMPAIGN.md's own table for this gate — a
+// single antechamber, not a fight arena. A linear sequence of four beats,
+// each staged as a two-path fork the hunter resolves just by how they walk
+// through it (`Game._updateForks`): grounded reads as 'low', airborne reads
+// as 'jump', no new collision primitive and no wrong answer either way.
+// Kaikeyi stands fixed past the far end of the antechamber for the whole
+// gate, visible from the moment the hunter arrives — never repositioning,
+// never fought, never won.
 //
-// Flat throughout, like gates 2–4: the same 3.8-unit gap, the same measured
-// 26% reserve against this build's running jump. Longer than any gate before
-// it — five chambers instead of four — because density needed room the prior
-// gates didn't.
+// Only three of the seven verbs carry meaning here — move/jump/dash — and
+// the hunter never speaks: the fork's two readings shape what she says
+// next, not an answer she's owed. See her handoff entry for the full
+// "witnessing, not winning" reasoning this gate is built around.
 
-import { VYAGHRI } from '../config.js';
 import { STRINGS } from '../../ui/strings.js';
 
 const ARENA_TOP = 0;
 
 /**
- * Choked green, per `docs/SPEC-CAMPAIGN.md`'s table — a canopy thick enough
- * that nothing above it reaches the floor. Where gate 4's palette went pale
- * against gate 3's dark, this goes dense and close against gate 4's open
- * washed-out dust.
+ * A palace antechamber, not a forest — the one interior space the campaign
+ * has built so far. Kept inside Act 2's own "Rakshasa/forest tones, moving
+ * toward regal gold approaching Ravana" register (docs/SPEC-CAMPAIGN.md's
+ * per-act table) by leaning into the gold half early rather than borrowing
+ * gate 4's green: torch-warm stone, dulled by grief rather than lit for a
+ * celebration, so it reads as court without reading as triumphant.
  */
 const REALM = {
-  sky: { zenith: 0x0e1c10, mid: 0x1c331b, horizon: 0x3c4f28 },
-  fog: { color: 0x24361f, near: 16, far: 92 },
+  sky: { zenith: 0x140e08, mid: 0x2e2010, horizon: 0x5a3e1c },
+  fog: { color: 0x241608, near: 14, far: 80 },
 
-  grass: 0x2c4022,
-  grassBlade: 0x3a5528,
-  grassBladeTip: 0x6f8f3a,
-  rock: 0x30401f,
-  rockDark: 0x1a2412,
-  rockMoss: 0x3f5a25,
-  stone: 0x3a4a2c,
-  crystal: 0x8fd14a,
+  grass: 0x3a2c14,
+  grassBlade: 0x4a3818,
+  grassBladeTip: 0x8a6a2c,
+  rock: 0x3c2e1a,
+  rockDark: 0x1e160c,
+  rockMoss: 0x4a3a1e,
+  stone: 0x4a3820,
+  crystal: 0xd9ad48,
 
-  mist: { back: 0x314a26, front: 0x1e2e17 },
-  ridges: [0x18240f, 0x243219, 0x30401f],
+  mist: { back: 0x5a3e1c, front: 0x241608 },
+  ridges: [0x1e160c, 0x2c2010, 0x3c2e1a],
 };
 
 /**
- * Five chambers: an approach, three grunt encounters that thicken in
- * sequence, and Vyaghri's arena. The same 3.8 gap gates 1–4 measured their
- * reserve against.
+ * One flat antechamber floor, in three dressed spans rather than one long
+ * slab — pillars vary in count and spacing so the walk reads as a real
+ * hall rather than a corridor repeating itself. Every span is `top: 0`,
+ * per the gate's own "Flat" call; nothing here climbs.
  */
 const SEGMENTS = [
-  // Approach: nothing to fight yet, room to read the realm.
-  { x0: -6, x1: 28, top: 0, boulders: 3, pillars: 2, crystals: 1 },
-
-  // The den: three raakchyas, nothing else — density without a new enemy.
-  { x0: 31.8, x1: 66, top: 0, boulders: 3, pillars: 3, crystals: 1 },
-
-  // The herd: raakchyas and a charger together for the first time since both
-  // were taught separately.
-  { x0: 69.8, x1: 104, top: 0, boulders: 4, pillars: 2, crystals: 2 },
-
-  // The stampede: the densest pre-Warden encounter in the campaign so far.
-  { x0: 107.8, x1: 140, top: 0, boulders: 3, pillars: 3, crystals: 2 },
-
-  // Vyaghri's arena — long and flat, the same reason gate 2's far bank is:
-  // a triple chain charge needs room to run three times.
-  { x0: 143.8, x1: 185, top: ARENA_TOP, boulders: 2, pillars: 2, crystals: 2, thickness: 6 },
+  { x0: -6, x1: 40, top: ARENA_TOP, barren: true, depth: 9, pillars: 2 },
+  { x0: 40, x1: 84, top: ARENA_TOP, barren: true, depth: 9, pillars: 3 },
+  { x0: 84, x1: 130, top: ARENA_TOP, barren: true, depth: 9, pillars: 2 },
 ];
 
 /**
- * Tiryak-lok's Warden: an existing archetype, elevated. `VYAGHRI` extends
- * `CHARGER` in `src/game/config.js` — the same relationship `KEVAT` has to
- * it — so the archetype named here is `charger`, not a fifth.
+ * Her four beats, chronological, each a two-path fork — the trigger x the
+ * hunter's own position crosses, and `Game._updateForks` reads their y at
+ * that instant to pick 'low' or 'jump'. Spaced well apart so one fork's
+ * beat (a paged, player-advanced CONTINUE window, same shape as any other
+ * story beat) always finishes well before the next trigger arrives.
  */
-const WARDEN = {
-  archetype: 'charger',
-  title: STRINGS.GATE5_WARDEN_TITLE,
-  stats: VYAGHRI,
-};
-
-/**
- * Four encounters: three grunt fights that grow denser in sequence, then the
- * Warden, met alone — the same solo shape every Warden fight in the campaign
- * has used so far.
- */
-const ENCOUNTERS = [
-  {
-    id: 'the-den',
-    trigger: 40,
-    lock: [33, 64],
-    intro: {
-      title: STRINGS.GATE5_DEN_TITLE,
-      body: STRINGS.GATE5_DEN_BODY,
-    },
-    spawns: [
-      { type: 'raakchyas', x: 46, delay: 0 },
-      { type: 'raakchyas', x: 54, delay: 0.4 },
-      { type: 'raakchyas', x: 60, delay: 0.9 },
-    ],
-  },
-  {
-    id: 'the-herd',
-    trigger: 80,
-    lock: [71, 102],
-    intro: {
-      title: STRINGS.GATE5_HERD_TITLE,
-      body: STRINGS.GATE5_HERD_BODY,
-    },
-    spawns: [
-      { type: 'charger', x: 88, delay: 0 },
-      { type: 'raakchyas', x: 80, delay: 0.6 },
-      { type: 'raakchyas', x: 96, delay: 1.1 },
-    ],
-  },
-  {
-    id: 'the-stampede',
-    trigger: 118,
-    lock: [109, 138],
-    intro: {
-      title: STRINGS.GATE5_STAMPEDE_TITLE,
-      body: STRINGS.GATE5_STAMPEDE_BODY,
-    },
-    spawns: [
-      { type: 'charger', x: 116, delay: 0 },
-      { type: 'charger', x: 132, delay: 0.5 },
-      { type: 'raakchyas', x: 122, delay: 1.0 },
-      { type: 'raakchyas', x: 128, delay: 1.5 },
-      { type: 'raakchyas', x: 135, delay: 2.0 },
-    ],
-  },
-  {
-    id: 'vyaghri',
-    trigger: 160,
-    lock: [145, 184],
-    boss: true,
-    intro: { title: STRINGS.GATE5_VYAGHRI_TITLE, body: WARDEN.title },
-    spawns: [{ type: 'warden', x: 168, delay: 0.9 }],
-  },
+const FORKS = [
+  { id: 'boon', x: 24 },
+  { id: 'manthara', x: 52 },
+  { id: 'invocation', x: 80 },
+  { id: 'regret', x: 104 },
 ];
 
-/**
- * Two boundary beats, the same shape every gate since 2 uses.
- */
+/** Kaikeyi herself — fixed, visible for the whole gate, facing the hunter's approach. */
+const FIGURE = { kind: 'kaikeyi', x: 116, y: ARENA_TOP, facing: -1 };
+
+const choiceBeat = (fork, path, big, body) => ({
+  at: 'choice-made',
+  fork,
+  path,
+  title: STRINGS.GATE5_KAIKEYI_TITLE,
+  big,
+  body,
+});
+
 const BEATS = [
-  {
-    at: 'enter',
-    title: STRINGS.GATE5_BEAT_ENTER_TITLE,
-    big: STRINGS.GATE5_BEAT_ENTER_BIG,
-    body: STRINGS.GATE5_BEAT_ENTER_BODY,
-  },
-  {
-    at: 'cleared',
-    title: STRINGS.GATE5_BEAT_CLEARED_TITLE,
-    big: STRINGS.GATE5_BEAT_CLEARED_BIG,
-    body: STRINGS.GATE5_BEAT_CLEARED_BODY,
-  },
+  choiceBeat('boon', 'low', STRINGS.GATE5_BOON_LOW_BIG, STRINGS.GATE5_BOON_LOW_BODY),
+  choiceBeat('boon', 'jump', STRINGS.GATE5_BOON_JUMP_BIG, STRINGS.GATE5_BOON_JUMP_BODY),
+  choiceBeat('manthara', 'low', STRINGS.GATE5_MANTHARA_LOW_BIG, STRINGS.GATE5_MANTHARA_LOW_BODY),
+  choiceBeat('manthara', 'jump', STRINGS.GATE5_MANTHARA_JUMP_BIG, STRINGS.GATE5_MANTHARA_JUMP_BODY),
+  choiceBeat('invocation', 'low', STRINGS.GATE5_INVOCATION_LOW_BIG, STRINGS.GATE5_INVOCATION_LOW_BODY),
+  choiceBeat('invocation', 'jump', STRINGS.GATE5_INVOCATION_JUMP_BIG, STRINGS.GATE5_INVOCATION_JUMP_BODY),
+  choiceBeat('regret', 'low', STRINGS.GATE5_REGRET_LOW_BIG, STRINGS.GATE5_REGRET_LOW_BODY),
+  choiceBeat('regret', 'jump', STRINGS.GATE5_REGRET_JUMP_BIG, STRINGS.GATE5_REGRET_JUMP_BODY),
 ];
 
 export const GATE_5 = {
@@ -169,12 +108,16 @@ export const GATE_5 = {
   beats: BEATS,
 
   spawnX: 2,
-  voidY: -26,
+  voidY: -20,
   arenaTop: ARENA_TOP,
-  exitX: 175,
-  end: 185,
+  exitX: 118,
+  end: 128,
 
   segments: SEGMENTS,
-  encounters: ENCOUNTERS,
-  warden: WARDEN,
+  // No `encounters`, no `warden` — nothing here fights. `_enterGate` opens
+  // the way out the moment the hunter arrives, same as any gate with no
+  // Warden to beat first.
+  encounters: [],
+  forks: FORKS,
+  figure: FIGURE,
 };

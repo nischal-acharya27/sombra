@@ -1256,6 +1256,130 @@ export function buildTaraka(skin = null) {
 }
 
 // ---------------------------------------------------------------------------
+// Kaikeyi — gate 5's tier-0 figure (no Enemy/Boss ancestry, see figure.js)
+// ---------------------------------------------------------------------------
+
+/**
+ * A grieving human queen, not a monster — the roster's first tier-0 build
+ * (`docs/agents/villain-handoff.md`). Scale sits close to the hunter's own
+ * (`hw ≈ 0.36, hh ≈ 0.85` per the handoff) rather than either tyrant-king's
+ * bulk: every oversized figure on the roster earns its size from being a
+ * physical threat, and she never is. No weapon prop anywhere on the rig —
+ * "she carries nothing because nothing in this encounter is a weapon."
+ *
+ * Exposes `head` and `body` on `userData.nodes` for `game/figure.js`'s
+ * `Kaikeyi.posture()` to rotate; nothing here animates on its own.
+ */
+export function buildKaikeyi() {
+  const root = new THREE.Group();
+  const n = {};
+
+  const body = new THREE.Group();
+  body.position.y = 0.62;
+  root.add(body);
+  n.body = body;
+
+  const robe = part(0.3, 0.62, 0.28, P.kaikeyiRobe, { pivot: 'bottom', outline: 0.03 });
+  body.add(robe);
+  n.robe = robe;
+
+  // A bridal/coronation hem, heavier and more layered than Shakuni's plain
+  // skirt — dressed for the day the boons were granted, not for court
+  // business.
+  const hem = part(0.4, 0.26, 0.36, P.kaikeyiRobeDark, { pivot: 'top', outline: 0.026 });
+  hem.position.y = 0.02;
+  robe.add(hem);
+
+  for (const side of [-1, 1]) {
+    const foot = part(0.12, 0.06, 0.13, P.kaikeyiRobeDark, { pivot: 'top', outline: 0.014 });
+    foot.position.set(0.05, -0.26, side * 0.08);
+    hem.add(foot);
+  }
+
+  // The cascading multi-strand gold coin-necklace reaching the waist — the
+  // handoff's own differentiator from Shurpanakha's simpler gold jewelry.
+  for (let i = 0; i < 3; i++) {
+    const strand = part(0.03, 0.5 - i * 0.06, 0.03, P.kaikeyiGold, { pivot: 'top', outline: 0.008 });
+    strand.position.set(0.15, 0.34, (i - 1) * 0.05);
+    robe.add(strand);
+  }
+
+  const sash = part(0.32, 0.06, 0.29, P.kaikeyiGold, { outline: 0.02 });
+  sash.position.y = 0.2;
+  robe.add(sash);
+
+  const head = new THREE.Group();
+  head.position.y = 0.52;
+  robe.add(head);
+  n.head = head;
+
+  const skull = part(0.19, 0.22, 0.2, P.kaikeyiSkin, { pivot: 'bottom', outline: 0.02 });
+  head.add(skull);
+
+  // Loose, wavy hair under the veil — Shurpanakha's own hair is bound and
+  // ornate under her headdress, a concrete, checkable difference rather
+  // than a mood contrast.
+  const hair = part(0.24, 0.24, 0.24, P.kaikeyiHair, { pivot: 'top', outline: 0.022 });
+  hair.position.set(-0.03, 0.24, 0);
+  skull.add(hair);
+
+  // The veil, over the hair rather than the face — ceremonial, not
+  // concealing.
+  const veil = part(0.22, 0.28, 0.22, P.kaikeyiRobeDark, { pivot: 'top', outline: 0.02 });
+  veil.position.set(-0.05, 0.3, 0);
+  skull.add(veil);
+
+  // The paisley crown and its single teardrop ruby, distinct from
+  // Duryodhana's tiered jeweled crown and Ravana's ten-head arc.
+  const crown = part(0.15, 0.1, 0.16, P.kaikeyiGold, { pivot: 'bottom', outline: 0.016 });
+  crown.position.y = 0.11;
+  skull.add(crown);
+  const ruby = decal(0.045, 0.06, P.crimson);
+  ruby.position.set(0.1, 0.13, 0);
+  ruby.rotation.y = Math.PI / 2;
+  skull.add(ruby);
+
+  // A large gold nose ring (nath) — unclaimed elsewhere on the roster.
+  const nath = decal(0.05, 0.05, P.kaikeyiGold);
+  nath.position.set(0.095, 0.0, 0.05);
+  nath.rotation.x = Math.PI / 2;
+  skull.add(nath);
+
+  // Heavy kohl — "an expression that reads as weighted rather than
+  // triumphant or cruel," the reference's own read.
+  for (const side of [-1, 1]) {
+    const eye = decal(0.045, 0.024, P.outline);
+    eye.position.set(0.095, 0.03, side * 0.05);
+    eye.rotation.y = Math.PI / 2;
+    skull.add(eye);
+  }
+
+  // Arms, clasped and empty.
+  for (const side of [-1, 1]) {
+    const shoulder = new THREE.Group();
+    shoulder.position.set(0, 0.42, side * 0.14);
+    robe.add(shoulder);
+
+    const upper = part(0.08, 0.22, 0.08, P.kaikeyiRobe, { pivot: 'top', outline: 0.015 });
+    shoulder.add(upper);
+
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.22;
+    shoulder.add(elbow);
+
+    const fore = part(0.07, 0.2, 0.07, P.kaikeyiSkin, { pivot: 'top', outline: 0.013 });
+    elbow.add(fore);
+
+    const hand = part(0.07, 0.08, 0.08, P.kaikeyiSkin, { pivot: 'top', outline: 0.012 });
+    hand.position.y = -0.2;
+    elbow.add(hand);
+  }
+
+  root.userData.nodes = n;
+  return root;
+}
+
+// ---------------------------------------------------------------------------
 // Dwar-Rakshak — the level's boss
 // ---------------------------------------------------------------------------
 

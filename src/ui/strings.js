@@ -259,21 +259,34 @@ export const STRINGS = {
   GATE4_TARAKA_DEFEAT_8_BIG: 'Take the shape with you, hunter. I am done carrying it.',
   GATE4_TARAKA_DEFEAT_8_BODY: "Whatever the Wheel does with what's left, it can only be kinder than the forest was.",
 
-  GATE5_NAME: 'Tiryak-lok',
-  GATE5_WARDEN_TITLE: 'VYAGHRI',
-  GATE5_DEN_TITLE: 'THREAT DETECTED',
-  GATE5_DEN_BODY: 'Raakchyas × 3',
-  GATE5_HERD_TITLE: 'THREAT DETECTED',
-  GATE5_HERD_BODY: 'Raakchyas × 2  ·  Charger × 1',
-  GATE5_STAMPEDE_TITLE: 'THREAT DETECTED',
-  GATE5_STAMPEDE_BODY: 'Raakchyas × 3  ·  Charger × 2',
-  GATE5_VYAGHRI_TITLE: 'GATE WARDEN',
-  GATE5_BEAT_ENTER_TITLE: 'THE SYSTEM',
-  GATE5_BEAT_ENTER_BIG: 'UNABLE TO CLASSIFY',
-  GATE5_BEAT_ENTER_BODY: 'No judgment reaches this far down. Nothing here asks to be spared it.',
-  GATE5_BEAT_CLEARED_TITLE: 'THE SYSTEM',
-  GATE5_BEAT_CLEARED_BIG: 'STILL UNCLASSIFIED',
-  GATE5_BEAT_CLEARED_BODY: 'It does not know what it just watched die, only that it did.',
+  // Gate 5 — Kaikeyi (Ramayana, Ayodhya Kanda). The roster's first tier-0,
+  // no-combat gate: four beats, each authored twice — 'low'/'jump' are the
+  // two fork paths `Game._updateForks` resolves per beat, per
+  // docs/agents/villain-handoff.md and docs/research/villain-roster.md.
+  // Which fork the hunter takes shapes tone (low leans matter-of-fact/angry,
+  // jump leans wistful/grieving) but never which beat comes next.
+  GATE5_NAME: 'Ayodhya',
+  GATE5_KAIKEYI_TITLE: 'KAIKEYI',
+
+  GATE5_BOON_LOW_BIG: 'He owed me two boons. I never asked for anything before that day.',
+  GATE5_BOON_LOW_BODY: 'A battlefield vow, kept the way a vow is supposed to be kept.',
+  GATE5_BOON_JUMP_BIG: 'I saved his life once, and never spent what he owed me for it.',
+  GATE5_BOON_JUMP_BODY: 'Not until I had a reason large enough to make it real.',
+
+  GATE5_MANTHARA_LOW_BIG: 'Manthara filled my ears until the crown looked like the only safe place left.',
+  GATE5_MANTHARA_LOW_BODY: 'I let her. That much is mine to own.',
+  GATE5_MANTHARA_JUMP_BIG: 'She was afraid for me before I was afraid for myself.',
+  GATE5_MANTHARA_JUMP_BODY: 'Fear is patient. It waited until I was tired enough to listen.',
+
+  GATE5_INVOCATION_LOW_BIG: 'Bharata crowned. Rama exiled fourteen years. I said the words and meant every one.',
+  GATE5_INVOCATION_LOW_BODY: 'Dasharatha died before the fourteenth year began.',
+  GATE5_INVOCATION_JUMP_BIG: 'I asked for exactly what I was owed, and the King kept his word.',
+  GATE5_INVOCATION_JUMP_BODY: 'It killed him to keep it. I did not think that far ahead.',
+
+  GATE5_REGRET_LOW_BIG: 'I have had a long time to sit with what I bought.',
+  GATE5_REGRET_LOW_BODY: 'It was never as much as I thought it would be.',
+  GATE5_REGRET_JUMP_BIG: 'Bharata never forgave me either. He wears the crown like a wound.',
+  GATE5_REGRET_JUMP_BODY: 'So do I, if you look closely enough.',
 
   // -- gate 6: Manav-lok -----------------------------------------------------
   GATE6_NAME: 'Manav-lok',
