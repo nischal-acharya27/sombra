@@ -8,8 +8,8 @@
 
 import * as THREE from 'three';
 import { Actor, boxHit } from './actor.js';
-import { buildRaakchyas, buildCharger, buildKawach, buildBhootBatti, buildTantrik, buildShakuni, buildBakasura, buildTaraka, buildShurpanakha } from '../render/models.js';
-import { RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, PHYS, JUGGLE } from './config.js';
+import { buildRaakchyas, buildCharger, buildKawach, buildBhootBatti, buildTantrik, buildShakuni, buildBakasura, buildTaraka, buildShurpanakha, buildLankaSoldier, buildKumbhakarna } from '../render/models.js';
+import { RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, LANKA_SOLDIER, KUMBHAKARNA, PHYS, JUGGLE } from './config.js';
 import { P } from '../render/palette.js';
 import { clamp, damp, lerp, rand } from '../engine/mathx.js';
 
@@ -680,9 +680,15 @@ export class Charger extends Enemy {
 export class Kawach extends Enemy {
   static stats = KAWACH;
 
-  constructor(level, ctx, x, y, cfg = KAWACH, skin = null) {
+  /**
+   * `buildRig` is the same escape hatch `Raakchyas` and `Charger` already
+   * take as their last parameter, added here when `LankaSoldier` became the
+   * third archetype to want this skeleton under a different silhouette. It
+   * defaults to `buildKawach`, so every existing call site is unchanged.
+   */
+  constructor(level, ctx, x, y, cfg = KAWACH, skin = null, buildRig = buildKawach) {
     super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
-    this.root = buildKawach(skin);
+    this.root = buildRig(skin);
     this.n = this.root.userData.nodes;
     this.finishSetup();
     this.phase = 0;
@@ -1969,6 +1975,465 @@ export class Shurpanakha extends Raakchyas {
     for (const key of ['L', 'R']) {
       const g = n['handGlow' + key];
       g.material.opacity = lerp(g.material.opacity, 0.2 + glow * 0.8, k);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Lanka soldier
+// ---------------------------------------------------------------------------
+
+/**
+ * Gate 7's new regular archetype, and Act 2's only one — Lanka on a war
+ * footing, per `docs/SPEC-CAMPAIGN.md` § Act 2.
+ *
+ * Extends `Kawach` directly rather than copying its chase → telegraph →
+ * attack → recover skeleton: the spec's own words are "extending `Kawach`'s
+ * plant→telegraph→commit skeleton rather than a reskin or a bespoke state
+ * machine", and a planted thrust *is* that shape. The state machine here is
+ * inherited whole; nothing in this class touches it.
+ *
+ * Two methods override, and both are presentation or geometry rather than
+ * behaviour:
+ *
+ * - `attackBox`, because a spear reaches forward and a shield bash straddles.
+ *   `LANKA_SOLDIER.bash.reach`/`reachBack` carry it, the same asymmetric-box
+ *   departure `Bakasura.attackBox` already makes for its grab.
+ * - `_animate` in full, because `Kawach._animate` drives a shield-arm rig and
+ *   this one drives a spear. Same override, same reason, as `Taraka` against
+ *   `Charger` and `Shurpanakha` against `Raakchyas`.
+ *
+ * The armour is not overridden — it is configured off. `LANKA_SOLDIER`
+ * sets `armorBreakLaunch: 0`, so `Kawach.takeHit`'s `launch < 0` test is
+ * false for every hit and each one goes through to `Enemy.takeHit`
+ * unabridged. One armour rule in the codebase, at two settings.
+ */
+export class LankaSoldier extends Kawach {
+  static stats = LANKA_SOLDIER;
+
+  constructor(level, ctx, x, y, cfg = LANKA_SOLDIER, skin = null) {
+    super(level, ctx, x, y, cfg, skin, buildLankaSoldier);
+    this.legPhase = 0;
+  }
+
+  /** Forward, not straddling — a spear goes one way. See `LANKA_SOLDIER.bash`. */
+  attackBox() {
+    if (this.state !== 'attack' || this.dead) return null;
+    const B = this.cfg.bash;
+    return this.facing >= 0
+      ? { x0: this.x - B.reachBack, x1: this.x + B.reach, y0: this.y, y1: this.y + this.hh * 2 }
+      : { x0: this.x - B.reach, x1: this.x + B.reachBack, y0: this.y, y1: this.y + this.hh * 2 };
+  }
+
+  _animate(dt) {
+    const n = this.n;
+    const k = 1 - Math.pow(0.0002, dt);
+    const B = this.cfg.bash;
+    let bodyZ = 0;
+    let bodyY = 0;
+    let armZ = 0;
+    let spearZ = 0;
+    let spearX = 0;
+
+    if (this.state === 'telegraph') {
+      // The spear cocks back and levels, the body turns side-on behind it.
+      // Deliberately the same *schedule* as Kawach's plant — eyes flare on
+      // the same curve — with the arm doing something visibly different, so
+      // the hunter reads "same tell, new distance" rather than a new tell.
+      const u = 1 - this.phase / B.windup;
+      bodyZ = -0.06 - u * 0.1;
+      bodyY = -0.03 - u * 0.04;
+      armZ = 0.3 + u * 0.5;
+      spearZ = -0.2 - u * 0.35;
+      spearX = -u * 0.5;
+      const g = 0.3 + u * 0.7;
+      n.eyeL.material.opacity = g;
+      n.eyeR.material.opacity = g;
+      n.eyeL.material.transparent = true;
+      n.eyeR.material.transparent = true;
+      n.eyeL.scale.setScalar(1 + u * 0.5);
+      n.eyeR.scale.setScalar(1 + u * 0.5);
+    } else {
+      n.eyeL.scale.setScalar(damp(n.eyeL.scale.x, 1, 0.001, dt));
+      n.eyeR.scale.setScalar(n.eyeL.scale.x);
+      n.eyeL.material.opacity = 1;
+      n.eyeR.material.opacity = 1;
+    }
+
+    if (this.state === 'attack') {
+      // The thrust: the arm drives through and the haft comes level.
+      const u = clamp(1 - this.phase / B.active, 0, 1);
+      bodyZ = lerp(0.18, -0.06, u);
+      armZ = lerp(-0.55, 0.15, u);
+      spearZ = lerp(0.12, -0.05, u);
+      bodyY = -0.05;
+    } else if (this.state === 'recover') {
+      // The punish window a planted thrust owes the hunter for reading it —
+      // and at this reach, the one the hunter has to walk in to take.
+      const u = clamp(this.phase / B.recover, 0, 1);
+      bodyZ = -0.08 * u;
+      bodyY = -0.05 * u;
+      armZ = -0.2 * u;
+    } else if (this.state === 'hurt') {
+      bodyZ = 0.2;
+    } else if (this.state === 'chase' && Math.abs(this.vx) > 0.3) {
+      this.legPhase += dt * (6 + Math.abs(this.vx));
+      bodyY = Math.abs(Math.sin(this.legPhase)) * 0.03;
+    } else if (this.state !== 'telegraph') {
+      bodyY = Math.sin(this.t * 1.5) * 0.02;
+    }
+
+    n.body.rotation.z = lerp(n.body.rotation.z, bodyZ, k);
+    n.body.position.y = lerp(n.body.position.y, 0.86 + bodyY, k);
+    n.shoulderR.rotation.z = lerp(n.shoulderR.rotation.z, armZ, k);
+    n.shoulderL.rotation.z = lerp(n.shoulderL.rotation.z, -armZ * 0.3, k);
+    n.spear.rotation.z = lerp(n.spear.rotation.z, spearZ, k);
+    n.spear.position.x = lerp(n.spear.position.x, 0.06 + spearX, k);
+    const legSwing = this.state === 'chase' ? Math.sin(this.legPhase) * 0.4 : 0;
+    n.hipL.rotation.z = lerp(n.hipL.rotation.z, legSwing, k);
+    n.hipR.rotation.z = lerp(n.hipR.rotation.z, -legSwing, k);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Kumbhakarna
+// ---------------------------------------------------------------------------
+
+/**
+ * Gate 7's Warden — Ravana's giant brother, who argued against the war in his
+ * brother's own hall, was refused, and fought anyway. The largest silhouette
+ * in the game (`KUMBHAKARNA.hw`/`hh`, and see that block for why being bigger
+ * than a boss is not the same as being harder than one).
+ *
+ * Follows `Bakasura`'s skeleton rather than `Kawach`'s directly: `Enemy` with
+ * two committed moves picked by range, which is what his roster entry's kit
+ * shape asks for. The departure from Bakasura is that the long move does not
+ * travel — the club supplies the reach — so there is no `tackling` state here
+ * that moves the body under its own power.
+ *
+ * The phase-transition is the third consumer of `Game.firePhaseBeat`
+ * (`docs/DECISIONS.md` § "Boss/Warden dialogue returns"), after Taraka's
+ * curse-reveal and Shurpanakha's illusion break. Unlike both of theirs it
+ * swaps no rig: one body, with the lids lifting, the skin re-tinting from
+ * `kumbhaSkinDull` to `kumbhaSkin`, the wind-ups tightening and the walk
+ * picking up. His entry is explicit that this is the difference — theirs are
+ * two-rig transformations, his is a man waking up.
+ */
+/**
+ * The club's resting angle — shouldered, angled up and back.
+ *
+ * Zero would hold a three-unit tree out horizontally at rest, which reads as
+ * a man presenting a weapon rather than a man carrying one. Hanging it the
+ * other way (the first thing tried) put the head through the floor at every
+ * idle frame, because the club is longer than his arm is high. Shouldered is
+ * the one resting pose a weapon this size has, and it leaves both wind-ups
+ * most of a half-turn of travel to be read against.
+ */
+const REST_CLUB = 1.0;
+
+export class Kumbhakarna extends Enemy {
+  static stats = KUMBHAKARNA;
+
+  constructor(level, ctx, x, y, cfg = KUMBHAKARNA, skin = null) {
+    super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
+    this.root = buildKumbhakarna(skin);
+    this.n = this.root.userData.nodes;
+    this.finishSetup();
+    this.phase = 0;
+    this.cooldown = rand(cfg.cooldown[0], cfg.cooldown[1]);
+    this.chargeHitSet = new Set();
+    this.leavesCorpse = true;
+    /** Fires once, at the HP threshold — see `takeHit` below. */
+    this.phaseFired = false;
+    this.legPhase = 0;
+  }
+
+  /** Always, for a hostile Kumbhakarna. Mirrors `Bakasura._canCommit`. */
+  _canCommit() {
+    return true;
+  }
+
+  takeHit(hit) {
+    const landed = super.takeHit(hit);
+    if (landed && !this.dead && !this.phaseFired && this.hp <= this.maxHp * this.cfg.phaseAt) {
+      this.phaseFired = true;
+      this.ctx.firePhaseBeat?.(() => this._wake());
+    }
+    return landed;
+  }
+
+  /**
+   * The waking, fired by `Game.firePhaseBeat` once the held beat drains.
+   *
+   * Nothing about the *kit* moves here — same two moves, same boxes, same
+   * damage. What moves is the wind-up multiplier and the walk speed (both
+   * read live from `cfg` in `update`), the lids, and the skin. Same "escalation
+   * is the wind-up, not the kit" rule Shakuni, Bakasura, Taraka and
+   * Shurpanakha all already hold to.
+   */
+  _wake() {
+    this._retint(this.n.skinMeshes, P.kumbhaSkin);
+    this.ctx.audio?.play('waking');
+    this.ctx.shake?.(0.4);
+  }
+
+  /**
+   * Re-colour a set of meshes for the rest of the run, `_flash`'s bookkeeping
+   * included.
+   *
+   * `Enemy.finishSetup` clones every material and caches its starting colour
+   * as the `base` that `_flash` restores to after a hit. Setting
+   * `material.color` alone would therefore last exactly until the next sword
+   * swing, which is a bug that would have looked like the waking "not
+   * sticking". The base moves with it.
+   */
+  _retint(meshes, color) {
+    for (const mesh of meshes) {
+      mesh.material.color.setHex(color);
+      const entry = this.mats?.find((m) => m.mat === mesh.material);
+      entry?.base.setHex(color);
+    }
+  }
+
+  /** Both wind-ups tighten together once he is awake. */
+  _windupMul() {
+    return this.phaseFired ? this.cfg.phaseWindupMul : 1;
+  }
+
+  update(dt, player) {
+    this.t += dt;
+    this.hitFlash -= dt;
+    this._flash(dt);
+
+    if (this.state === 'dying') return this._dieAnim(dt);
+    if (this.spawnT > 0) this._spawnAnim(dt);
+
+    const S = this.cfg.smash;
+    const W = this.cfg.sweep;
+    const dx = player.x - this.x;
+    const dist = Math.abs(dx);
+    const canSee = dist < this.cfg.chaseRange && Math.abs(player.y - this.y) < 6;
+    const windupMul = this._windupMul();
+    const speed = this.cfg.speed * (this.phaseFired ? this.cfg.phaseSpeedMul : 1);
+
+    if (this.stagger > 0) {
+      this.stagger -= dt;
+      if (this.stagger <= 0 && this.state === 'hurt') this.state = 'idle';
+    }
+
+    switch (this.state) {
+      case 'idle':
+      case 'chase': {
+        this.cooldown -= dt;
+        if (!canSee) {
+          this.state = 'idle';
+          this.vx = damp(this.vx, 0, 0.001, dt);
+          break;
+        }
+        this.state = 'chase';
+        this.faceToward(player.x);
+
+        // The smash takes the close band; the sweep takes the long one out to
+        // club length. Same range-picked pair as Bakasura's grab and tackle,
+        // and the same reason: holding station just outside the close move
+        // must not be a fight he cannot answer.
+        if (this._canCommit() && this.cooldown <= 0 && this.grounded) {
+          if (dist < S.range) {
+            this.state = 'smashTelegraph';
+            this.phase = S.windup * windupMul;
+            this.vx = 0;
+            this.chargeHitSet.clear();
+            this.ctx.audio?.play('growl');
+            break;
+          } else if (dist < W.range) {
+            this.state = 'sweepTelegraph';
+            this.phase = W.windup * windupMul;
+            this.vx = 0;
+            this.chargeHitSet.clear();
+            this.ctx.audio?.play('growl');
+            break;
+          }
+        }
+
+        const want = dist > this.cfg.stopAt ? this.facing * speed : 0;
+        const ahead = this.x + Math.sign(want || this.facing) * 1.4;
+        if (want !== 0 && !this.level.hasFloorAhead(ahead, this.y)) this.vx = 0;
+        else this.vx = damp(this.vx, want, 0.0008, dt);
+        break;
+      }
+
+      case 'smashTelegraph': {
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0001, dt);
+        if (this.phase > S.windup * windupMul * 0.35) this.faceToward(player.x);
+        if (this.phase <= 0) {
+          this.state = 'smash';
+          this.phase = S.active;
+          this.chargeHitSet.clear();
+          this.ctx.audio?.play('slam');
+          this.ctx.shake?.(S.shake);
+          this.ctx.vfx.dust(this.x + this.facing * 2.2, this.y, 9);
+        }
+        break;
+      }
+
+      case 'sweepTelegraph': {
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0001, dt);
+        if (this.phase > W.windup * windupMul * 0.35) this.faceToward(player.x);
+        if (this.phase <= 0) {
+          this.state = 'sweep';
+          this.phase = W.active;
+          this.chargeHitSet.clear();
+          this.ctx.audio?.play('pounce');
+          this.ctx.shake?.(W.shake);
+        }
+        break;
+      }
+
+      case 'smash':
+      case 'sweep': {
+        this.phase -= dt;
+        if (this.phase <= 0) {
+          const done = this.state === 'smash' ? S : W;
+          this.state = 'recover';
+          this.phase = done.recover;
+        }
+        break;
+      }
+
+      case 'recover': {
+        // The punish window. At his reach it is the only one the hunter gets,
+        // which is why both moves pay a long one.
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0005, dt);
+        if (this.phase <= 0) {
+          this.state = 'chase';
+          this.cooldown = rand(this.cfg.cooldown[0], this.cfg.cooldown[1]);
+        }
+        break;
+      }
+
+      case 'hurt':
+        this.vx = damp(this.vx, 0, 0.06, dt);
+        break;
+    }
+
+    if (this.juggleT > 0) this.juggleT = this.grounded ? 0 : this.juggleT - dt;
+    this.applyGravity(dt, PHYS.gravity * (this.juggleT > 0 ? JUGGLE.gravityMul : 1));
+    this.moveAndCollide(dt);
+    this._animate(dt);
+    this.syncRig();
+  }
+
+  /** Both boxes are forward-biased — see `KUMBHAKARNA.smash`'s own note. */
+  attackBox() {
+    if (this.dead) return null;
+    const A = this.state === 'smash' ? this.cfg.smash : this.state === 'sweep' ? this.cfg.sweep : null;
+    if (!A) return null;
+    return this.facing >= 0
+      ? { x0: this.x - A.reachBack, x1: this.x + A.reach, y0: this.y, y1: this.y + this.hh * 2 }
+      : { x0: this.x - A.reach, x1: this.x + A.reachBack, y0: this.y, y1: this.y + this.hh * 2 };
+  }
+
+  currentAttackDamage() {
+    if (this.state === 'smash') return { damage: this.cfg.smash.damage, knock: this.cfg.smash.knock };
+    if (this.state === 'sweep') return { damage: this.cfg.sweep.damage, knock: this.cfg.sweep.knock };
+    return null;
+  }
+
+  _animate(dt) {
+    const n = this.n;
+    const k = 1 - Math.pow(0.0002, dt);
+    const S = this.cfg.smash;
+    const W = this.cfg.sweep;
+    const windupMul = this._windupMul();
+    let bodyZ = 0;
+    let bodyY = 0;
+    let armZ = 0;
+    let clubZ = REST_CLUB;
+    let glow = 0;
+    let legSwing = 0;
+
+    if (this.state === 'smashTelegraph') {
+      // The club goes up and over — the readable half of a heavy overhead,
+      // and at this scale it is visible from the far end of the hall, which
+      // is the point of building the fight around reach. It travels most of a
+      // half-turn from the resting hang, so there is no frame of the wind-up
+      // that looks like the idle.
+      const u = 1 - this.phase / (S.windup * windupMul);
+      bodyZ = -0.1 - u * 0.14;
+      bodyY = -0.06 - u * 0.08;
+      armZ = 0.4 + u * 1.1;
+      clubZ = lerp(REST_CLUB, 2.25, u);
+      glow = 0.3 + u * 0.7;
+    } else if (this.state === 'smash') {
+      const u = clamp(1 - this.phase / S.active, 0, 1);
+      bodyZ = lerp(0.3, 0.08, u);
+      armZ = lerp(-1.3, -0.6, u);
+      clubZ = lerp(2.25, -0.65, u); // straight down through the arc it raised
+      bodyY = -0.12;
+      glow = 1;
+    } else if (this.state === 'sweepTelegraph') {
+      // The club drops off the shoulder and winds back low, the opposite
+      // direction from the overhead's raise — so the two wind-ups differ in
+      // the one thing the hunter can read from eight units away: which way
+      // the tree went.
+      const u = 1 - this.phase / (W.windup * windupMul);
+      bodyZ = 0.08 + u * 0.12;
+      bodyY = -0.04 - u * 0.05;
+      armZ = -0.3 - u * 0.5;
+      clubZ = lerp(REST_CLUB, -0.55, u);
+      glow = 0.3 + u * 0.7;
+    } else if (this.state === 'sweep') {
+      // Forward and level through the low arc it wound into — a sweep, not
+      // a chop, which is what the long move is and what the arc has to say.
+      const u = clamp(1 - this.phase / W.active, 0, 1);
+      bodyZ = lerp(-0.24, 0.06, u);
+      armZ = lerp(0.7, 0.1, u);
+      clubZ = lerp(-0.55, 0.2, u);
+      glow = 1;
+      if (Math.random() < 0.5) this.ctx.vfx.dust(this.x + this.facing * 3.0, this.y, 2);
+    } else if (this.state === 'recover') {
+      const total = Math.max(S.recover, W.recover);
+      const u = clamp(this.phase / total, 0, 1);
+      bodyZ = -0.12 * u;
+      bodyY = -0.08 * u;
+      armZ = -0.15 * u;
+    } else if (this.state === 'hurt') {
+      bodyZ = 0.2;
+    } else if (this.state === 'chase' && Math.abs(this.vx) > 0.3) {
+      this.legPhase += dt * (4 + Math.abs(this.vx));
+      legSwing = Math.sin(this.legPhase) * 0.42;
+      bodyY = Math.abs(Math.cos(this.legPhase)) * 0.09;
+    } else {
+      // The idle: a slow, heavy breath. Slower before the waking than after,
+      // because the whole first phase is a man who has not finished getting up.
+      bodyY = Math.sin(this.t * (this.phaseFired ? 1.5 : 0.85)) * 0.06;
+    }
+
+    n.torso.rotation.z = lerp(n.torso.rotation.z, bodyZ, k);
+    n.body.position.y = lerp(n.body.position.y, n.baseY + bodyY, k);
+    n.shoulderR.rotation.z = lerp(n.shoulderR.rotation.z, armZ, k);
+    n.shoulderL.rotation.z = lerp(n.shoulderL.rotation.z, -armZ * 0.25, k);
+    n.club.rotation.z = lerp(n.club.rotation.z, clubZ, k);
+    n.hipL.rotation.z = lerp(n.hipL.rotation.z, legSwing, k);
+    n.hipR.rotation.z = lerp(n.hipR.rotation.z, -legSwing, k);
+
+    // The jaw hangs open a crack while groggy and shuts once he is awake —
+    // the cheapest possible version of "this face changed", and the one the
+    // camera can actually see at this scale.
+    n.jaw.rotation.z = lerp(n.jaw.rotation.z, this.phaseFired ? 0 : 0.18, k);
+
+    // The lids. Heavy-lidded through the whole first phase, per his entry's
+    // default character read; they come up at the waking and stay up.
+    const lid = this.phaseFired ? 0.12 : 1;
+    for (const key of ['L', 'R']) {
+      const l = n['lid' + key];
+      l.scale.y = lerp(l.scale.y, lid, k);
+      const e = n['eye' + key];
+      e.material.transparent = true;
+      e.material.opacity = lerp(e.material.opacity, (this.phaseFired ? 0.5 : 0.28) + glow * 0.5, k);
     }
   }
 }

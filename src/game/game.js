@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { Level } from './level.js';
 import { Player } from './player.js';
-import { Raakchyas, Charger, Kawach, BhootBatti, Tantrik, Shakuni, Bakasura, Taraka, Shurpanakha, Bolt } from './enemies.js';
+import { Raakchyas, Charger, Kawach, BhootBatti, Tantrik, Shakuni, Bakasura, Taraka, Shurpanakha, LankaSoldier, Kumbhakarna, Bolt } from './enemies.js';
 import { Corpse } from './shadow.js';
 import { Guardian, GoruMukh, Hakim, Chiranjivi, MaunAnkur } from './boss.js';
 import { GameCamera } from './camera.js';
@@ -53,6 +53,8 @@ export const ARCHETYPES = {
   bakasura: Bakasura,
   taraka: Taraka,
   shurpanakha: Shurpanakha,
+  lankaSoldier: LankaSoldier,
+  kumbhakarna: Kumbhakarna,
   guardian: Guardian,
   goruMukh: GoruMukh,
   hakim: Hakim,

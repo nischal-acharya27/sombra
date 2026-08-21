@@ -888,6 +888,153 @@ export const SHURPANAKHA = {
   phaseWindupMul: 0.88,
 };
 
+/**
+ * The Lanka soldier — gate 7's new regular archetype, and Act 2's only one
+ * (`docs/SPEC-CAMPAIGN.md` § Act 2: "a Lanka war-footing rakshasa-soldier —
+ * spear/polearm, formation-fighting — built as a new rig extending
+ * `Kawach`'s plant→telegraph→commit skeleton rather than a reskin or a
+ * bespoke state machine").
+ *
+ * Spreads `KAWACH` rather than restating it, the same way `SHURPANAKHA`
+ * spreads `RAAKCHYAS` — what is written out below is exactly what the spear
+ * changes about the shield, and nothing else.
+ *
+ * Two of those changes matter and both come from the same fact, that a spear
+ * is longer than an arm:
+ *
+ * - `stopAt` and `bash.range` both move out. It plants at spear length, not
+ *   at shield length, so the distance the hunter learned to read on gate 1's
+ *   court guards is now the wrong distance — which is the whole lesson this
+ *   archetype exists to teach, and why its solo debut is protected.
+ * - `armorBreakLaunch: 0` turns `Kawach.takeHit`'s armour off outright rather
+ *   than branching around it. A soldier in scale is not a wall; every hit
+ *   staggers it normally. Reusing the existing knob at zero means there is
+ *   one armour rule in the codebase, not two.
+ *
+ * The wind-up itself stays generous — 0.55s, well clear of
+ * `tools/gatecheck.js`'s 0.42s floor. A planted thrust has no distance to
+ * close, exactly as `KAWACH.bash.windup`'s own note says, so the reach is
+ * what makes it dangerous and the tell can afford to stay readable.
+ */
+export const LANKA_SOLDIER = {
+  ...KAWACH,
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  // Taller and narrower than the shield it extends (0.66/0.76), which is the
+  // silhouette half of the same "this is not that" job the reach does.
+  hw: 0.5,
+  hh: 0.9,
+  speed: 3.0,
+  chaseRange: 26,
+  stopAt: 3.4,
+  bash: {
+    ...KAWACH.bash,
+    range: 4.2,
+    windup: 0.55,
+    active: 0.20,
+    recover: 1.0,
+    damage: 15,
+    knock: 9,
+    shake: 0.16,
+    /**
+     * The thrust's box is asymmetric — forward, not straddling — because a
+     * spear goes one way. Same departure, same reason, as `BAKASURA.grab`'s
+     * own `reach`/`reachBack` pair; `LankaSoldier.attackBox` in `enemies.js`
+     * is the one method that overrides `Kawach`'s to read them.
+     */
+    reach: 3.4,
+    reachBack: 0.3,
+  },
+  cooldown: [1.0, 1.7],
+  armorBreakLaunch: 0,
+  exp: 48,
+  contactDamage: 0,
+};
+
+/**
+ * Kumbhakarna — gate 7's Warden, and the largest silhouette in the game.
+ *
+ * `hw 1.8 / hh 2.2` is `docs/research/villain-roster.md`'s explicit
+ * instruction, not a drift: past `GORU_MUKH`'s 1.7 and past every locked
+ * boss's 2.0 ceiling. His entry decouples size from difficulty to make that
+ * safe — `contactDamage: 0` plus the file-wide no-passive-contact rule means
+ * an oversized box is movement space, not a threat multiplier, so a Warden
+ * can be physically bigger than a boss without out-escalating one.
+ *
+ * The kit is Bakasura's shape — `Enemy` directly, two committed moves picked
+ * by range — with the club supplying the reach Bakasura's tackle had to
+ * travel for. Deliberately not `Charger`: "a straightforward committed heavy
+ * swing" is the opposite of that class's speed identity, already spent on
+ * Taraka two gates back.
+ */
+export const KUMBHAKARNA = {
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hw: 1.8,
+  hh: 2.2,
+  // Slowest thing in the game that still chases. The size is not the threat;
+  // the two committed swings are, and both are readable from across the hall.
+  speed: 2.0,
+  chaseRange: 30,
+  stopAt: 3.2,
+  /**
+   * The close move: a heavy downward smash with the club. Forward-biased box
+   * for the same reason Bakasura's grab has one — a smash lands in front of
+   * him, and at `hw 1.8` a straddling box would make standing behind him a
+   * mistake he never actually commits to.
+   */
+  smash: {
+    range: 4.4,
+    windup: 0.78,
+    active: 0.26,
+    recover: 1.25,
+    damage: 24,
+    knock: 14,
+    reach: 3.6,
+    reachBack: 0.4,
+    shake: 0.3,
+  },
+  /**
+   * The long move: a horizontal sweep at club length. It does not travel —
+   * the club is what supplies the reach, which is precisely what separates it
+   * from Bakasura's lunging tackle and keeps "committed heavy swing" from
+   * quietly becoming a second charge.
+   *
+   * The two bands are what stop the fight collapsing to one distance: inside
+   * `smash.range` he smashes, out to `sweep.range` he sweeps, and holding
+   * station at the seam is answered either way.
+   */
+  sweep: {
+    range: 8.2,
+    windup: 0.70,
+    active: 0.30,
+    recover: 1.05,
+    damage: 18,
+    knock: 12,
+    reach: 6.4,
+    reachBack: 0.5,
+    shake: 0.22,
+  },
+  cooldown: [1.0, 1.8],
+  exp: 72,
+  contactDamage: 0,
+  /**
+   * The waking. An HP threshold firing a paged, held story beat
+   * (`Game.firePhaseBeat`) — the third consumer of the machinery Taraka's
+   * curse-reveal built and Shurpanakha's reveal reused, not a third bespoke
+   * wiring job. Unlike both of theirs it swaps no rig: one body throughout,
+   * with pose, speed and palette moving, per his entry's own call.
+   *
+   * 0.78 × 0.65 = 0.507s and 0.70 × 0.65 = 0.455s, both clear of
+   * `tools/gatecheck.js`'s 0.42s floor with more room than Shurpanakha's
+   * 20ms — a giant's swing should stay the most readable thing in the act
+   * even fully awake, and `telegraphs()` holds the awake numbers rather than
+   * the groggy ones for exactly that reason.
+   */
+  phaseAt: 0.5,
+  phaseWindupMul: 0.65,
+  /** The other half of "snaps to fully awake": he closes ground faster too. */
+  phaseSpeedMul: 1.35,
+};
+
 export const GUARDIAN = {
   hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 1.5,

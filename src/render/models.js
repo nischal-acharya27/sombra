@@ -1497,6 +1497,373 @@ export function buildShurpanakha(skin = null) {
 }
 
 // ---------------------------------------------------------------------------
+// Lanka soldier — gate 7's new regular archetype
+// ---------------------------------------------------------------------------
+
+/**
+ * Lanka on a war footing: a rakshasa-soldier with a spear, per
+ * `docs/SPEC-CAMPAIGN.md` § Act 2 — the act's one new regular-enemy archetype,
+ * and the first *regular* enemy since Act 1 to get a rig of its own rather
+ * than a reskin.
+ *
+ * The silhouette exists to answer one question the hunter asks from across the
+ * ramparts: is this the shield thing again? So it is built as `Kawach`'s
+ * opposite at every proportion the eye reads first — taller, narrower, no
+ * shield slab, and a haft that sticks a metre and a half past the body it
+ * belongs to. `LankaSoldier` in `game/enemies.js` extends `Kawach`, so the
+ * *tell* is deliberately the same one (plant, eyes flare, commit); the reach
+ * is the only thing that moved, and the silhouette is what has to say so
+ * before the first thrust lands.
+ *
+ * Node vocabulary matches `buildKawach`'s (`body`, `head`, `eyeL`/`eyeR`,
+ * `shoulderL`/`shoulderR`, `hipL`/`hipR`) plus `spear`, which the animator
+ * drives through the thrust.
+ */
+export function buildLankaSoldier(skin = null) {
+  const c = skin || {
+    body: P.lankaSoldierPlate,
+    dark: P.lankaSoldierPlateDark,
+    skin: P.lankaSoldierSkin,
+    eye: P.lankaSoldierEye,
+    haft: P.lankaSpearHaft,
+    head: P.lankaSpearHead,
+  };
+  const root = new THREE.Group();
+  const n = {};
+
+  const body = new THREE.Group();
+  body.position.y = 0.86;
+  root.add(body);
+  n.body = body;
+
+  // Narrow and upright where Kawach is wide and low-slung — a formation
+  // fighter stands in a line, it does not brace alone.
+  const torso = part(0.34, 0.62, 0.38, c.body, { pivot: 'bottom', outline: 0.028 });
+  body.add(torso);
+
+  // Scale skirting rather than a bolted chest slab: the plate is layered and
+  // war-worn, not one thick piece.
+  for (let i = 0; i < 3; i++) {
+    const lame = part(0.38, 0.1, 0.42, c.dark, { outline: 0.018 });
+    lame.position.set(0.01, 0.1 + i * 0.13, 0);
+    torso.add(lame);
+  }
+
+  const head = new THREE.Group();
+  head.position.y = 0.66;
+  torso.add(head);
+  n.head = head;
+
+  const skull = part(0.26, 0.26, 0.26, c.skin, { pivot: 'bottom', outline: 0.022 });
+  head.add(skull);
+
+  // A conical helm with a back-swept crest — height added at the top of the
+  // silhouette, which is where a lineup of them reads as a line.
+  const helm = part(0.28, 0.14, 0.28, c.dark, { pivot: 'bottom', outline: 0.02 });
+  helm.position.y = 0.24;
+  skull.add(helm);
+  const crest = part(0.05, 0.22, 0.14, c.body, { pivot: 'bottom', outline: 0.014 });
+  crest.position.set(-0.08, 0.12, 0);
+  crest.rotation.z = 0.5;
+  helm.add(crest);
+
+  // Eyes, in the shared vocabulary: they flare when a commit is near — the
+  // same signal on the same schedule as the Kawach this extends.
+  for (const side of [-1, 1]) {
+    const eye = decal(0.06, 0.04, c.eye);
+    eye.position.set(0.14, 0.12, side * 0.065);
+    eye.rotation.y = Math.PI / 2;
+    head.add(eye);
+    n[side < 0 ? 'eyeL' : 'eyeR'] = eye;
+  }
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const shoulder = new THREE.Group();
+    shoulder.position.set(0, 0.5, side * 0.24);
+    torso.add(shoulder);
+    n['shoulder' + key] = shoulder;
+
+    const pauldron = part(0.18, 0.14, 0.18, c.dark, { outline: 0.018 });
+    shoulder.add(pauldron);
+
+    const upper = part(0.13, 0.28, 0.13, c.skin, { pivot: 'top', outline: 0.018 });
+    upper.position.y = -0.04;
+    shoulder.add(upper);
+
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.3;
+    shoulder.add(elbow);
+    n['elbow' + key] = elbow;
+
+    const fore = part(0.12, 0.26, 0.12, c.skin, { pivot: 'top', outline: 0.018 });
+    elbow.add(fore);
+
+    const bracer = part(0.15, 0.09, 0.15, c.dark, { outline: 0.012 });
+    bracer.position.y = -0.2;
+    elbow.add(bracer);
+  }
+
+  // The spear, carried in the far arm and pivoting from the grip so the
+  // animator swings the whole length from one node. Built along +X, which is
+  // the direction it thrusts — see this file's orientation note.
+  const spear = new THREE.Group();
+  spear.position.set(0.06, -0.24, 0);
+  n.elbowR.add(spear);
+  n.spear = spear;
+
+  const haft = new THREE.Group();
+  haft.rotation.z = -Math.PI / 2; // lay the box down along +X (a +90° z-turn would point it backwards)
+  spear.add(haft);
+  const shaft = part(0.05, 2.0, 0.05, c.haft, { pivot: 'bottom', outline: 0.012 });
+  shaft.position.y = -0.55; // grip sits a third of the way up, not at the butt
+  haft.add(shaft);
+  const tip = part(0.07, 0.32, 0.07, c.head, { pivot: 'bottom', outline: 0.012 });
+  tip.position.y = 1.45;
+  haft.add(tip);
+  // The leaf blade: two flared cheeks either side of the point, so the head
+  // reads as a spear rather than as the haft continuing in a paler colour.
+  for (const side of [-1, 1]) {
+    const cheek = part(0.03, 0.16, 0.05, c.head, { pivot: 'bottom', outline: 0.008 });
+    cheek.position.set(0, 1.45, side * 0.05);
+    haft.add(cheek);
+  }
+
+  // Legs — long, planted. It walks in and stops at spear length, which is a
+  // very different distance from the one the shield taught.
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const hip = new THREE.Group();
+    hip.position.set(0, 0, side * 0.13);
+    body.add(hip);
+    n['hip' + key] = hip;
+
+    const thigh = part(0.16, 0.36, 0.16, c.dark, { pivot: 'top', outline: 0.02 });
+    hip.add(thigh);
+
+    const knee = new THREE.Group();
+    knee.position.y = -0.36;
+    hip.add(knee);
+    n['knee' + key] = knee;
+
+    const shin = part(0.14, 0.34, 0.14, c.skin, { pivot: 'top', outline: 0.018 });
+    knee.add(shin);
+
+    const foot = part(0.22, 0.08, 0.16, c.dark, { pivot: 'top', outline: 0.016 });
+    foot.position.set(0.04, -0.34, 0);
+    knee.add(foot);
+  }
+
+  root.userData.nodes = n;
+  return root;
+}
+
+// ---------------------------------------------------------------------------
+// Kumbhakarna — gate 7's Warden, the largest silhouette in the game
+// ---------------------------------------------------------------------------
+
+/**
+ * `hw 1.8`, `hh 2.2` — by his roster entry's own instruction, made
+ * *exceptionally* giant rather than merely the roster's biggest Warden, which
+ * puts him past every one of the four locked bosses (`GoruMukh`'s `hw 1.7` was
+ * the prior largest; the bosses top out at `hh 2.0`). That deliberately breaks
+ * the assumption Bakasura's entry left standing — that Wardens stay under boss
+ * scale — and it is safe to break because `contactDamage: 0` and the
+ * no-passive-contact rule mean the collision box is a movement-space fact, not
+ * a threat multiplier.
+ *
+ * Bare-chested with an actual face, not armoured: the respectful-treatment
+ * note needs a face to land pathos on, and an inhuman war-machine read would
+ * work against it. So the scale-up echoes the `Guardian`/`Boss` rig's
+ * *proportions* only, never its plate-and-blank-faceplate identity.
+ *
+ * One rig, not two. His phase-transition is groggy → awake, which is pose,
+ * speed and palette — `Kumbhakarna._wake` in `game/enemies.js` re-tints the
+ * meshes collected in `n.skinMeshes` and lifts `n.lidL`/`n.lidR`, rather than
+ * toggling a second pre-built body the way `buildTaraka` and
+ * `buildShurpanakha` do for their own reveals.
+ */
+export function buildKumbhakarna(skin = null) {
+  const c = skin || {
+    skin: P.kumbhaSkinDull, // opens groggy; `_wake` re-tints to `kumbhaSkin`
+    dark: P.kumbhaSkinDark,
+    wrap: P.kumbhaWrap,
+    hair: P.kumbhaHair,
+    club: P.kumbhaClub,
+    clubDark: P.kumbhaClubDark,
+    eye: P.kumbhaEye,
+  };
+  const root = new THREE.Group();
+  const n = {};
+  /** Every mesh wearing the skin colour, so `_wake` can re-tint in one pass. */
+  n.skinMeshes = [];
+  const flesh = (g) => {
+    n.skinMeshes.push(g.userData.mesh);
+    return g;
+  };
+
+  const body = new THREE.Group();
+  body.position.y = 1.9;
+  root.add(body);
+  n.body = body;
+  /** `_animate`'s idle-bob baseline, read back rather than re-derived. */
+  n.baseY = body.position.y;
+
+  // The trunk: mountain-like, per the source's own word for him. Wide and
+  // deep, and unlike Bakasura it is a chest rather than a belly — he is a
+  // giant, not a glutton, and the two must not read as the same build scaled.
+  const torso = flesh(part(1.5, 1.5, 1.3, c.skin, { pivot: 'bottom', outline: 0.05 }));
+  body.add(torso);
+  n.torso = torso;
+
+  // The wrap — minimal warrior garb, the only garment on him, and no jewelry
+  // anywhere: the inverse of Bakasura's bone-heavy read, on purpose.
+  const wrap = part(1.56, 0.46, 1.36, c.wrap, { pivot: 'top', outline: 0.034 });
+  wrap.position.y = 0.24;
+  torso.add(wrap);
+
+  const head = new THREE.Group();
+  head.position.y = 1.46;
+  torso.add(head);
+  n.head = head;
+
+  const skull = flesh(part(0.86, 0.8, 0.82, c.skin, { pivot: 'bottom', outline: 0.04 }));
+  head.add(skull);
+
+  // A heavy jaw, hung open a crack — a face caught mid-yawn is the whole
+  // default character read his entry asks for. It has to sit far enough
+  // forward to break the skull's own outline: the skull is 0.86 across, so
+  // anything inside x ±0.43 is a box drawn inside a box and reads as nothing
+  // at all.
+  const jaw = flesh(part(0.42, 0.3, 0.6, c.skin, { pivot: 'top', outline: 0.028 }));
+  jaw.position.set(0.46, 0.16, 0);
+  skull.add(jaw);
+  n.jaw = jaw;
+
+  // Disheveled hair and beard — this is a man who has been asleep for a very
+  // long time, and it is the only untidy thing on a rig that wears no
+  // ornament at all. Three masses, each placed to clear the skull's own
+  // silhouette rather than to sit inside it: on top, down the back, and
+  // hanging off the chin below the jaw.
+  const crown = part(0.8, 0.44, 0.86, c.hair, { pivot: 'bottom', outline: 0.034 });
+  crown.position.set(-0.16, 0.72, 0);
+  skull.add(crown);
+  const mane = part(0.3, 0.62, 0.8, c.hair, { pivot: 'top', outline: 0.03 });
+  mane.position.set(-0.5, 0.74, 0);
+  skull.add(mane);
+  // The beard frames the jaw rather than hanging below it. Below is not
+  // available: the skull's underside sits level with the top of a chest 1.5
+  // units across, so anything that hangs is inside him. So it flares wider
+  // than the skull is deep instead, which is what makes it read from the
+  // three-quarter angle the camera actually holds.
+  const beard = part(0.36, 0.40, 0.90, c.hair, { pivot: 'top', outline: 0.03 });
+  beard.position.set(0.30, 0.16, 0);
+  skull.add(beard);
+
+  // Eyes and lids. The eye is the telegraph — the shared damage-signal amber,
+  // per his entry — and the lid sitting over most of it is the groggy read.
+  // `_wake` raises the lids; nothing else about the face moves.
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const eye = decal(0.2, 0.13, c.eye, { opacity: 0.5 });
+    eye.position.set(0.44, 0.5, side * 0.2);
+    eye.rotation.y = Math.PI / 2;
+    skull.add(eye);
+    n['eye' + key] = eye;
+
+    const lid = flesh(part(0.04, 0.1, 0.24, c.skin, { pivot: 'top', outline: 0.01 }));
+    lid.position.set(0.45, 0.57, side * 0.2);
+    skull.add(lid);
+    n['lid' + key] = lid;
+  }
+
+  // Arms. The club is carried in the far arm; the near arm hangs — a
+  // two-handed grip would hide the weapon behind the body at this scale, and
+  // the club is the silhouette's whole second half.
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const shoulder = new THREE.Group();
+    shoulder.position.set(0.08, 1.24, side * 0.84);
+    torso.add(shoulder);
+    n['shoulder' + key] = shoulder;
+
+    const upper = flesh(part(0.52, 0.86, 0.52, c.skin, { pivot: 'top', outline: 0.036 }));
+    shoulder.add(upper);
+
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.86;
+    shoulder.add(elbow);
+    n['elbow' + key] = elbow;
+
+    const fore = flesh(part(0.46, 0.8, 0.46, c.skin, { pivot: 'top', outline: 0.034 }));
+    elbow.add(fore);
+
+    const hand = flesh(part(0.44, 0.4, 0.42, c.skin, { pivot: 'top', outline: 0.03 }));
+    hand.position.y = -0.8;
+    elbow.add(hand);
+    n['hand' + key] = hand;
+  }
+
+  // The uprooted tree. Settles his entry's open "bare hands or a club"
+  // question in favour of the club — bare hands would leave him sharing both
+  // Bakasura's `Enemy` skeleton and Bakasura's unarmed identity, and the
+  // wielded weapon is what keeps the two giants apart at the kit level.
+  //
+  // Pivoting from the grip, laid along +X like the Lanka soldier's spear, so
+  // the animator swings the whole length from one node.
+  const club = new THREE.Group();
+  club.position.set(0.1, -0.9, 0);
+  n.elbowR.add(club);
+  n.club = club;
+
+  const trunk = new THREE.Group();
+  trunk.rotation.z = -Math.PI / 2; // along +X, same as the soldier's haft
+  club.add(trunk);
+  const shaft = part(0.34, 3.0, 0.34, c.club, { pivot: 'bottom', outline: 0.03 });
+  shaft.position.y = -0.5;
+  trunk.add(shaft);
+  // The head end: thicker, knotted, still carrying its root ball. An
+  // *uprooted* tree, not a turned handle.
+  const knot = part(0.62, 0.7, 0.62, c.clubDark, { outline: 0.032 });
+  knot.position.y = 2.15;
+  trunk.add(knot);
+  for (const side of [-1, 1]) {
+    const root_ = part(0.24, 0.4, 0.22, c.clubDark, { pivot: 'bottom', outline: 0.016 });
+    root_.position.set(side * 0.24, 2.4, side * 0.22);
+    root_.rotation.z = side * 0.5;
+    trunk.add(root_);
+  }
+
+  // Legs — heavy columns. Nothing here is built for speed, and the fight is
+  // written around that.
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const hip = new THREE.Group();
+    hip.position.set(0, 0, side * 0.5);
+    body.add(hip);
+    n['hip' + key] = hip;
+
+    const thigh = flesh(part(0.62, 1.0, 0.62, c.skin, { pivot: 'top', outline: 0.04 }));
+    hip.add(thigh);
+
+    const knee = new THREE.Group();
+    knee.position.y = -1.0;
+    hip.add(knee);
+    n['knee' + key] = knee;
+
+    const shin = flesh(part(0.54, 0.86, 0.54, c.skin, { pivot: 'top', outline: 0.036 }));
+    knee.add(shin);
+
+    const foot = part(0.66, 0.2, 0.5, c.dark, { pivot: 'top', outline: 0.026 });
+    foot.position.set(0.1, -0.86, 0);
+    knee.add(foot);
+  }
+
+  root.userData.nodes = n;
+  return root;
+}
+
+// ---------------------------------------------------------------------------
 // Kaikeyi — gate 5's tier-0 figure (no Enemy/Boss ancestry, see figure.js)
 // ---------------------------------------------------------------------------
 

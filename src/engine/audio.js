@@ -267,6 +267,16 @@ export class Audio {
         this._noise({ gain: 0.22, a: 0.002, d: 0.7, filter: 'highpass', freq: 900, send: 0.5 });
         this._tone({ freq: 300, freq2: 70, type: 'sawtooth', gain: 0.16, a: 0.02, d: 1.0, at: 0.12, send: 0.4 });
         break;
+      case 'waking':
+        // Kumbhakarna's phase-transition. Neither Taraka's descending curdle
+        // nor Shurpanakha's rising glass-break: a low, slow, enormous intake
+        // — a mountain sitting up. Rising in pitch but starting far below
+        // either of them, so at a glance it is unmistakably the third
+        // reveal in the act and not a recolour of one of the first two.
+        this._tone({ freq: 34, freq2: 120, type: 'sine', gain: 0.34, a: 0.35, d: 1.6, send: 0.6 });
+        this._tone({ freq: 68, freq2: 96, type: 'sawtooth', gain: 0.14, a: 0.4, d: 1.4, send: 0.4 });
+        this._noise({ gain: 0.2, a: 0.5, d: 1.5, filter: 'lowpass', freq: 240, freq2: 900, send: 0.5 });
+        break;
       case 'enrage':
         this._tone({ freq: 60, freq2: 240, type: 'sawtooth', gain: 0.3, a: 0.02, d: 0.9, send: 0.5 });
         this._noise({ gain: 0.2, a: 0.02, d: 0.9, filter: 'highpass', freq: 400, send: 0.4 });

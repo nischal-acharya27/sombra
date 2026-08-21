@@ -25,7 +25,7 @@
 // descriptor is authored correctly, that one asks whether `Level` built what
 // the descriptor said.
 
-import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR } from '../src/game/config.js';
+import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, LANKA_SOLDIER, KUMBHAKARNA, GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR } from '../src/game/config.js';
 import { ARCHETYPES } from '../src/game/game.js';
 import { GATES } from '../src/game/gates/index.js';
 
@@ -537,6 +537,16 @@ const TELLS = [
   // floor is the one she fights with for the rest of the encounter. At 0.44s
   // it is the tightest non-boss tell in the game, 20ms over the floor.
   { archetype: 'shurpanakha', tell: 'swipe, revealed', windup: SHURPANAKHA.pounce.windup * SHURPANAKHA.phaseWindupMul },
+  // The Lanka soldier's thrust does not tighten anywhere — it has no enrage
+  // and no phase — so unlike every row above it there is only one number to
+  // hold, and it is the one the hunter answers all fight.
+  { archetype: 'lankaSoldier', tell: 'thrust', windup: LANKA_SOLDIER.bash.windup },
+  // Kumbhakarna's two wind-ups both tighten at his waking
+  // (`KUMBHAKARNA.phaseWindupMul`), same reasoning as Taraka's and
+  // Shurpanakha's rows — the number that has to clear the floor is the one he
+  // fights with for the rest of the encounter, not his groggy one.
+  { archetype: 'kumbhakarna', tell: 'smash, awake', windup: KUMBHAKARNA.smash.windup * KUMBHAKARNA.phaseWindupMul },
+  { archetype: 'kumbhakarna', tell: 'sweep, awake', windup: KUMBHAKARNA.sweep.windup * KUMBHAKARNA.phaseWindupMul },
   ...Object.entries(GUARDIAN.attacks).map(([name, a]) => ({
     archetype: 'guardian',
     tell: `${name}, enraged`,

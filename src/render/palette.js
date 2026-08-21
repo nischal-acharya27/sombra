@@ -231,5 +231,55 @@ export const P = {
   junglePriestRobeDark: 0x54492f,
   junglePriestSigil: 0xd8f0a8,
 
+  // Act 2 — gate 07's Lanka war-footing rakshasa-soldier, the campaign's first
+  // new *regular* archetype since Act 1 (docs/SPEC-CAMPAIGN.md § Act 2). It is
+  // Lanka's rank and file, so it opens the Lanka register one gate ahead of
+  // Ravana rather than borrowing gate 6's forest tones — but deliberately not
+  // with his own five names (`lankaSkin`/`lankaPlate`/`lankaPlateDark`/
+  // `lankaRobe`/`lankaCore`, reserved by his roster entry for the "richly
+  // adorned" court gold): a soldier's kit is war-worn and duller than the
+  // king's by a whole octave, and a shared name at two brightnesses would
+  // read as one of them being wrong. `lankaSoldierEye` reuses the shared
+  // damage-signal amber outright — the same value `kawachEye` carries, on
+  // purpose, because this archetype extends `Kawach`'s plant-and-commit
+  // skeleton and the tell the hunter reads is the same tell.
+  lankaSoldierPlate: 0x6a5a2c,
+  lankaSoldierPlateDark: 0x30290f,
+  lankaSoldierSkin: 0x6e5a52,
+  lankaSoldierEye: 0xffb347,
+  // The spear: dark haft, dull bronze head. Not `bladeSteel` — that is the
+  // hunter's own blade, and the one weapon in the game that should read as
+  // cleaner than what it is pointed at.
+  lankaSpearHaft: 0x4a3826,
+  lankaSpearHead: 0x9a8a5c,
+
+  // Act 2 — Kumbhakarna. Per docs/research/villain-roster.md: coarse,
+  // weathered-granite grey-brown, picked to sit clear of every other
+  // giant/demon tone already spent (Shurpanakha's pale ash-grey, Taraka's
+  // moss-green-to-black, Bakasura's sallow-bilious-purple). `kumbhaSkinDull`
+  // is the same stone with the light taken out of it — the groggy phase's
+  // "duller skin sheen", re-tinted to `kumbhaSkin` at the threshold rather
+  // than being a second rig, since his phase-transition is explicitly a
+  // one-rig pose/speed/palette change and not Taraka's or Shurpanakha's
+  // two-rig swap.
+  //
+  // No jewelry colour anywhere in this block, and that is the point: his
+  // entry asks for the inverse of Bakasura's bone-heavy read, reinforcing
+  // the "sleep-boon simpleton" framing through absence. `kumbhaWrap` is
+  // undyed cloth, the only garment on him.
+  kumbhaSkin: 0x8b8479,
+  kumbhaSkinDull: 0x6a6459,
+  kumbhaSkinDark: 0x4e4941,
+  kumbhaWrap: 0x6e5a3e,
+  kumbhaHair: 0x2a2622,
+  // The uprooted tree/club — the weapon that keeps the two giants distinct at
+  // the kit level, since Bakasura already owns unarmed.
+  kumbhaClub: 0x4a3a24,
+  kumbhaClubDark: 0x2a2015,
+  // The shared damage-signal amber one more time (Bakasura's hands, Taraka's
+  // and Shurpanakha's eyes). His entry names this value outright: the groggy,
+  // heavy-lidded eyes flare it as the telegraph rather than inventing a hue.
+  kumbhaEye: 0xffb347,
+
   outline: 0x0a0813,
 };

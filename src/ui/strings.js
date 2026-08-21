@@ -367,22 +367,90 @@ export const STRINGS = {
   GATE6_SHURPANAKHA_DEFEAT_8_BIG: 'Tell it I asked, hunter. That is all I ever did.',
   GATE6_SHURPANAKHA_DEFEAT_8_BODY: 'Let something finally answer.',
 
-  // -- gate 7: Asura-lok -----------------------------------------------------
-  GATE7_NAME: 'Asura-lok',
-  GATE7_WARDEN_TITLE: 'AMAR-YODDHA',
-  GATE7_VANGUARD_TITLE: 'THREAT DETECTED',
-  GATE7_VANGUARD_BODY: 'Raakchyas × 2  ·  Charger × 1',
-  GATE7_LINE_TITLE: 'THREAT DETECTED',
-  GATE7_LINE_BODY: 'Kawach × 2  ·  Raakchyas × 1',
-  GATE7_MELEE_TITLE: 'THREAT DETECTED',
-  GATE7_MELEE_BODY: 'Raakchyas × 2  ·  Charger × 1  ·  Kawach × 1  ·  Tantrik × 1  ·  Bhoot-Batti × 1',
-  GATE7_YODDHA_TITLE: 'GATE WARDEN',
-  GATE7_BEAT_ENTER_TITLE: 'THE SYSTEM',
-  GATE7_BEAT_ENTER_BIG: 'NO CEASEFIRE ON RECORD',
-  GATE7_BEAT_ENTER_BODY: 'They fought this long before the Wheel stopped, and never noticed.',
-  GATE7_BEAT_CLEARED_TITLE: 'THE SYSTEM',
-  GATE7_BEAT_CLEARED_BIG: 'ONE FEWER COMBATANT',
-  GATE7_BEAT_CLEARED_BODY: 'The war does not end because one side changed by one.',
+  // -- gate 7: Lanka's ramparts ----------------------------------------------
+  //
+  // Gate 7 under the fifteen-gate redesign: Kumbhakarna, not the retired
+  // Asura-lok/Amar-Yoddha. His roster entry (docs/research/villain-roster.md)
+  // calls him the best-positioned villain on the whole list for sympathetic
+  // writing without any tension against the source — the epic itself frames
+  // him as a loyal, decent figure trapped by family duty into a war he
+  // argued against. So the risk these beats have to manage is the opposite
+  // of Shurpanakha's: not recovering an interiority the text withholds, but
+  // not squandering one the text already gives.
+  //
+  // Two specific ways that could go wrong, and what the beats do instead.
+  // First, the sleep boon is a comic detail in most retellings — the slip of
+  // the tongue, the drums and elephants used to wake him. It is named here
+  // as the thing done *to* him by frightened gods, and the beats never
+  // invite the hunter to laugh at it. Second, his loyalty is usually
+  // narrated as simplicity. He says plainly that he was not deceived: he
+  // knew what his brother was, said so out loud in open court, and went
+  // anyway. That is the sentence the whole scene is built to protect.
+  //
+  // The pre-fight and phase-transition lines are the ones already locked in
+  // docs/SPEC-CAMPAIGN.md's dialogue table; the rest is written to arrive at
+  // them. The defeat beats use SORGI's escort framing throughout, never
+  // victory framing.
+  GATE7_NAME: 'Lanka\u2019s Ramparts',
+  GATE7_WARDEN_TITLE: 'KUMBHAKARNA',
+  GATE7_RAMPARTS_TITLE: 'THREAT DETECTED',
+  GATE7_RAMPARTS_BODY: 'Lanka Soldier × 3',
+  GATE7_RAMPARTS_NOTE: 'The <b>spear</b> reaches well past the shield you learned on. Read the plant, not the gap.',
+  GATE7_KUMBHAKARNA_TITLE: 'GATE WARDEN',
+
+  GATE7_KUMBHAKARNA_INTRO_1_BIG: 'Ten thousand years of penance, and I asked for the wrong thing.',
+  GATE7_KUMBHAKARNA_INTRO_1_BODY: 'One syllable out of place. The gods were listening very carefully that day.',
+  GATE7_KUMBHAKARNA_INTRO_2_BIG: 'I meant to ask for the end of the gods. I asked for sleep instead.',
+  GATE7_KUMBHAKARNA_INTRO_2_BODY: 'Nobody laughs about it here. That is the only mercy this place has offered.',
+  GATE7_KUMBHAKARNA_INTRO_3_BIG: 'Six months down, one day awake. Long enough to eat, never long enough to think.',
+  GATE7_KUMBHAKARNA_INTRO_3_BODY: 'You learn to say what matters fast, or you sleep through saying it.',
+  GATE7_KUMBHAKARNA_INTRO_4_BIG: 'They woke me with drums, and elephants, and men walking on my chest.',
+  GATE7_KUMBHAKARNA_INTRO_4_BODY: 'Lanka was already burning. Nobody wakes a mountain for good news.',
+  GATE7_KUMBHAKARNA_INTRO_5_BIG: 'The first thing I did was ask what he had done.',
+  GATE7_KUMBHAKARNA_INTRO_5_BODY: 'Not what the enemy had done. What my brother had done. He knew the difference.',
+  GATE7_KUMBHAKARNA_INTRO_6_BIG: 'I told him to give her back.',
+  GATE7_KUMBHAKARNA_INTRO_6_BODY: 'Out loud, in his own hall, with his own court listening. I said it plainly.',
+  GATE7_KUMBHAKARNA_INTRO_7_BIG: 'I said the war was wrong, and that winning it would not make it right.',
+  GATE7_KUMBHAKARNA_INTRO_7_BODY: 'He heard every word. He was never stupid. That was never his trouble.',
+  GATE7_KUMBHAKARNA_INTRO_8_BIG: 'He refused. I picked up my club and went out to die for him.',
+  GATE7_KUMBHAKARNA_INTRO_8_BODY: 'You may call that stupid. I would rather be that than a brother who leaves.',
+  GATE7_KUMBHAKARNA_INTRO_9_BIG: 'I was not deceived. That is the part people get wrong about me.',
+  GATE7_KUMBHAKARNA_INTRO_9_BODY: 'I knew exactly what he was. I went anyway. Knowing is not the same as leaving.',
+  GATE7_KUMBHAKARNA_INTRO_10_BIG: 'They cut the arms off first. Then the legs. Then the rest of it.',
+  GATE7_KUMBHAKARNA_INTRO_10_BODY: 'It took a long time. I have had longer to sit with it since.',
+  GATE7_KUMBHAKARNA_INTRO_11_BIG: 'The Wheel stopped and left me here, half-asleep, exactly where it found me.',
+  GATE7_KUMBHAKARNA_INTRO_11_BODY: 'Whatever this is, it is not rest. I would know rest.',
+  GATE7_KUMBHAKARNA_INTRO_12_BIG: 'You will find me slow at first. Do not be flattered by it.',
+  GATE7_KUMBHAKARNA_INTRO_12_BODY: 'I am always slow at first. It has never been how the fight finishes.',
+  GATE7_KUMBHAKARNA_INTRO_13_BIG: 'Let me sleep. I already told him how this ends.',
+  GATE7_KUMBHAKARNA_INTRO_13_BODY: 'You will not listen either. Nobody ever does. Come on, then.',
+
+  // The waking, fired by `Kumbhakarna.takeHit` at his HP threshold through
+  // `Game.firePhaseBeat` — the third consumer of that machinery, after
+  // Taraka's wordless curse-reveal and Shurpanakha's reveal. His carries the
+  // line docs/SPEC-CAMPAIGN.md already locked, and it is the sentence his
+  // respectful-treatment note asked for a mechanical home for: counsel,
+  // refusal, and the choice made anyway, said at the moment the fight gets
+  // harder rather than in a name card before it starts.
+  GATE7_KUMBHAKARNA_PHASE_BIG: 'I said make peace. He is my brother. I fight anyway.',
+  GATE7_KUMBHAKARNA_PHASE_BODY: 'Now I am awake. You will like me better asleep.',
+
+  GATE7_KUMBHAKARNA_DEFEAT_1_BIG: 'There. That is the rest of it, finally.',
+  GATE7_KUMBHAKARNA_DEFEAT_1_BODY: 'Not the sleep I asked for. Close enough that I will take it.',
+  GATE7_KUMBHAKARNA_DEFEAT_2_BIG: 'You fought a man who told his king the truth and then died for the lie.',
+  GATE7_KUMBHAKARNA_DEFEAT_2_BODY: 'Carry both halves out. Neither one alone is me.',
+  GATE7_KUMBHAKARNA_DEFEAT_3_BIG: 'I do not want him punished. I want him to have listened.',
+  GATE7_KUMBHAKARNA_DEFEAT_3_BODY: 'Those are different wishes. Only one of them was ever available.',
+  GATE7_KUMBHAKARNA_DEFEAT_4_BIG: 'Tell them I argued. Not that I was right — that I argued.',
+  GATE7_KUMBHAKARNA_DEFEAT_4_BODY: 'Everyone remembers the size of me. Nobody remembers the sentence.',
+  GATE7_KUMBHAKARNA_DEFEAT_5_BIG: 'Loyalty is not a virtue by itself. I found that out very late.',
+  GATE7_KUMBHAKARNA_DEFEAT_5_BODY: 'It is only as good as the man you spend it on.',
+  GATE7_KUMBHAKARNA_DEFEAT_6_BIG: 'If the Wheel turns again, do not put me somewhere quiet.',
+  GATE7_KUMBHAKARNA_DEFEAT_6_BODY: 'I have had enough quiet. Put me somewhere I would be awake for.',
+  GATE7_KUMBHAKARNA_DEFEAT_7_BIG: 'You are smaller than everything else that has ever tried.',
+  GATE7_KUMBHAKARNA_DEFEAT_7_BODY: 'You also stayed to hear the whole of it. Nobody else did that either.',
+  GATE7_KUMBHAKARNA_DEFEAT_8_BIG: 'Go on, hunter. Wake the next one.',
+  GATE7_KUMBHAKARNA_DEFEAT_8_BODY: 'And if it argues with you first — let it finish arguing.',
 
   // -- gate 8: Deva-lok -----------------------------------------------------
   GATE8_NAME: 'Deva-lok',

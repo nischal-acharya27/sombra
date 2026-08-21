@@ -3088,3 +3088,103 @@ is named once, by her, as something fought in her name rather than at her
 word. The eight `'cleared'` beats hold the same line: she does not ask to be
 told she was right, and the gate's mechanical clear is identical to every
 other Warden's.
+
+---
+
+## Gate 7 becomes Lanka's ramparts, and the act's one new regular archetype finally gets built
+
+`docs/SPEC-CAMPAIGN.md`'s Act 2 table gives gate 07 to Kumbhakarna and hands
+it the act's single new regular-enemy archetype — a Lanka war-footing
+rakshasa-soldier, spear and polearm, formation-fighting — with its **solo
+debut** here, one gate before gate 08 first combines it with `Kawach`. So
+this gate is the first since Act 1 to add a regular enemy at all, and it
+carries a Warden on top of that. Both are built here.
+
+**Two rigs, one of them a regular enemy, and neither is a reskin.** The
+soldier is new geometry (`buildLankaSoldier`) because its whole lesson is a
+distance: a spear plants further out than a shield, so the range gate 1's
+court guards taught is now inside the thrust. A palette swap over `Kawach`
+would have been a lie about that distance — the hunter would read the
+silhouette they already know and stand where it used to be safe. The
+behaviour underneath *is* `Kawach`'s, unchanged, per the spec's own words:
+`LankaSoldier` extends it and overrides exactly two methods, `attackBox` (a
+spear reaches forward; a bash straddles) and `_animate` (a spear is not a
+shield). No new state machine.
+
+**The armour is configured off, not branched around.** `Kawach.takeHit`
+shrugs any hit whose `launch` is under `KAWACH.armorBreakLaunch`. A soldier
+in scale is not a wall, so `LANKA_SOLDIER` sets that number to `0` and every
+hit falls through to `Enemy.takeHit` unabridged. One armour rule in the
+codebase at two settings, rather than two rules that can drift apart.
+
+**`Kawach` gained the `buildRig` parameter, the same way `Raakchyas` did at
+gate 6.** The first version swapped the rig after construction, which built
+and discarded a whole Kawach per soldier spawn. That is not merely waste:
+three.js draws four `Math.random()` values per object for its UUID and the
+suite seeds `Math.random` globally, so a discarded rig spends the gameplay
+stream. `Charger` already had the parameter, `Raakchyas` got it for
+Shurpanakha, and `Kawach` gets it here — third time, same fix, and every
+existing call site is unchanged by the default.
+
+**Kumbhakarna is deliberately bigger than every boss, and that is safe
+because of the no-passive-contact rule.** `hw 1.8 / hh 2.2` is his roster
+entry's explicit instruction: past `GORU_MUKH`'s 1.7 and past the locked
+bosses' 2.0 ceiling, so he is the largest silhouette in the game. Bakasura's
+own entry had left standing the assumption that Wardens stay under boss scale
+to protect the escalation curve; this breaks it on purpose, and the thing
+that makes it harmless is that `contactDamage` is 0 roster-wide. An oversized
+collision box is movement space and a visual fact, never a threat multiplier,
+so a Warden can be physically larger than a boss without out-escalating one.
+
+**His kit is Bakasura's shape with the reach moved into the weapon.** `Enemy`
+directly, two committed moves picked by range — a close overhead smash and a
+long horizontal sweep — which is the pair Bakasura's grab and tackle already
+established. The one departure: the long move does not travel. Bakasura's
+tackle closes ground; Kumbhakarna's sweep does not have to, because the club
+is three units long. Keeping it stationary is what stops "a straightforward
+committed heavy swing" from quietly becoming a second `Charger`, an identity
+already spent on Taraka two gates back.
+
+**The waking is `firePhaseBeat`'s third consumer, and the first that swaps no
+rig.** Taraka's curse-reveal built the machinery and Shurpanakha's illusion
+break reused it; both toggle between two pre-built bodies on a `visible`
+flag. Kumbhakarna's roster entry asks for something different on purpose —
+one rig throughout, with pose, speed and palette moving — because his is a
+man waking up, not a transformation. So `_wake` lifts the eyelids, shuts the
+jaw, re-tints the skin from `kumbhaSkinDull` to `kumbhaSkin`, and the
+wind-ups and walk speed pick up from `cfg` on the next frame.
+
+**Re-tinting had to move the `_flash` base, and this is the kind of bug that
+would have looked like the beat not working.** `Enemy.finishSetup` clones
+every material and caches its starting colour as the base `_flash` restores
+to after a hit. Setting `material.color` alone would have held exactly until
+the hunter's next sword swing, at which point he would have gone back to
+looking asleep. `Kumbhakarna._retint` moves the cached base with the colour.
+
+**The rig went through a visual pass, because `?sim` cannot see a face.**
+Three things only a screenshot caught. The hair and beard were placed inside
+the skull and drew as nothing at all — the skull is 0.86 across and every
+mass sat within it; the hair moved on top and down the back, and the beard
+now flares wider than the skull is deep rather than hanging below it, because
+below the chin is inside a chest 1.5 units wide. The skin tones read
+near-black under this gate's night fog and were lifted a full step, which is
+also what makes the waking's re-tint legible at all. And the club's resting
+angle went from horizontal (a man presenting a weapon) through hanging (the
+head clipped the floor at every idle frame, since the club is longer than his
+arm is high) to shouldered, which is the one resting pose a tree-sized weapon
+has and leaves both wind-ups most of a half-turn of travel to be read
+against.
+
+**The gate's own `soloDebut` row went green and gate 9's went red, and that
+is the same pre-existing fault moving rather than a new one.** Gate 7's red
+before this session was `charger debuts alongside raakchyas + charger`:
+`Charger` has no debut anywhere in the fifteen-gate campaign, because Act 1's
+budget assigns it to gate 03 and gate 03 is still retired ten-gate content
+(Goru-Mukh). Rebuilding gate 7 to its own table removed the `Charger` spawns
+that were standing in for that missing debut, so the campaign-ordered check
+now reports it at gate 9 — the next gate that spawns one, in a combination.
+The suite total is unchanged (6 FAIL, or 5 on seeds where the frozen
+`signed-rank` gate lands green), the four `hp: 5` rows and `signed-rank` are
+untouched, and the row resolves when gate 03 is rebuilt as Duryodhana's,
+which is where the spec puts `Charger`'s debut. Fixing it from this gate
+would have meant re-adding an archetype the gate's table does not list.
