@@ -268,6 +268,13 @@ all text in this game is DOM text styled by CSS and Android's WebView supplies
 system fonts for Devanagari, CJK and the rest. If text were rendered into
 textures this would be impossible. It is not.
 
+*(Updated 2026-08-21: the no-asset-files rule has since been lifted for image
+textures — see § "The no-asset-files rule is lifted". This paragraph's
+conclusion is unaffected and its reasoning is why: that reversal explicitly
+does **not** permit text baked into a texture, precisely to keep localisation
+open. The dependency runs the other way now — this decision constrains the
+asset rule rather than the asset rule constraining it.)*
+
 ## ARISE / shadow extraction — specified, not yet built
 
 The signature mechanic of the genre, currently absent. Specified as:
@@ -3732,3 +3739,73 @@ campaign has, so it was not fixed here: giving the climb a ground floor is a
 recomposition well outside a rebuild's scope, and it is plausibly issue #51
 territory (platforms reading as boxes, fatal-fall confusion) rather than a gate
 10 bug. Recorded so it is a decision on the record and not an oversight.
+
+## The no-asset-files rule is lifted, deliberately and with conditions
+
+Reversed on 2026-08-21, at the project owner's direction, after the rule had
+held since the first commit. It is recorded here at length because it is the
+oldest constraint this project had and the one the most other decisions were
+argued from — including, three sections up, the localisation call that leaned
+on it explicitly.
+
+**What the rule was.** "No asset files, ever. Every model, sound, particle and
+texture — and all storyline text — is generated or written in code." It bought
+three real things: a repo that clones and runs with nothing installed, a build
+that cannot break because an asset 404s, and a hard ceiling on scope creep.
+
+**Why it is being lifted.** Not for one gate. The owner's stated reason is
+character and enemy *redesigns* — the box-primitive rigs in `models.js` have
+carried the whole cast for eleven gates, and the roster's own handoff notes
+have started leaning on external reference images (Putana's Kalighat painting,
+Shurpanakha's TV still, Narakasura's five generated references) to describe
+looks the box vocabulary cannot actually reach. The rule had stopped being a
+constraint that sharpened the work and started being one the design was
+routing around.
+
+**What is lifted, precisely.** External image files — PNG and SVG — may be
+loaded as textures. That is all. Everything else the rule covered stands:
+
+- **No build step, no npm, no bundler.** Unchanged and non-negotiable.
+- **No model files.** No glTF, no OBJ, no FBX. Geometry is still built in
+  code; this buys textures, not meshes. A rig is still `part()` boxes.
+- **No audio files.** `engine/audio.js` still synthesises everything.
+- **No text in textures.** The localisation decision three sections up depends
+  on all text being DOM text styled by CSS, and that dependency is unchanged —
+  see "Text is centralised now, translated later." An asset carrying baked
+  words would re-break what that decision established.
+
+**The three conditions the mechanism has to meet**, which are not style
+preferences but consequences of things this repo already proved the hard way:
+
+1. **Every texture is created before the seeded stream is touched.** Three.js
+   draws four `Math.random()` values per UUID, and a `CanvasTexture` is two
+   objects — `Texture` and `Source` — so eight draws. `tools/sim.js` seeds
+   `Math.random` globally. An asset resolving mid-run would spend the gameplay
+   stream and re-roll every enemy's jitter after it, which is the exact failure
+   the pre-built-gates design already exists to prevent. Loading is therefore
+   `await`ed in `main.js` *before* `new Game(...)`, and the suite gets a row
+   that counts it.
+2. **A missing file is not an error.** The game must run, and look deliberate,
+   with the `assets/` directory entirely empty. Every asset slot has a
+   procedural fallback that is what the game looked like before this decision.
+   This is not defensive politeness: it is what keeps the repo's "clone it and
+   it runs" property, and it is what let gate 11 be built before any art
+   existed for it.
+3. **Assets decorate; they never carry meaning.** No hitbox, telegraph,
+   readability cue or gameplay-legible signal may live only in a texture. A
+   player whose assets failed to load must still be able to read every fight.
+   This is the same principle the "no passive contact damage" rule protects,
+   applied to the render layer.
+
+**What this costs, stated up front so nobody rediscovers it.** `main.js`
+becomes async, which it was not before. The boot sequence grows a load phase
+that can fail slowly on a bad connection, where previously boot was a
+synchronous straight line. And the Android port now has files to package that
+it did not have. All three were judged acceptable against the redesign work
+this unblocks; the first is mitigated by condition 2, since a load that fails
+entirely still produces a playable game.
+
+**What would reverse this back.** If the asset set grows past what a phone
+download tolerates, or if a texture ever ends up carrying a telegraph, the
+right answer is to tighten condition 3 and prune — not to re-impose the whole
+rule, which would now orphan work rather than prevent it.

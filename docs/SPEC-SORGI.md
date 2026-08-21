@@ -389,8 +389,11 @@ it. The Guardian re-tune comes after both and is not in this spec.
 - **A fourth tuning round on level 1.** Barred outright until SORGI exists. A bug
   is not tuning and a suite regression is not tuning; neither is covered by the
   bar, so it cannot be used to wave either away.
-- **New levels, new enemy types, gamepad support, any asset file, any build
-  step.** All unchanged and all still excluded.
+- **New levels, new enemy types, gamepad support, any build step.** All
+  unchanged and all still excluded. ("Any asset file" was on this list until
+  2026-08-21, when the no-asset-files rule was lifted for image textures only —
+  see `docs/DECISIONS.md`. Model and audio files remain excluded, and nothing
+  in SORGI's own slice loads an asset either way.)
 
 ## Further Notes
 

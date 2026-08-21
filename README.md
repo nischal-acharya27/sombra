@@ -11,9 +11,10 @@ Named moves are drawn from across the Romance languages — *Sombra* (shadow),
 when its vocabulary comes from somewhere other than English.
 
 It runs in a browser with **no build step and no dependencies to install**.
-three.js is vendored into the repo; everything else — every model, animation,
-sound and particle — is generated in code at startup. There is not a single
-asset file.
+three.js is vendored into the repo; every model, animation, sound and particle
+is generated in code at startup. The sole exception is image textures, which
+may be loaded from `assets/` — and the game runs, and looks deliberate, with
+that directory empty.
 
 ![Combat](docs/combat.png)
 

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- Riveted plate for the fortress's ironwork. Also a MULTIPLY map — the
+       colour comes from the material, so this same file reads as prison iron
+       on a cold grey and as banded bronze on a warm one. -->
+  <rect width="256" height="256" fill="#efecea"/>
+  <g stroke="#b0a9a2" stroke-width="4" fill="none">
+    <line x1="0" y1="128" x2="256" y2="128"/>
+    <line x1="128" y1="0" x2="128" y2="256"/>
+  </g>
+  <g stroke="#c8c1ba" stroke-width="2" fill="none">
+    <rect x="16" y="16" width="96" height="96" rx="5"/>
+    <rect x="144" y="16" width="96" height="96" rx="5"/>
+    <rect x="16" y="144" width="96" height="96" rx="5"/>
+    <rect x="144" y="144" width="96" height="96" rx="5"/>
+  </g>
+  <g fill="#a8a19a">
+    <circle cx="28" cy="28" r="5"/><circle cx="100" cy="28" r="5"/>
+    <circle cx="28" cy="100" r="5"/><circle cx="100" cy="100" r="5"/>
+    <circle cx="156" cy="28" r="5"/><circle cx="228" cy="28" r="5"/>
+    <circle cx="156" cy="100" r="5"/><circle cx="228" cy="100" r="5"/>
+    <circle cx="28" cy="156" r="5"/><circle cx="100" cy="156" r="5"/>
+    <circle cx="28" cy="228" r="5"/><circle cx="100" cy="228" r="5"/>
+    <circle cx="156" cy="156" r="5"/><circle cx="228" cy="156" r="5"/>
+    <circle cx="156" cy="228" r="5"/><circle cx="228" cy="228" r="5"/>
+  </g>
+</svg>

@@ -14,6 +14,7 @@
 
 import * as THREE from 'three';
 import { P } from './palette.js';
+import { assets } from './assets.js';
 
 const gradientCache = new Map();
 
@@ -48,6 +49,15 @@ const RIM_CHUNK = /* glsl */ `
 /**
  * Cel-shaded material. `rim` of 0 disables the rim term (useful for terrain,
  * where every silhouette edge would otherwise glow).
+ *
+ * `map` is an **asset name**, not a texture — see `assets.js`. It resolves to
+ * null when that art is not loaded, which is an ordinary outcome rather than a
+ * failure: the material then looks exactly as it did before the no-asset-files
+ * rule was lifted. Passing a name for art that does not exist yet is fine and
+ * deliberately unremarkable.
+ *
+ * These are multiply maps over the material's own colour, so one grain file
+ * serves a warm fortress wall and a cold iron grate alike.
  */
 export function toonMaterial({
   color = 0xffffff,
@@ -62,12 +72,17 @@ export function toonMaterial({
   fog = true,
   side = THREE.FrontSide,
   vertexColors = false,
+  map = null,
 } = {}) {
+  // A name resolves now, at build time, because everything here is constructed
+  // before the seeded stream is touched. `assets()` never allocates.
+  const texture = map ? assets().get(map) : null;
   // No `flatShading` option: MeshToonMaterial does not support it. Faceted
   // surfaces come from the geometry instead — see `faceted()` below.
   const mat = new THREE.MeshToonMaterial({
     color,
     gradientMap: gradientMap(steps),
+    map: texture,
     emissive,
     emissiveIntensity,
     transparent,
@@ -94,7 +109,11 @@ export function toonMaterial({
         .replace('#include <opaque_fragment>', `${RIM_CHUNK}\n#include <opaque_fragment>`);
     };
     // Materials that differ only in onBeforeCompile must not share a program.
-    mat.customProgramCacheKey = () => `rim${rim}|${rimBias}|${rimColor}`;
+    // The map is in the key too. Three.js's own key already varies on `!!map`
+    // and this is appended to it rather than replacing it, so this is belt and
+    // braces — but a rim material that silently borrowed a mapped material's
+    // program would be a miserable thing to track down, and the key is free.
+    mat.customProgramCacheKey = () => `rim${rim}|${rimBias}|${rimColor}|m${map ?? ''}`;
   }
 
   return mat;

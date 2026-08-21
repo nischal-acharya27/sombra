@@ -19,6 +19,31 @@ import {
   markTutorialSeen,
 } from './game/save.js';
 import { STRINGS } from './ui/strings.js';
+import { loadAssets } from './render/assets.js';
+
+// Image textures, before anything else exists.
+//
+// This is the one `await` in the boot path and its position is the whole
+// point. A texture is two three.js objects (`Texture` and its `Source`), each
+// drawing four `Math.random()` values for its UUID, and `tools/sim.js` seeds
+// `Math.random` globally — so art that resolved *after* the suite seeded would
+// spend the gameplay stream and re-roll every enemy's jitter after it. Loading
+// here, before `World` and long before `Game`, means every draw an asset costs
+// is spent before there is a seeded stream to spend it from.
+//
+// It never rejects. `assets/` may be entirely empty — every call site has a
+// procedural fallback, and an empty directory is a supported configuration
+// rather than a degraded one. See `docs/DECISIONS.md` § "The no-asset-files
+// rule is lifted", condition 2.
+//
+// Top-level await, rather than wrapping the module in an async main(): the
+// rest of this file is a straight line of construction and indenting all of it
+// to buy one await would be a far larger diff than the feature.
+const ASSETS = await loadAssets();
+console.log(
+  `[boot] assets: ${ASSETS.count} loaded` +
+    (ASSETS.missing.length ? `, ${ASSETS.missing.length} missing (${ASSETS.missing.join(', ')})` : '')
+);
 
 // `Game` is handed the whole campaign, and opens on the first of it. It builds
 // every gate up front and switches between them by visibility, because a gate
@@ -331,4 +356,4 @@ if (simMode) {
 // the filter itself was removed instead. See the note in src/ui/style.css.
 
 // Handy for poking at a running game from the console.
-window.__game = { game, world, loop, audio, input, hud, touch, tutorial };
+window.__game = { game, world, loop, audio, input, hud, touch, tutorial, assets: ASSETS };

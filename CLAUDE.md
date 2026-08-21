@@ -34,8 +34,15 @@ size, precisely so a failure cannot be answered by adjusting the instrument.
 
 ## Rules that bind
 
-- **No asset files, ever.** Every model, sound, particle and texture — and all
-  storyline text — is generated or written in code.
+- **Code builds everything except image textures.** Every model, sound and
+  particle — and all storyline text — is generated or written in code. The one
+  exception, lifted 2026-08-21: **PNG/SVG textures may be loaded from
+  `assets/`** (see `docs/DECISIONS.md` § "The no-asset-files rule is lifted").
+  Still excluded, unchanged: model files (glTF/OBJ/FBX), audio files, any build
+  step, and **text baked into a texture** — all text is DOM text, because
+  localisation depends on it. Assets decorate and never carry meaning: no
+  telegraph, hitbox or readability cue may live only in a texture, and the game
+  must look deliberate with `assets/` empty.
 - **Allocate nothing during a run.** Three.js draws four `Math.random()` values
   per object for its UUID and the suite seeds `Math.random` globally, so an
   object built mid-run spends the gameplay stream and re-rolls every enemy's
