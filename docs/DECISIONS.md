@@ -3542,3 +3542,74 @@ renders, not just a colour change, answering whether the verticality reads
 at all) and the encounter: her disguise form's crimson-and-mustard drape and
 gold jewelry, and her true form's bloated silhouette and bile-khaki skin
 after a forced `_reveal()`, both confirmed by screenshot.
+
+## Gate 10's rebuild opens one authoring seam: landmarks become placeable, and plural
+
+Authored 2026-08-21, immediately after the section above, and it should be
+read as an amendment to it rather than a fresh start. Gate 10 was rebuilt a
+second time against the same level-design brief, so the first question worth
+answering is what the first build actually left undone — the brief had seven
+asks and the section above resolves five of them honestly.
+
+The elevation changes, the stair, the forgiving platforming section and the
+place where jumping is genuinely required are all built and all verified. The
+vertical-positioning encounter was declined on the record, because the
+flat-arena rule and Putana's own "flat, minimal, deliberately intimate" table
+row both outrank the brief, and that call stands unchanged here — this rebuild
+does not reopen it, does not add a ledge to her nursery, and does not add a
+regular encounter to a gate whose spec sets the count to zero.
+
+**What was not done is the composition ask**, and it was not scoped down on
+the record so much as quietly under-served: "more deliberate environmental
+composition instead of relying primarily on background-colour changes," a
+visually distinct mid-level area, a visually distinct approach to the boss.
+The first build answered all three with realm palette plus per-segment scatter
+counts, and then described the results as distinct areas in its own comments.
+They are not distinct in the way the brief means. `Level._dress` places every
+tree, boulder, pillar and crystal at a random x within the segment and a
+random z behind the play plane; a gate chooses *how many* it gets and never
+*where*. A courtyard with two boulders and a loft with one boulder and two
+pillars are the same room with different dice — nothing in that vocabulary can
+say "the well stands beside the gatepost" or "a lamp burns at the foot of the
+stair," which is exactly what makes a household read as a household.
+
+**So the seam: `gate.landmarks`, an array, built by the existing
+`buildLandmark` through the existing `Level` group at the existing
+construction time.** `gate.landmark` stays exactly what it was — the single
+hero silhouette `src/main.js` aims the title-card drift at — and the plural
+field is ordinary authored placements alongside it. The only genuinely new
+field is `scale`, so one kind can serve several placements rather than forcing
+a near-duplicate kind per size.
+
+This is worth stating out loud because `docs/agents/gate-build.md` says a gate
+build almost never touches `src/game/level.js` and that doing so "is a signal
+worth stating out loud rather than a step." The signal here is real, and it is
+about the engine rather than about gate 10: **authored prop placement did not
+exist**, and every gate in the campaign has been composing its sense of place
+out of colour and scatter density because that was the whole vocabulary. Gate
+10 is the first to need otherwise, but nothing about the need is specific to
+Gokul.
+
+It is deliberately *not* a new subsystem, per the brief's own instruction and
+gate-build.md's rule. No new file, no new update path, no new material set, no
+draw at run time — `landmarks` is the closest existing mechanic (`landmark`,
+already a kind-plus-position descriptor) used more than once. The allocation
+rule holds unchanged: landmarks are built inside `Level._build`, at gate
+construction, before the run's random stream matters.
+
+**The limitation the seam does not remove**, recorded so a later session does
+not go looking for it: a landmark is scenery with no collision. `Level.solids`
+comes from `segments` alone, so an authored structure cannot be stood on,
+walked into, or hidden behind. Anything gate 10 wants the hunter to *touch*
+still has to be a segment; landmarks are what make those segments read as a
+place. A gate that wants a prop the hunter can climb is adding a new
+subsystem, not using this one.
+
+**Verification for this step alone.** Behaviour-neutral by construction: with
+no gate authoring a `landmarks` array yet, `_buildLandmarks` walks the same
+one-element list `_buildLandmark` did. Confirmed rather than assumed — the
+five recorded seeds sweep to the FAIL set captured before the change
+(`ranged`, `ranged +chaya`, the charger `recovery-window` and `leaves-remnant`
+rows on every seed, plus the frozen `signed-rank` gate on four of five;
+`20260728` 5, `1` 4, `99991` 5, `20260802` 5, `7777777` 5), with no row moving
+in either direction.

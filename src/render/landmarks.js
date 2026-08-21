@@ -1,10 +1,16 @@
-// The one silhouette a gate is remembered by.
+// The silhouettes a gate is remembered by.
 //
 // A landmark is scenery and never a fight. It is built here rather than in
 // `Level` because it is the most gate-specific thing a gate has: the geometry
 // below *is* the Hollow of the Kneeling Stone, and the next realm's is its own
 // shape entirely. The descriptor names a kind and where to stand it; this file
 // knows how to build each kind.
+//
+// A gate's `landmark` is its hero silhouette — one per gate, and the thing the
+// title-card camera drifts across. A gate may *also* author a `landmarks`
+// array of ordinary placements through the same builder, which is how a gate
+// composes a place out of several deliberately positioned structures rather
+// than one monument. See `Level._buildLandmarks`.
 
 import * as THREE from 'three';
 import { P } from './palette.js';

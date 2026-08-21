@@ -138,7 +138,7 @@ export class Level {
       this._dress(seg, grassPoints);
     }
 
-    this._buildLandmark();
+    this._buildLandmarks();
     this._buildFigure();
     this._buildGateArch();
     this._buildWater();
@@ -209,15 +209,42 @@ export class Level {
     }
   }
 
-  /** The gate's one landmark, if it has one. Scenery, and never a fight. */
-  _buildLandmark() {
-    const l = this.gate.landmark;
-    if (!l) return;
-    const g = buildLandmark(l.kind);
-    g.position.set(l.x, l.y, l.z);
-    g.rotation.y = l.rotY;
-    this.group.add(g);
-    this.landmark = g;
+  /**
+   * The gate's landmarks. Scenery, and never a fight.
+   *
+   * `landmark` (singular) is the hero silhouette — the one `src/main.js` aims
+   * the title-card camera drift at, so a gate has at most one of those.
+   * `landmarks` (plural) is the same builder authored several times over, for
+   * a gate that composes a *place* out of repeated architecture rather than
+   * standing under one monument. Nothing else changes: same `buildLandmark`,
+   * same group, same authored position — the only new field is `scale`, so one
+   * kind can serve several placements instead of needing a near-duplicate kind
+   * per size.
+   *
+   * This is the one seam a gate build is allowed to open in this file, and
+   * `docs/agents/gate-build.md` asks that opening it be said out loud rather
+   * than done quietly: before it, the only way to put anything on a segment
+   * was `_dress`'s random scatter counts, which choose their own x and z. A
+   * gate could pick *how many* boulders it had and never *where* — so a
+   * household with a well by the gatepost and a lamp at the foot of its stair
+   * was not expressible, and every gate's sense of place came down to realm
+   * colour plus scatter density. Gate 10 is the first to need otherwise; see
+   * `docs/DECISIONS.md` § "Gate 10's rebuild opens one authoring seam".
+   *
+   * Both lists are built here, at construction, like everything else in a gate
+   * — see the allocation note at the top of this file.
+   */
+  _buildLandmarks() {
+    const hero = this.gate.landmark;
+    const all = hero ? [hero, ...(this.gate.landmarks ?? [])] : (this.gate.landmarks ?? []);
+    for (const l of all) {
+      const g = buildLandmark(l.kind);
+      g.position.set(l.x, l.y, l.z);
+      g.rotation.y = l.rotY ?? 0;
+      if (l.scale !== undefined) g.scale.setScalar(l.scale);
+      this.group.add(g);
+      if (l === hero) this.landmark = g;
+    }
   }
 
   /**

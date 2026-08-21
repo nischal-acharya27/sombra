@@ -74,6 +74,15 @@ export const GATE_N = {
 `depth`, `barren`, plus scatter counts `trees`, `boulders`, `pillars`,
 `crystals`. Nothing else is read — `src/game/level.js` is the authority.
 
+**Scatter counts choose their own x and z.** A segment says how *many*
+boulders it has, never where they stand. When a gate needs a specific thing
+in a specific spot — a well beside the gatepost, a lamp at the foot of a
+stair — that is a **landmark**, not scatter: `landmark` is the gate's one
+hero silhouette (the title-card camera drifts across it), and `landmarks`
+is an array of ordinary authored placements through the same builder. Both
+take `kind`, `x`, `y`, `z`, and optionally `rotY` and `scale`; kinds live in
+`src/render/landmarks.js`. Gate 10 is the worked example.
+
 `encounters` entries take `id`, `trigger`, `lock: [x0, x1]`, `intro`, and
 `spawns: [{ type, x, delay, skin? }]`.
 
