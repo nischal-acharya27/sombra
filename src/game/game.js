@@ -296,7 +296,7 @@ export class Game {
     this._advance = null;
     this.state = 'playing';
 
-    this.player.reset(this.gate.spawnX, 0.2);
+    this.player.reset(this.gate.spawnX, this.level.groundAt(this.gate.spawnX) + 0.2);
     // The chaya comes too, and it has to be *put* there rather than left to
     // its own recall rule: that rule fires on distance from the hunter, and a
     // chaya standing at gate 1's arena in gate 2's coordinates is a body in

@@ -183,7 +183,7 @@ export class Tutorial {
     // for the same reason on every real transition.
     this.vfx.clear();
 
-    this.player.reset(this.gate.spawnX, 0.2);
+    this.player.reset(this.gate.spawnX, this.level.groundAt(this.gate.spawnX) + 0.2);
     this.cam.snapTo(this.player);
     this.cam.setBounds(null);
     this.cam.zoom(11.5);
@@ -347,7 +347,7 @@ export class Tutorial {
     // reachable, but the rule holds regardless: put the hunter back rather
     // than let them fall.
     if (this.player.y < TUTORIAL.fallResetY) {
-      this.player.reset(this.gate.spawnX, 0.2);
+      this.player.reset(this.gate.spawnX, this.level.groundAt(this.gate.spawnX) + 0.2);
       this.cam.snapTo(this.player);
     }
 
