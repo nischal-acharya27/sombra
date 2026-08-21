@@ -347,5 +347,36 @@ export const P = {
   lankaGuardPlate: 0x8a7434,
   lankaGuardPlateDark: 0x453914,
 
+  // Act 3 — gate 09's Kamsa. Per docs/research/villain-roster.md: an
+  // overbuilt human tyrant-king, not a monster, whose armour is built from
+  // the iconography of the cell he kept Devaki in — literal bar-shapes, not
+  // a smooth ruff. `mathuraPlate`/`mathuraPlateDark` are dark bronze/
+  // near-black, deliberately apart from Duryodhana's warm gold-bronze
+  // (`kuruPlate`) and Ravana's heavy court gold (`lankaPlate`) so the three
+  // human/human-coded kings don't read as one palette repeated.
+  // `mathuraIron` is the coldest, least "regal" material on the roster —
+  // the bars, shackles, chain and crown all read as bolted onto the armour
+  // rather than matching it, the jailer-iron identity his entry asks for.
+  // `mathuraSkin` is a human tone distinct from both the hunter's own and
+  // Ravana's `lankaSkin`, so the two human-coded villains don't visually
+  // merge.
+  mathuraPlate: 0x332618,
+  mathuraPlateDark: 0x1a130b,
+  mathuraIron: 0x6e7176,
+  mathuraSkin: 0xc9946a,
+
+  // Act 3 — gate 09's regular archetype, the Mathura akhada wrestler. Per
+  // `docs/SPEC-CAMPAIGN.md` § Act 3, a wrestler/grappler set against Kamsa
+  // before the boy ever reaches the throne — bare-chested, oiled, in a
+  // plain akhada loincloth, deliberately unarmoured and unornamented so
+  // nothing on it competes with Kamsa's own jailer-iron regalia one
+  // encounter later. `mathuraWrestlerEye` reuses the shared damage-signal
+  // amber (`P.amber`), the same telegraph vocabulary every archetype on the
+  // roster reads a wind-up off, rather than inventing a fifth accent.
+  mathuraWrestlerSkin: 0xa8703e,
+  mathuraWrestlerSkinDark: 0x6a4726,
+  mathuraWrestlerCloth: 0xc4b088,
+  mathuraWrestlerEye: 0xffb347,
+
   outline: 0x0a0813,
 };

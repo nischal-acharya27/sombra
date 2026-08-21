@@ -25,7 +25,7 @@
 // descriptor is authored correctly, that one asks whether `Level` built what
 // the descriptor said.
 
-import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, LANKA_SOLDIER, KUMBHAKARNA, RAVANA, DURYODHANA, GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR } from '../src/game/config.js';
+import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, LANKA_SOLDIER, KUMBHAKARNA, MATHURA_WRESTLER, KAMSA, RAVANA, DURYODHANA, GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR } from '../src/game/config.js';
 import { ARCHETYPES } from '../src/game/game.js';
 import { GATES } from '../src/game/gates/index.js';
 
@@ -547,6 +547,16 @@ const TELLS = [
   // fights with for the rest of the encounter, not his groggy one.
   { archetype: 'kumbhakarna', tell: 'smash, awake', windup: KUMBHAKARNA.smash.windup * KUMBHAKARNA.phaseWindupMul },
   { archetype: 'kumbhakarna', tell: 'sweep, awake', windup: KUMBHAKARNA.sweep.windup * KUMBHAKARNA.phaseWindupMul },
+  // The Mathura wrestler's grapple-lunge has no enrage and no phase — same
+  // reasoning as the Lanka soldier's row — so there is only one number to
+  // hold, and it is the one the hunter answers all fight.
+  { archetype: 'mathuraWrestler', tell: 'grapple', windup: MATHURA_WRESTLER.charge.windup },
+  // Kamsa's two wind-ups both tighten on enrage (`KAMSA.enrageWindupMul`),
+  // same reasoning as Bakasura's and Kumbhakarna's own rows above — the
+  // number that has to clear the floor is the one he fights with once
+  // cornered, not his opening one.
+  { archetype: 'kamsa', tell: 'smash, enraged', windup: KAMSA.smash.windup * KAMSA.enrageWindupMul },
+  { archetype: 'kamsa', tell: 'lash, enraged', windup: KAMSA.lash.windup * KAMSA.enrageWindupMul },
   // Ravana's four weapons are four entries in the same `attacks` block every
   // boss below him carries, so the row is generated the same way and against
   // the same enraged multiplier — the number the hunter actually answers is

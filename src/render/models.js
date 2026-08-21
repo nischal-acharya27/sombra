@@ -3233,3 +3233,328 @@ export function buildRavana() {
   root.userData.nodes = n;
   return root;
 }
+
+// ---------------------------------------------------------------------------
+// Kamsa — gate 9's Warden
+// ---------------------------------------------------------------------------
+
+/**
+ * An overbuilt human tyrant-king, not a monster, per
+ * `docs/research/villain-roster.md`: `hw 0.58 / hh 1.05`, bulkier than any
+ * other human-scale figure on the roster but well short of Kumbhakarna's
+ * giant or the tier-3 cluster. Every ornament on him is the cell he kept
+ * Devaki in, worn as regalia — he is the jailer, not the prisoner, and the
+ * irony is the point his entry makes explicit:
+ *
+ * - a barred gorget collar (literal bar-shapes, not a smooth ruff),
+ * - heavy shackle-cuffs at both wrists, worn unused,
+ * - a chain drape looped from both pauldrons across the chest,
+ * - an iron circlet-crown with bar-like spikes rather than gold/jewels.
+ *
+ * `mathuraIron` carries all four — the coldest, least "regal" material on
+ * the roster, so the prison-iron reads as bolted onto the armour rather than
+ * matching it. The mace's head is the same iron, a fused mass of
+ * shackle-iron rather than a plain flanged weight, settling the entry's own
+ * "mace or heavy sword" question in the mace's favour.
+ */
+export function buildKamsa(skin = null) {
+  const c = skin || {
+    plate: P.mathuraPlate,
+    plateDark: P.mathuraPlateDark,
+    iron: P.mathuraIron,
+    skin: P.mathuraSkin,
+    eye: P.amber,
+  };
+  const root = new THREE.Group();
+  const n = {};
+
+  const body = new THREE.Group();
+  body.position.y = 0.92;
+  root.add(body);
+  n.body = body;
+  n.baseY = body.position.y;
+
+  const torso = part(0.62, 0.72, 0.5, c.plate, { pivot: 'bottom', outline: 0.04 });
+  body.add(torso);
+  n.torso = torso;
+
+  const belt = part(0.66, 0.14, 0.54, c.plateDark, { pivot: 'top', outline: 0.026 });
+  belt.position.y = 0.02;
+  torso.add(belt);
+
+  // The pauldrons, wide enough to anchor the chain drape strung between them.
+  for (const side of [-1, 1]) {
+    const pauldron = part(0.2, 0.16, 0.24, c.plateDark, { outline: 0.024 });
+    pauldron.position.set(0.02, 0.6, side * 0.32);
+    torso.add(pauldron);
+  }
+
+  // The barred gorget: a collar ring with bar-shapes standing proud of it,
+  // read across the neck rather than smoothed into a ruff.
+  const gorget = part(0.34, 0.14, 0.4, c.iron, { outline: 0.022 });
+  gorget.position.y = 0.68;
+  torso.add(gorget);
+  for (let i = -2; i <= 2; i++) {
+    const bar = part(0.06, 0.2, 0.06, c.iron, { outline: 0.012 });
+    bar.position.set(0.19, 0.68, i * 0.09);
+    torso.add(bar);
+  }
+
+  // The chain drape: three links strung from each pauldron down to the
+  // chest's centre line — armour motif and, per his kit, the chain lash's
+  // own weapon, doing double duty rather than sitting on the rig as
+  // decoration.
+  n.chainLinks = [];
+  for (const side of [-1, 1]) {
+    for (let i = 0; i < 3; i++) {
+      const link = part(0.07, 0.09, 0.07, c.iron, { outline: 0.012 });
+      const u = i / 2;
+      link.position.set(0.28, 0.58 - u * 0.24, side * (0.32 - u * 0.32));
+      torso.add(link);
+      n.chainLinks.push(link);
+    }
+  }
+
+  const head = new THREE.Group();
+  head.position.y = 0.86;
+  torso.add(head);
+  n.head = head;
+
+  const skull = part(0.32, 0.32, 0.32, c.skin, { pivot: 'bottom', outline: 0.03 });
+  head.add(skull);
+
+  // The iron circlet-crown, bar-spiked rather than gold and jewelled —
+  // deliberately not competing with Duryodhana's or Ravana's opulence.
+  const circlet = part(0.3, 0.08, 0.3, c.iron, { pivot: 'bottom', outline: 0.02 });
+  circlet.position.y = 0.3;
+  skull.add(circlet);
+  for (let i = -2; i <= 2; i++) {
+    const spike = part(0.03, 0.14, 0.03, c.iron, { pivot: 'bottom', outline: 0.008 });
+    spike.position.set(0.06, 0.36, i * 0.055);
+    skull.add(spike);
+  }
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const eye = decal(0.06, 0.04, c.eye, { opacity: 0.7 });
+    eye.position.set(0.15, 0.06, side * 0.08);
+    eye.rotation.y = Math.PI / 2;
+    skull.add(eye);
+    n['eye' + key] = eye;
+  }
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const shoulder = new THREE.Group();
+    shoulder.position.set(0.02, 0.58, side * 0.34);
+    torso.add(shoulder);
+    n['shoulder' + key] = shoulder;
+
+    const upper = part(0.2, 0.34, 0.2, c.skin, { pivot: 'top', outline: 0.026 });
+    shoulder.add(upper);
+
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.34;
+    shoulder.add(elbow);
+    n['elbow' + key] = elbow;
+
+    const fore = part(0.18, 0.32, 0.18, c.skin, { pivot: 'top', outline: 0.024 });
+    elbow.add(fore);
+
+    const hand = part(0.17, 0.16, 0.17, c.skin, { pivot: 'top', outline: 0.022 });
+    hand.position.y = -0.32;
+    elbow.add(hand);
+    n['hand' + key] = hand;
+
+    // The shackle-cuff, worn unused — the jailer wearing his own prisoners'
+    // irons as regalia.
+    const cuff = part(0.2, 0.06, 0.2, c.iron, { outline: 0.014 });
+    cuff.position.y = -0.24;
+    elbow.add(cuff);
+  }
+
+  // The mace, carried in the right hand: a fused mass of shackle-iron —
+  // cuffs and chain-links hammered into the head — settling the entry's own
+  // open "mace or heavy sword" question. Pivots from the grip, laid along
+  // +X like Kumbhakarna's club and the Lanka soldier's spear.
+  const mace = new THREE.Group();
+  mace.position.set(0.06, -0.3, 0);
+  n.elbowR.add(mace);
+  n.mace = mace;
+
+  const grip = new THREE.Group();
+  grip.rotation.z = -Math.PI / 2;
+  mace.add(grip);
+  const shaft = part(0.1, 1.5, 0.1, c.plateDark, { pivot: 'bottom', outline: 0.018 });
+  shaft.position.y = -0.1;
+  grip.add(shaft);
+
+  const head_ = part(0.36, 0.4, 0.36, c.iron, { outline: 0.026 });
+  head_.position.y = 1.5;
+  grip.add(head_);
+  // Cuffs and links, hammered into the head — the same shackle motif as the
+  // wrists, spent again here rather than a new ornament.
+  for (const side of [-1, 1]) {
+    const stud = part(0.1, 0.1, 0.1, c.plateDark, { outline: 0.012 });
+    stud.position.set(0, 1.5, side * 0.2);
+    grip.add(stud);
+  }
+  const maceGlow = decal(0.5, 0.5, c.eye, { opacity: 0.4 });
+  maceGlow.position.y = 1.5;
+  maceGlow.rotation.y = Math.PI / 2;
+  grip.add(maceGlow);
+  n.maceGlow = maceGlow;
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const hip = new THREE.Group();
+    hip.position.set(0, 0, side * 0.2);
+    body.add(hip);
+    n['hip' + key] = hip;
+
+    const thigh = part(0.24, 0.4, 0.24, c.plateDark, { pivot: 'top', outline: 0.03 });
+    hip.add(thigh);
+
+    const knee = new THREE.Group();
+    knee.position.y = -0.4;
+    hip.add(knee);
+    n['knee' + key] = knee;
+
+    const shin = part(0.2, 0.36, 0.2, c.plateDark, { pivot: 'top', outline: 0.026 });
+    knee.add(shin);
+
+    const foot = part(0.24, 0.1, 0.28, c.plateDark, { pivot: 'top', outline: 0.02 });
+    foot.position.set(0.05, -0.36, 0);
+    knee.add(foot);
+  }
+
+  root.userData.nodes = n;
+  return root;
+}
+
+// ---------------------------------------------------------------------------
+// Mathura wrestler — gate 09's regular archetype, its own solo debut
+// ---------------------------------------------------------------------------
+
+/**
+ * An akhada wrestler/grappler, per `docs/SPEC-CAMPAIGN.md` § Act 3: fast and
+ * committal against Kamsa's own heavy, armoured kit. Extends `Charger`'s
+ * chase → telegraph → charge → recover skeleton under a new biped
+ * silhouette — the same `buildRig` escape hatch `Taraka` already takes,
+ * reskinned here as a grapple-lunge rather than a claw-pounce.
+ *
+ * Bare-chested and unarmoured on purpose: nothing on this rig competes with
+ * Kamsa's own jailer-iron regalia one encounter later, and the akhada's own
+ * dress code is a loincloth and oiled skin, not court dress.
+ */
+export function buildMathuraWrestler(skin = null) {
+  const c = skin || {
+    skin: P.mathuraWrestlerSkin,
+    dark: P.mathuraWrestlerSkinDark,
+    cloth: P.mathuraWrestlerCloth,
+    eye: P.mathuraWrestlerEye,
+  };
+  const root = new THREE.Group();
+  const n = {};
+
+  const body = new THREE.Group();
+  body.position.y = 0.76;
+  root.add(body);
+  n.body = body;
+  n.baseY = body.position.y;
+
+  const torso = part(0.38, 0.5, 0.32, c.skin, { pivot: 'bottom', outline: 0.028 });
+  body.add(torso);
+  n.torso = torso;
+
+  const langot = part(0.42, 0.16, 0.34, c.cloth, { pivot: 'top', outline: 0.022 });
+  langot.position.y = 0.02;
+  torso.add(langot);
+
+  const head = new THREE.Group();
+  head.position.y = 0.48;
+  torso.add(head);
+  n.head = head;
+
+  const skull = part(0.24, 0.24, 0.24, c.skin, { pivot: 'bottom', outline: 0.024 });
+  head.add(skull);
+
+  // Cropped topknot — akhada custom, and a silhouette tell distinct from
+  // every other biped's own hair/headdress.
+  const knot = part(0.1, 0.12, 0.1, c.dark, { pivot: 'bottom', outline: 0.014 });
+  knot.position.y = 0.24;
+  skull.add(knot);
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const eye = decal(0.05, 0.03, c.eye, { opacity: 0.6 });
+    eye.position.set(0.12, 0.02, side * 0.07);
+    eye.rotation.y = Math.PI / 2;
+    skull.add(eye);
+    n['eye' + key] = eye;
+  }
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const shoulder = new THREE.Group();
+    shoulder.position.set(0.04, 0.42, side * 0.22);
+    torso.add(shoulder);
+    n['shoulder' + key] = shoulder;
+
+    const upper = part(0.13, 0.28, 0.13, c.skin, { pivot: 'top', outline: 0.02 });
+    shoulder.add(upper);
+
+    // A wrestler's arm-band, akhada-plain — the roster's own note that
+    // nothing here should compete with Kamsa's regalia.
+    const band = part(0.15, 0.04, 0.15, c.cloth, { outline: 0.01 });
+    band.position.y = -0.08;
+    upper.add(band);
+
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.28;
+    shoulder.add(elbow);
+    n['elbow' + key] = elbow;
+
+    const fore = part(0.12, 0.26, 0.12, c.skin, { pivot: 'top', outline: 0.018 });
+    elbow.add(fore);
+
+    const hand = part(0.12, 0.13, 0.12, c.skin, { pivot: 'top', outline: 0.016 });
+    hand.position.y = -0.26;
+    elbow.add(hand);
+    n['hand' + key] = hand;
+
+    // The grapple's telegraph flare — the shared damage-signal amber, on the
+    // hands that do the actual grabbing.
+    const glow = decal(0.16, 0.16, c.eye, { opacity: 0.4 });
+    glow.position.set(0.08, -0.26, 0);
+    glow.rotation.y = Math.PI / 2;
+    elbow.add(glow);
+    n['handGlow' + key] = glow;
+  }
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const hip = new THREE.Group();
+    hip.position.set(0, 0, side * 0.13);
+    body.add(hip);
+    n['hip' + key] = hip;
+
+    const thigh = part(0.16, 0.34, 0.16, c.skin, { pivot: 'top', outline: 0.022 });
+    hip.add(thigh);
+
+    const knee = new THREE.Group();
+    knee.position.y = -0.34;
+    hip.add(knee);
+    n['knee' + key] = knee;
+
+    const shin = part(0.14, 0.3, 0.14, c.skin, { pivot: 'top', outline: 0.02 });
+    knee.add(shin);
+
+    const foot = part(0.16, 0.08, 0.2, c.dark, { pivot: 'top', outline: 0.016 });
+    foot.position.set(0.04, -0.3, 0);
+    knee.add(foot);
+  }
+
+  root.userData.nodes = n;
+  return root;
+}

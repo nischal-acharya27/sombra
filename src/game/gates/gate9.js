@@ -1,156 +1,161 @@
-// Gate 9 — Yama-sabha.
+// Gate 9 — Mathura's Akhada.
 //
-// Yama's court, per `docs/SPEC-CAMPAIGN.md`'s table: "Ten thrones, nine
-// empty. Yama is present and does not fight. The Warden is The Backlog — the
-// accumulated unjudged given shape — so the fight is against what his
-// absence made rather than against him." No new archetype arrives here
-// either — the job this gate does is the same one gates 6, 7 and 8 did,
-// combine what earlier gates already taught (raakchyas, bhoot-batti, charger,
-// kawach, tantrik — every archetype the campaign has, now that gate 7 taught
-// the last combination) into a hall built for judgment nobody is rendering,
-// before Bakaya — the Backlog, a second elevation of the summoner line
-// `ATRIPTA` began, per `docs/DECISIONS.md`'s locked table — closes it.
+// This is gate 9 under the fifteen-gate redesign (docs/SPEC-CAMPAIGN.md):
+// Kamsa, not the retired Yama-sabha/Bakaya. Act 3's opener, and the act's one
+// new-regular-enemy spend — a Mathura akhada wrestler/grappler, extending
+// `Charger`'s chase-and-commit skeleton, giving literal form to the source
+// detail that Kamsa staged a public wrestling tournament and set his
+// champions against the boy before he ever reached the throne himself.
 //
-// Flat throughout, like every gate since the crossing: the same 3.8-unit
-// gap, the same measured 26% reserve against this build's running jump.
+// The gate's own table gives it a moderate descent: tiered stone spectator
+// stands stepping down into the packed-earth pit, flattening completely for
+// both fights. One regular encounter — the wrestler, met alone, protecting
+// its own solo debut per `tools/gatecheck.js`'s `soloDebut` check, since the
+// table never combines it with anything anywhere in the campaign — then
+// Kamsa: fast and grappling against his own heavy, armoured, committal kit
+// (overhead shackle-iron mace smash, mid-range chain lash).
 //
-// Yama's own presence is carried by `GATE9_BEAT_ENTER_BODY` rather than
-// anything mechanical, the same way gate 6's wrongness and gate 4's sympathy
-// were: a line, not a system. He is not an entity the hunter can target —
-// there is nothing here for the hunter's moveset to reach, which is the
-// point the beat text makes without a rule enforcing it.
+// Kamsa's own handoff is the one Warden entry on the roster that declines a
+// dialogue-beat hook at the escalation moment outright — no phase-transition
+// flag, and the ordinary enrage fires no line, only the wind-ups tightening.
+// His 13 intro beats and 8 defeat beats carry the respectful-treatment note
+// instead: every line stays on the prophecy and his fear of it, never on the
+// children the prophecy cost, per the handoff's explicit instruction that
+// the armour and the mace should carry that backstory worn, not narrated.
 
-import { BAKAYA } from '../config.js';
+import { KAMSA } from '../config.js';
 import { STRINGS } from '../../ui/strings.js';
 
 const ARENA_TOP = 0;
 
 /**
- * Monochrome and violet, per `docs/SPEC-CAMPAIGN.md`'s table — grays and
- * near-blacks with one accent, rather than any register a prior gate owns.
- * `crystal` echoes gate 1's `0x9d5cff` deliberately rather than doubling as a
- * boss core the way gates 3, 6 and 8's do: Bakaya is an elevated grunt, not a
- * bespoke rig with a core to match, and the violet this gate spends instead
- * ties Yama-sabha back to the one dead violet eye the Kneeling Stone has
- * carried since gate 1 — the judge who put the work down, seen again at the
- * seat he stopped sitting in.
+ * "Divine-tyrant — gold and dark red, prophecy-coded" per
+ * `docs/SPEC-CAMPAIGN.md`'s per-act table — a torch-lit court arena at night,
+ * gold firelight against a dark maroon sky. Kamsa's own palette
+ * (`mathuraPlate`/`mathuraIron` in `palette.js`) deliberately breaks from
+ * this register into cold iron, per his entry's own case against a third
+ * gold-and-oxblood court palette in a row; the *realm* still spends the
+ * act's register, the same way gate 6's forest tones carried Act 2's own
+ * table entry even where Shurpanakha's individual palette departed from it.
+ * `crystal` ties to `P.amber` directly rather than a bespoke boss-core hex —
+ * Kamsa has no core of his own, only the shared damage-signal amber his eyes
+ * and mace already flare, so the accent doubles as his own tell rather than
+ * inventing a colour nothing on his rig actually carries.
  */
 const REALM = {
-  sky: { zenith: 0x0c0c14, mid: 0x28273a, horizon: 0x5c4a72 },
-  fog: { color: 0x38334a, near: 20, far: 116 },
+  sky: { zenith: 0x120a08, mid: 0x3a1810, horizon: 0xb87a2a },
+  fog: { color: 0x2e1712, near: 18, far: 108 },
 
-  grass: 0x46434f,
-  grassBlade: 0x5a5766,
-  grassBladeTip: 0x8a7aae,
-  rock: 0x38363f,
-  rockDark: 0x18171d,
-  rockMoss: 0x423f4a,
-  stone: 0x68647a,
-  crystal: 0x9d5cff,
+  grass: 0x3a2c1e,
+  grassBlade: 0x54402a,
+  grassBladeTip: 0xa0793a,
+  rock: 0x4a3a2a,
+  rockDark: 0x201812,
+  rockMoss: 0x40301e,
+  stone: 0x5e4c34,
+  crystal: 0xffb347,
 
-  mist: { back: 0x5c4a72, front: 0x28273a },
-  ridges: [0x18171d, 0x28273a, 0x38363f],
+  mist: { back: 0x7a4a1e, front: 0x2e1712 },
+  ridges: [0x1a120c, 0x2e1712, 0x4a3a2a],
 };
 
 /**
- * Three chambers, every gap the same 3.8 gates 2–8 already measured their
- * reserve against. Flat throughout — a court has no summit to offer, and
- * gate 1 already owns the climb.
+ * A descent, not a climb — tiered stands stepping down from the entrance to
+ * the packed-earth pit, then flat for both fights. No jump-gated rise
+ * anywhere in the stands themselves (dropping a tier costs nothing the way
+ * climbing one does); the one real gap sits where the stands give way to the
+ * pit proper, the same `?vtest`-validated 3.8-unit figure every gate's gap
+ * is measured against.
  */
 const SEGMENTS = [
-  // Approach: nothing to fight yet, room to read the realm.
-  { x0: -6, x1: 28, top: 0, boulders: 3, pillars: 2, crystals: 1 },
+  // The entrance tier — top of the stands, room to read the realm.
+  { x0: -6, x1: 14, top: 6, barren: true, depth: 5, thickness: 1.0, boulders: 1, pillars: 1 },
 
-  // The antechamber: raakchyas and bhoot-batti together, both already taught
-  // in gate 1, met here in a setting neither was met in before.
-  { x0: 31.8, x1: 68, top: 0, boulders: 3, pillars: 3, crystals: 1 },
+  // Two more tiers, stepping down. `thickness: 1.0` on each — the
+  // `?vtest`-validated figure every stacked ledge in the campaign uses, so a
+  // step down never reads to the collision resolver as a wall.
+  { x0: 10, x1: 28, top: 3, barren: true, depth: 5, thickness: 1.0, boulders: 1, pillars: 1 },
+  { x0: 24, x1: 44, top: 0, barren: true, depth: 5, thickness: 1.0, boulders: 2, pillars: 1 },
 
-  // The nine thrones: every archetype the campaign has taught, one to a
-  // throne — the widest roster the campaign combines in a single encounter,
-  // short of gate 7's own claim to the densest one.
-  { x0: 71.8, x1: 108, top: 0, boulders: 3, pillars: 4, crystals: 2 },
+  // The pit floor: flat and wide, the wrestler's own ground.
+  { x0: 40, x1: 76, top: 0, barren: true, depth: 9, thickness: 6, pillars: 2 },
 
-  // Bakaya's chamber — long and flat, the same reason every prior Warden
-  // arena is: room to read a wind-up and room for what it raises to stand.
-  { x0: 111.8, x1: 155, top: ARENA_TOP, boulders: 2, pillars: 2, crystals: 2, thickness: 6 },
+  // The one real gap — 3.8 wide — where the stands' floor gives way to
+  // Kamsa's own arena.
+  { x0: 79.8, x1: 130, top: ARENA_TOP, barren: true, depth: 10, thickness: 6, boulders: 2, pillars: 2 },
 ];
 
 /**
- * Yama-sabha's Warden: a second elevation of the summoner line `ATRIPTA`
- * began, exactly as `VYAGHRI` is to `KEVAT`. `archetype: 'tantrik'` names the
- * same class Atripta does — the numbers in `BAKAYA` (`src/game/config.js`)
- * are the only thing that changes.
+ * Kamsa. Tier 2 — a new rig in `models.js`, but `Kamsa` in `enemies.js`
+ * extends `Enemy` directly, the same shape `Bakasura` and `Kumbhakarna`
+ * already use.
  */
 const WARDEN = {
-  archetype: 'tantrik',
+  archetype: 'kamsa',
   title: STRINGS.GATE9_WARDEN_TITLE,
-  stats: BAKAYA,
+  stats: KAMSA,
 };
 
 /**
- * Three encounters: two grunt fights, the second combining every archetype
- * the campaign has taught, then the Warden, met alone — the same solo shape
- * every Warden fight in the campaign has used so far.
+ * The Mathura wrestler: gate 9's new regular archetype, met alone per the
+ * gate's own table — its solo debut, protected the same way every new-rig
+ * regular archetype's has been since the Lanka soldier's at gate 07.
  */
 const ENCOUNTERS = [
   {
-    id: 'the-antechamber',
-    trigger: 40,
-    lock: [33, 66],
+    id: 'the-pit',
+    trigger: 46,
+    lock: [42, 74],
     intro: {
-      title: STRINGS.GATE9_ANTECHAMBER_TITLE,
-      body: STRINGS.GATE9_ANTECHAMBER_BODY,
+      title: STRINGS.GATE9_PIT_TITLE,
+      body: STRINGS.GATE9_PIT_BODY,
     },
     spawns: [
-      { type: 'raakchyas', x: 46, delay: 0 },
-      { type: 'bhootBatti', x: 52, delay: 0.6 },
-      { type: 'raakchyas', x: 60, delay: 1.1 },
+      { type: 'mathuraWrestler', x: 56, delay: 0 },
+      { type: 'mathuraWrestler', x: 66, delay: 0.7 },
     ],
   },
   {
-    id: 'the-nine-thrones',
-    trigger: 80,
-    lock: [73, 106],
-    intro: {
-      title: STRINGS.GATE9_THRONES_TITLE,
-      body: STRINGS.GATE9_THRONES_BODY,
-    },
-    spawns: [
-      { type: 'charger', x: 82, delay: 0 },
-      { type: 'kawach', x: 90, delay: 0.5 },
-      { type: 'tantrik', x: 98, delay: 1.0 },
-      { type: 'raakchyas', x: 86, delay: 1.5 },
-    ],
-  },
-  {
-    id: 'bakaya',
-    trigger: 130,
-    lock: [113, 154],
-    boss: true,
-    intro: { title: STRINGS.GATE9_BAKAYA_TITLE, body: WARDEN.title },
-    spawns: [{ type: 'warden', x: 135, delay: 0.9 }],
+    id: 'kamsa',
+    trigger: 100,
+    lock: [82, 126],
+    intro: { title: STRINGS.GATE9_KAMSA_TITLE, body: WARDEN.title },
+    spawns: [{ type: 'warden', x: 108, delay: 0.9 }],
   },
 ];
 
 /**
- * Two boundary beats. The `enter` one breaks from the prior gate's "THE
- * SYSTEM" framing on purpose, the same way gate 6's `cleared` beat did: Yama
- * himself is what the hunter meets walking in, and the System has nothing to
- * report about a figure it has never had to describe before.
+ * `docs/DECISIONS.md` § "A Warden's intro and defeat are a scene, not a
+ * line": thirteen paged 'intro' beats and eight paged 'cleared' beats, and no
+ * `phase` beat between them — Kamsa's entry carries no phase-transition flag
+ * and, uniquely on the roster so far, declines the ordinary enrage's
+ * dialogue-beat hook too, per the respectful-treatment note above.
  */
+const introBeat = (big, body) => ({ at: 'intro', title: STRINGS.GATE9_WARDEN_TITLE, big, body });
+const clearedBeat = (big, body) => ({ at: 'cleared', title: STRINGS.GATE9_WARDEN_TITLE, big, body });
+
 const BEATS = [
-  {
-    at: 'enter',
-    title: STRINGS.GATE9_BEAT_ENTER_TITLE,
-    big: STRINGS.GATE9_BEAT_ENTER_BIG,
-    body: STRINGS.GATE9_BEAT_ENTER_BODY,
-  },
-  {
-    at: 'cleared',
-    title: STRINGS.GATE9_BEAT_CLEARED_TITLE,
-    big: STRINGS.GATE9_BEAT_CLEARED_BIG,
-    body: STRINGS.GATE9_BEAT_CLEARED_BODY,
-  },
+  introBeat(STRINGS.GATE9_KAMSA_INTRO_1_BIG, STRINGS.GATE9_KAMSA_INTRO_1_BODY),
+  introBeat(STRINGS.GATE9_KAMSA_INTRO_2_BIG, STRINGS.GATE9_KAMSA_INTRO_2_BODY),
+  introBeat(STRINGS.GATE9_KAMSA_INTRO_3_BIG, STRINGS.GATE9_KAMSA_INTRO_3_BODY),
+  introBeat(STRINGS.GATE9_KAMSA_INTRO_4_BIG, STRINGS.GATE9_KAMSA_INTRO_4_BODY),
+  introBeat(STRINGS.GATE9_KAMSA_INTRO_5_BIG, STRINGS.GATE9_KAMSA_INTRO_5_BODY),
+  introBeat(STRINGS.GATE9_KAMSA_INTRO_6_BIG, STRINGS.GATE9_KAMSA_INTRO_6_BODY),
+  introBeat(STRINGS.GATE9_KAMSA_INTRO_7_BIG, STRINGS.GATE9_KAMSA_INTRO_7_BODY),
+  introBeat(STRINGS.GATE9_KAMSA_INTRO_8_BIG, STRINGS.GATE9_KAMSA_INTRO_8_BODY),
+  introBeat(STRINGS.GATE9_KAMSA_INTRO_9_BIG, STRINGS.GATE9_KAMSA_INTRO_9_BODY),
+  introBeat(STRINGS.GATE9_KAMSA_INTRO_10_BIG, STRINGS.GATE9_KAMSA_INTRO_10_BODY),
+  introBeat(STRINGS.GATE9_KAMSA_INTRO_11_BIG, STRINGS.GATE9_KAMSA_INTRO_11_BODY),
+  introBeat(STRINGS.GATE9_KAMSA_INTRO_12_BIG, STRINGS.GATE9_KAMSA_INTRO_12_BODY),
+  introBeat(STRINGS.GATE9_KAMSA_INTRO_13_BIG, STRINGS.GATE9_KAMSA_INTRO_13_BODY),
+  clearedBeat(STRINGS.GATE9_KAMSA_DEFEAT_1_BIG, STRINGS.GATE9_KAMSA_DEFEAT_1_BODY),
+  clearedBeat(STRINGS.GATE9_KAMSA_DEFEAT_2_BIG, STRINGS.GATE9_KAMSA_DEFEAT_2_BODY),
+  clearedBeat(STRINGS.GATE9_KAMSA_DEFEAT_3_BIG, STRINGS.GATE9_KAMSA_DEFEAT_3_BODY),
+  clearedBeat(STRINGS.GATE9_KAMSA_DEFEAT_4_BIG, STRINGS.GATE9_KAMSA_DEFEAT_4_BODY),
+  clearedBeat(STRINGS.GATE9_KAMSA_DEFEAT_5_BIG, STRINGS.GATE9_KAMSA_DEFEAT_5_BODY),
+  clearedBeat(STRINGS.GATE9_KAMSA_DEFEAT_6_BIG, STRINGS.GATE9_KAMSA_DEFEAT_6_BODY),
+  clearedBeat(STRINGS.GATE9_KAMSA_DEFEAT_7_BIG, STRINGS.GATE9_KAMSA_DEFEAT_7_BODY),
+  clearedBeat(STRINGS.GATE9_KAMSA_DEFEAT_8_BIG, STRINGS.GATE9_KAMSA_DEFEAT_8_BODY),
 ];
 
 export const GATE_9 = {
@@ -160,10 +165,11 @@ export const GATE_9 = {
   beats: BEATS,
 
   spawnX: 2,
-  voidY: -26,
+  /** Below the lowest tier and the gap both. */
+  voidY: -22,
   arenaTop: ARENA_TOP,
-  exitX: 145,
-  end: 155,
+  exitX: 122,
+  end: 130,
 
   segments: SEGMENTS,
   encounters: ENCOUNTERS,

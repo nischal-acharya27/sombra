@@ -539,22 +539,65 @@ export const STRINGS = {
   GATE8_RAVANA_DEFEAT_8_BIG: 'Go on. The throne is empty and the Wheel is still not turning.',
   GATE8_RAVANA_DEFEAT_8_BODY: 'Whatever comes next was never going to be me.',
 
-  // -- gate 9: Yama-sabha ---------------------------------------------------
-  GATE9_NAME: 'Yama-sabha',
-  GATE9_WARDEN_TITLE: 'BAKAYA',
-  GATE9_ANTECHAMBER_TITLE: 'THREAT DETECTED',
-  GATE9_ANTECHAMBER_BODY: 'Raakchyas × 2  ·  Bhoot-Batti × 1',
-  GATE9_THRONES_TITLE: 'THREAT DETECTED',
-  GATE9_THRONES_BODY: 'Charger × 1  ·  Kawach × 1  ·  Tantrik × 1  ·  Raakchyas × 1',
-  GATE9_BAKAYA_TITLE: 'GATE WARDEN',
-  // Breaks from every prior gate's "THE SYSTEM" enter framing on purpose —
-  // see the comment in `gate9.js` — the same way gate 6's cleared beat did.
-  GATE9_BEAT_ENTER_TITLE: 'YAMA',
-  GATE9_BEAT_ENTER_BIG: 'NINE THRONES EMPTY',
-  GATE9_BEAT_ENTER_BODY: 'He watches the hunter cross the hall. He does not rise.',
-  GATE9_BEAT_CLEARED_TITLE: 'THE SYSTEM',
-  GATE9_BEAT_CLEARED_BIG: 'JUDGMENT: NONE RENDERED',
-  GATE9_BEAT_CLEARED_BODY: 'He did not move. Only what he left undone did.',
+  // -- gate 9: Mathura's Akhada ----------------------------------------------
+  // Gate 9 — Kamsa, and the one Warden on the roster whose escalation carries
+  // no dialogue-beat hook at all. His own respectful-treatment note declines
+  // one outright: no version of a line about the infanticide backstory avoids
+  // staging it as spectacle, so every beat below stays on the prophecy and
+  // his fear of it — never on the children — per the handoff's explicit
+  // instruction. The pre-fight line is the one already locked in
+  // `docs/SPEC-CAMPAIGN.md`'s dialogue table; the rest is written to arrive
+  // at it. No phase beat: his entry's kit carries no phase-transition, and
+  // the ordinary enrage tightens the mace and the chain-lash alone.
+  GATE9_NAME: 'Mathura’s Akhada',
+  GATE9_WARDEN_TITLE: 'KAMSA',
+  GATE9_PIT_TITLE: 'THREAT DETECTED',
+  GATE9_PIT_BODY: 'Mathura Wrestler × 2',
+  GATE9_KAMSA_TITLE: 'GATE WARDEN',
+
+  GATE9_KAMSA_INTRO_1_BIG: 'A voice named my death before it ever named a face.',
+  GATE9_KAMSA_INTRO_1_BODY: 'Eighth child, it said. I have counted every year against that number since.',
+  GATE9_KAMSA_INTRO_2_BIG: 'I built walls around anyone the prophecy could still be hiding inside.',
+  GATE9_KAMSA_INTRO_2_BODY: 'Call it a cage if that is easier for you. I called it staying alive.',
+  GATE9_KAMSA_INTRO_3_BIG: 'Every year I did not die, I decided the voice had been wrong.',
+  GATE9_KAMSA_INTRO_3_BODY: 'Every year after that, it was still whispering, waiting on one more birth.',
+  GATE9_KAMSA_INTRO_4_BIG: 'A wrestling ring is an honest weapon. Nobody calls a champion a coward.',
+  GATE9_KAMSA_INTRO_4_BODY: 'I staged the match myself. I wanted to watch it happen, not hear about it after.',
+  GATE9_KAMSA_INTRO_5_BIG: 'My own champions went down first. That should have told me something.',
+  GATE9_KAMSA_INTRO_5_BODY: 'It told me to come down off the throne instead.',
+  GATE9_KAMSA_INTRO_6_BIG: 'Mathura is mine. Every stone of it answers to a fear I never asked to carry.',
+  GATE9_KAMSA_INTRO_6_BODY: 'You would be afraid too, with a sky that keeps a ledger on you.',
+  GATE9_KAMSA_INTRO_7_BIG: 'I have outlived eighteen years of a countdown nobody else could hear.',
+  GATE9_KAMSA_INTRO_7_BODY: 'You want to know what that does to a man. Stand still and find out.',
+  GATE9_KAMSA_INTRO_8_BIG: 'The voice never said how. Only that it would be him, and it would be soon.',
+  GATE9_KAMSA_INTRO_8_BODY: 'I have spent a reign trying to out-plan a sentence with no timetable.',
+  GATE9_KAMSA_INTRO_9_BIG: 'Every guard I hired was hired against one child I have never once met.',
+  GATE9_KAMSA_INTRO_9_BODY: 'That is not a kingdom. I know that. I built it anyway.',
+  GATE9_KAMSA_INTRO_10_BIG: 'You are not the voice’s promise. You are not even from here.',
+  GATE9_KAMSA_INTRO_10_BODY: 'But you are standing where the promise said someone would, and that is close enough to answer.',
+  GATE9_KAMSA_INTRO_11_BIG: 'A throne built on a countdown is still a throne.',
+  GATE9_KAMSA_INTRO_11_BODY: 'I intend to sit it until the number actually arrives.',
+  GATE9_KAMSA_INTRO_12_BIG: 'I do not need you to believe the prophecy. I need it wrong today.',
+  GATE9_KAMSA_INTRO_12_BODY: 'Every day it stays wrong is a day I already won.',
+  GATE9_KAMSA_INTRO_13_BIG: 'A voice told me my death has a name. I have never stopped listening for it.',
+  GATE9_KAMSA_INTRO_13_BODY: 'Let’s see whether it finally learned to pick the right man.',
+
+  GATE9_KAMSA_DEFEAT_1_BIG: 'There it is. Eighteen years, and it was never even you.',
+  GATE9_KAMSA_DEFEAT_1_BODY: 'Some other door was supposed to open. I never got to see which one.',
+  GATE9_KAMSA_DEFEAT_2_BIG: 'I do not know if that makes this worse, or almost a mercy.',
+  GATE9_KAMSA_DEFEAT_2_BODY: 'A stranger closing an account that was never addressed to them.',
+  GATE9_KAMSA_DEFEAT_3_BIG: 'I will not pretend the throne was clean under me.',
+  GATE9_KAMSA_DEFEAT_3_BODY: 'I know exactly what it cost the people who had to live under the fear too.',
+  GATE9_KAMSA_DEFEAT_4_BIG: 'I spent a reign guarding against one voice, and never once against my own hand in it.',
+  GATE9_KAMSA_DEFEAT_4_BODY: 'That part was mine. Nobody prophesied that half.',
+  GATE9_KAMSA_DEFEAT_5_BIG: 'Take the crown apart if you want it. It was always only iron.',
+  GATE9_KAMSA_DEFEAT_5_BODY: 'I wore it like it meant something. It never once did.',
+  GATE9_KAMSA_DEFEAT_6_BIG: 'Tell Mathura the countdown is finished, one way or another.',
+  GATE9_KAMSA_DEFEAT_6_BODY: 'Whatever sits that throne next will not be afraid of a voice in the sky.',
+  GATE9_KAMSA_DEFEAT_7_BIG: 'The Wheel was never going to send the one the prophecy actually named.',
+  GATE9_KAMSA_DEFEAT_7_BODY: 'I understand that now, for whatever that understanding is still worth to me.',
+  GATE9_KAMSA_DEFEAT_8_BIG: 'Go on, hunter. I have no years left to spend listening for a face.',
+  GATE9_KAMSA_DEFEAT_8_BODY: 'Let something else finally arrive on time.',
 
   // -- gate 10: Bhavachakra --------------------------------------------------
   GATE10_NAME: 'Bhavachakra',

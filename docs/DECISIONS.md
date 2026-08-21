@@ -3373,3 +3373,87 @@ enrage threshold (confirmed `firePhaseBeat` opens and drains), the kill, and
 the death transition, with no thrown exceptions; a screenshot at the arena
 confirmed the crown, armor palette and gada read as designed and that the
 telegraph-state pose is legible next to the hunter for scale.
+
+## Gate 9 becomes Kamsa's Mathura's Akhada, retiring Yama-sabha/Bakaya
+
+Authored 2026-08-21. Gate 9 under the ten-gate campaign was Yama's court —
+monochrome and violet, Bakaya (a second `Tantrik` elevation) as its Warden.
+Under the fifteen-gate redesign (`docs/SPEC-CAMPAIGN.md`) gate 9 is Kamsa,
+Act 3's opener, and the old content is retired the same way gate 3's and
+gate 8's own rebuilds retired theirs: the gate file and its `GATE9_*` string
+block are replaced outright, and the orphaned `BAKAYA` config export is left
+in place rather than deleted, the same precedent `GORU_MUKH`/`CHIRANJIVI`/
+`MAUN_ANKUR` already set — dead but harmless, and deleting it is a second
+session's call, not this one's.
+
+**Kamsa is tier 2, `Enemy` directly, per his entry's own explicit case
+against `Charger`: "a heavy armored king is the opposite of that class's
+speed identity."** The kit is Bakasura's and Kumbhakarna's shape — two
+committed moves picked by range — with the overhead shackle-iron mace smash
+taking the close band and the shoulder-chain lash taking the wide one, the
+same relationship Kumbhakarna's smash/sweep pair has to his own reach.
+
+**The Mathura wrestler is Act 3's one new-regular-archetype spend, extending
+`Charger`'s chase-and-commit skeleton under a new biped rig** — `Taraka`'s
+own precedent for reusing the class under a genuinely new silhouette rather
+than reskinning `buildCharger`. Its solo debut is protected: the gate's one
+grunt encounter meets it alone, and the campaign never combines it with
+anything, exactly as `docs/SPEC-CAMPAIGN.md`'s own note says it shouldn't.
+
+**Kamsa carries no dialogue-beat hook at all — the one Warden on the roster
+whose escalation stays silent.** His respectful-treatment note declines one
+outright: no version of a line about the infanticide backstory avoids
+staging it as spectacle, so `KAMSA` has no `phaseAt` and `Kamsa._enrage` in
+`enemies.js` fires only the generic timed `ctx.onEnrage` card, the same
+locally-implemented escalation `Bakasura._enrage` already uses for its own
+tier-2 kit. The 13 intro and 8 defeat beats stay on the prophecy and his
+fear of it throughout, never on the children, per the handoff's explicit
+instruction that the armour and the mace should carry that backstory worn
+rather than narrated.
+
+**The descending stands needed the same `thickness: 1.0` fix Duryodhana's
+descent already found.** A first pass left the three stepped-tier segments
+at the campaign's default `thickness` (5), and `tools/gatecheck.js`'s
+`headroomClear` caught the upper tiers' solid bodies reaching down far
+enough to bury the tier below them — `reachability` failed outright with "no
+route from x 2 to exitX 122" rather than merely a tight jump-reserve number,
+since the lower ledge was unstandable at all. Thinning each stepped tier to
+`thickness: 1.0`, the same figure gate 2's and gate 3's own stacked ledges
+already validated, fixed it without touching the gap width the arena's own
+3.8-unit crossing needs.
+
+**One drafted intro beat (`GATE9_KAMSA_INTRO_8`) was over the 30-word glance
+budget** — 32 words combined, caught by `tools/gatecheck.js`'s `storyBeats`
+check on the first sim run. Trimmed the body from "with no method written in
+it" to "with no timetable," preserving the line rather than cutting it.
+
+**The mace's rest pose floated disconnected from the hand.** `buildKamsa`'s
+grip is built laid along +X exactly like `buildKumbhakarna`'s club, meant to
+be brought down into a natural hang by a rest rotation on the outer `mace`
+group — but the rotation was left at its literal-zero default rather than
+given `Kumbhakarna`'s own `REST_CLUB`-equivalent, so the weapon read as a
+separate floating box rather than something he was holding. `?sim` cannot
+see this — no row in the suite checks a prop's resting angle — so it only
+surfaced once a headless screenshot was taken. `REST_MACE = -1.3` (the
+opposite sign from `REST_CLUB`, since the two rigs' arm geometry mounts the
+weapon from the elbow at a different rotation baseline) brings the head down
+at his side; the telegraph and swing arcs (`smashTelegraph`/`smash`) were
+retuned around the same anchor so the wind-up still reads as a raise rather
+than snapping through the new rest angle.
+
+**Verification.** Baseline FAIL set captured before the session (`ranged`,
+`ranged +chaya`, the charger `recovery-window` and `leaves-remnant` rows,
+and the frozen `signed-rank` gate's own measured false-negative rate on 4 of
+5 seeds) — not zero, per `docs/agents/gate-build.md`'s own warning against
+reading `CLAUDE.md`'s stale headline number literally. All seven gate-9
+Tier-1 rows are green (`jump reserve` 26% at the one real gap, `spawn
+points`, `reachability`, `encounter locks`, `enemy types`, `solo debut` for
+both `mathuraWrestler` and `kamsa`, `story beats` at 21 beats), the three new
+telegraph rows clear the 0.42 s floor with the tightest at 0.520 s
+(`kamsa · lash, enraged`), and `every archetype has a tell` counts 39 tells
+across 20 archetypes. The five recorded seeds sweep to the same FAIL set as
+the captured baseline, byte-for-byte, both before and after the mace-hang
+fix. The fight was driven headlessly through spawn, chase and a mid-fight
+frame: a screenshot at the arena confirmed the gorget bars, the iron
+circlet-crown, the shackle-cuffs, the chain drape and the mace all read as
+designed, caught the disconnected-mace bug above, and confirmed the fix.

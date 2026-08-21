@@ -1121,6 +1121,112 @@ export const RAVANA = {
   cooldown: [0.8, 1.5],
 };
 
+/**
+ * The Mathura wrestler — gate 09's regular archetype and Act 3's one new
+ * regular-enemy spend (`docs/SPEC-CAMPAIGN.md` § Act 3), giving literal form
+ * to the source detail that Kamsa staged a public wrestling tournament and
+ * set his champions against the boy before ever reaching the throne
+ * himself.
+ *
+ * Spreads `CHARGER` rather than restating it, the same way `TARAKA` spreads
+ * it: what is written out below is exactly what "fast and grappling"
+ * changes about the base charge, and nothing else. Faster on its feet and a
+ * shorter, quicker lunge than the base charger's own lane — a grapple closes
+ * in a beat, not a lumbering body-check — but not Taraka's "lightning
+ * speed" outlier; this is a fast human, not a curse.
+ */
+export const MATHURA_WRESTLER = {
+  ...CHARGER,
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hw: 0.4,
+  hh: 0.88,
+  speed: 3.6,
+  chaseRange: 26,
+  charge: {
+    ...CHARGER.charge,
+    range: 6.5,
+    minRange: 2.4,
+    windup: 0.48,
+    speed: 15,
+    dur: 0.38,
+    recover: 1.15,
+    wallRecover: 0.4,
+    damage: 16,
+    knock: 10,
+    shake: 0.2,
+  },
+  cooldown: [0.8, 1.4],
+  exp: 46,
+  contactDamage: 0,
+};
+
+/**
+ * Kamsa — gate 09's Warden, per `docs/research/villain-roster.md`: an
+ * overbuilt, armoured human tyrant, not a monster — "monstrously strong"
+ * carried by a mace rather than by a supernatural form. Tier 2: a new rig in
+ * `models.js`, but `Kamsa` in `enemies.js` extends `Enemy` directly, the
+ * same shape `Bakasura` and `Kumbhakarna` already use — two committed moves
+ * picked by range, per his entry's explicit call against `Charger`: "a heavy
+ * armored king is the opposite of that class's speed identity."
+ *
+ * `hw 0.58, hh 1.05` is the entry's own number — the bulkiest human-scale
+ * silhouette on the roster, short of Kumbhakarna's giant and every tier-3
+ * boss. No phase-transition flag: no boon, no reveal, matching "traditionally
+ * defeated at a wrestling match, not unmasked as something else." He still
+ * carries the ordinary `enrageAt`/`enrageSpeedMul`/`enrageWindupMul` every
+ * Warden already has — tighter mace wind-ups and a faster chain-lash as he
+ * is cornered — and, uniquely on the roster so far, no dialogue-beat hook at
+ * either: his entry's own respectful-treatment note declines one outright,
+ * since no version of a line about the infanticide backstory avoids staging
+ * it as spectacle.
+ */
+export const KAMSA = {
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hw: 0.58,
+  hh: 1.05,
+  speed: 2.3,
+  chaseRange: 28,
+  stopAt: 3.0,
+  /**
+   * The close move: the overhead shackle-iron mace smash — the "commit"
+   * move his entry names. Forward-biased box, the same reason Bakasura's
+   * grab and Kumbhakarna's smash both have one.
+   */
+  smash: {
+    range: 3.6,
+    windup: 0.72,
+    active: 0.24,
+    recover: 1.15,
+    damage: 22,
+    knock: 13,
+    reach: 2.8,
+    reachBack: 0.35,
+    shake: 0.26,
+  },
+  /**
+   * The mid-range move: the shoulder-chains snapping out as a reach attack,
+   * telegraphed by the same audible/visual rattle his entry calls for before
+   * the strike lands.
+   */
+  lash: {
+    range: 6.2,
+    windup: 0.65,
+    active: 0.28,
+    recover: 1.0,
+    damage: 16,
+    knock: 10,
+    reach: 4.8,
+    reachBack: 0.4,
+    shake: 0.18,
+  },
+  cooldown: [1.0, 1.7],
+  exp: 68,
+  contactDamage: 0,
+  enrageAt: 0.5,
+  enrageSpeedMul: 1.3,
+  enrageWindupMul: 0.8,
+};
+
 export const GUARDIAN = {
   hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 1.5,

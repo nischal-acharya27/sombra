@@ -8,8 +8,8 @@
 
 import * as THREE from 'three';
 import { Actor, boxHit } from './actor.js';
-import { buildRaakchyas, buildCharger, buildKawach, buildBhootBatti, buildTantrik, buildShakuni, buildBakasura, buildTaraka, buildShurpanakha, buildLankaSoldier, buildKumbhakarna } from '../render/models.js';
-import { RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, LANKA_SOLDIER, KUMBHAKARNA, PHYS, JUGGLE } from './config.js';
+import { buildRaakchyas, buildCharger, buildKawach, buildBhootBatti, buildTantrik, buildShakuni, buildBakasura, buildTaraka, buildShurpanakha, buildLankaSoldier, buildKumbhakarna, buildMathuraWrestler, buildKamsa } from '../render/models.js';
+import { RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, LANKA_SOLDIER, KUMBHAKARNA, MATHURA_WRESTLER, KAMSA, PHYS, JUGGLE } from './config.js';
 import { P } from '../render/palette.js';
 import { clamp, damp, lerp, rand } from '../engine/mathx.js';
 
@@ -2435,6 +2435,361 @@ export class Kumbhakarna extends Enemy {
       e.material.transparent = true;
       e.material.opacity = lerp(e.material.opacity, (this.phaseFired ? 0.5 : 0.28) + glow * 0.5, k);
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Mathura wrestler — gate 09's regular archetype
+// ---------------------------------------------------------------------------
+
+/**
+ * `docs/SPEC-CAMPAIGN.md` § Act 3: extends `Charger`'s chase → telegraph →
+ * charge → recover skeleton under a new biped silhouette, the same
+ * `buildRig` escape hatch `Taraka` already takes — a grapple-lunge is that
+ * shape already, reskinned as a shorter, quicker close rather than a
+ * lumbering body-check. `_animate` is the one thing this class overrides in
+ * full, the same reason `Taraka`'s does: the base `Charger._animate` drives
+ * a quadruped's neck/tail/four legs, and `buildMathuraWrestler`'s rig is a
+ * biped.
+ */
+export class MathuraWrestler extends Charger {
+  static stats = MATHURA_WRESTLER;
+
+  constructor(level, ctx, x, y, cfg = MATHURA_WRESTLER, skin = null) {
+    super(level, ctx, x, y, cfg, skin, buildMathuraWrestler);
+  }
+
+  _animate(dt) {
+    const n = this.n;
+    const k = 1 - Math.pow(0.0002, dt);
+    const C = this.cfg.charge;
+    let bodyZ = 0;
+    let bodyY = 0;
+    let armZ = 0;
+    let glow = 0;
+    let legSwing = 0;
+
+    if (this.state === 'telegraph') {
+      // Crouched into a grappler's stance, arms drawn in rather than reared
+      // back — a grapple reads as a gather, the same distinction Bakasura's
+      // grab windup draws against Charger's own rock-back.
+      const u = 1 - this.phase / C.windup;
+      bodyZ = -0.16 - u * 0.14;
+      bodyY = -0.08 - u * 0.06;
+      armZ = 0.2 + u * 0.6;
+      glow = 0.3 + u * 0.7;
+      this.legPhase += dt * 15;
+      legSwing = Math.sin(this.legPhase) * 0.3;
+    } else if (this.state === 'charging') {
+      bodyZ = 0.22;
+      bodyY = -0.1;
+      armZ = -0.55;
+      glow = 1;
+      this.legPhase += dt * 32;
+      legSwing = Math.sin(this.legPhase) * 0.9;
+      if (Math.random() < 0.5) this.ctx.vfx.dust(this.x - this.facing * 0.5, this.y, 1);
+    } else if (this.state === 'recover') {
+      const u = clamp(this.phase / C.recover, 0, 1);
+      bodyZ = 0.18 * u;
+      bodyY = -0.1 * u;
+    } else if (this.state === 'hurt') {
+      bodyZ = -0.2;
+    } else if (this.state === 'chase' && Math.abs(this.vx) > 0.3) {
+      this.legPhase += dt * (8 + Math.abs(this.vx));
+      legSwing = Math.sin(this.legPhase) * 0.55;
+      bodyY = Math.abs(Math.cos(this.legPhase)) * 0.05;
+    } else {
+      bodyY = Math.sin(this.t * 1.7) * 0.03;
+    }
+
+    n.torso.rotation.z = lerp(n.torso.rotation.z, bodyZ, k);
+    n.body.position.y = lerp(n.body.position.y, n.baseY + bodyY, k);
+    n.shoulderL.rotation.z = lerp(n.shoulderL.rotation.z, -armZ, k);
+    n.shoulderR.rotation.z = lerp(n.shoulderR.rotation.z, armZ, k);
+    n.hipL.rotation.z = lerp(n.hipL.rotation.z, legSwing, k);
+    n.hipR.rotation.z = lerp(n.hipR.rotation.z, -legSwing, k);
+
+    for (const key of ['L', 'R']) {
+      const g = n['handGlow' + key];
+      g.material.opacity = lerp(g.material.opacity, 0.3 + glow * 0.7, k);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Kamsa — gate 09's Warden
+// ---------------------------------------------------------------------------
+
+/**
+ * An overbuilt, armoured human tyrant, per `docs/research/villain-roster.md`
+ * — not a monster. His entry's own kit-shape call is explicit against
+ * `Charger`: "a heavy armored king is the opposite of that class's speed
+ * identity." The kit is Bakasura's and Kumbhakarna's shape instead — `Enemy`
+ * directly, two committed moves picked by range — with the mace and the
+ * shoulder-chains supplying the two bands, the same relationship
+ * Kumbhakarna's smash/sweep pair has to his own reach.
+ *
+ * No phase-transition: no boon, no reveal, matching his entry's "not
+ * unmasked as something else." Escalation is the ordinary
+ * `enrageAt`/`enrageSpeedMul`/`enrageWindupMul` every Warden already
+ * carries, and — uniquely on the roster so far — it fires no dialogue-beat
+ * hook at all. His respectful-treatment note declines one outright: no
+ * version of a line about the infanticide backstory avoids staging it as
+ * spectacle, so the armour and the mace carry the backstory instead, worn
+ * rather than narrated.
+ */
+/** The mace's idle hang — `buildKamsa`'s grip is built laid along +X, so a rest rotation is what brings the head down at his side. */
+const REST_MACE = -1.3;
+
+export class Kamsa extends Enemy {
+  static stats = KAMSA;
+
+  constructor(level, ctx, x, y, cfg = KAMSA, skin = null) {
+    super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
+    this.root = buildKamsa(skin);
+    this.n = this.root.userData.nodes;
+    this.finishSetup();
+    this.phase = 0;
+    this.cooldown = rand(cfg.cooldown[0], cfg.cooldown[1]);
+    this.chargeHitSet = new Set();
+    this.leavesCorpse = true;
+    this.enraged = false;
+  }
+
+  /** Always, for a hostile Kamsa. Mirrors `Kumbhakarna._canCommit`. */
+  _canCommit() {
+    return true;
+  }
+
+  takeHit(hit) {
+    const landed = super.takeHit(hit);
+    if (landed && !this.dead && !this.enraged && this.hp <= this.maxHp * this.cfg.enrageAt) this._enrage();
+    return landed;
+  }
+
+  /**
+   * No rig-swap, no dialogue beat — per his entry, escalation is the two
+   * wind-ups tightening (`enrageWindupMul`) and the approach quickening
+   * (`enrageSpeedMul`), the same locally-implemented call `Bakasura._enrage`
+   * makes for its own tier-2 kit.
+   */
+  _enrage() {
+    this.enraged = true;
+    this.ctx.onEnrage?.();
+    this.ctx.audio?.play('enrage');
+  }
+
+  update(dt, player) {
+    this.t += dt;
+    this.hitFlash -= dt;
+    this._flash(dt);
+
+    if (this.state === 'dying') return this._dieAnim(dt);
+    if (this.spawnT > 0) this._spawnAnim(dt);
+
+    const S = this.cfg.smash;
+    const L = this.cfg.lash;
+    const dx = player.x - this.x;
+    const dist = Math.abs(dx);
+    const canSee = dist < this.cfg.chaseRange && Math.abs(player.y - this.y) < 6;
+    const windupMul = this.enraged ? this.cfg.enrageWindupMul : 1;
+    const speed = this.cfg.speed * (this.enraged ? this.cfg.enrageSpeedMul : 1);
+
+    if (this.stagger > 0) {
+      this.stagger -= dt;
+      if (this.stagger <= 0 && this.state === 'hurt') this.state = 'idle';
+    }
+
+    switch (this.state) {
+      case 'idle':
+      case 'chase': {
+        this.cooldown -= dt;
+        if (!canSee) {
+          this.state = 'idle';
+          this.vx = damp(this.vx, 0, 0.001, dt);
+          break;
+        }
+        this.state = 'chase';
+        this.faceToward(player.x);
+
+        // The smash takes the close band; the lash takes the wider one out
+        // to chain length — the same range-picked pair Kumbhakarna's
+        // smash/sweep and Bakasura's grab/tackle already use, and the same
+        // reason: holding station just outside the close move must not be a
+        // fight he cannot answer.
+        if (this._canCommit() && this.cooldown <= 0 && this.grounded) {
+          if (dist < S.range) {
+            this.state = 'smashTelegraph';
+            this.phase = S.windup * windupMul;
+            this.vx = 0;
+            this.chargeHitSet.clear();
+            this.ctx.audio?.play('growl');
+            break;
+          } else if (dist < L.range) {
+            this.state = 'lashTelegraph';
+            this.phase = L.windup * windupMul;
+            this.vx = 0;
+            this.chargeHitSet.clear();
+            // The rattle: an audible tell before the chains ever move,
+            // per his entry's explicit call.
+            this.ctx.audio?.play('growl');
+            break;
+          }
+        }
+
+        const want = dist > this.cfg.stopAt ? this.facing * speed : 0;
+        const ahead = this.x + Math.sign(want || this.facing) * 1.1;
+        if (want !== 0 && !this.level.hasFloorAhead(ahead, this.y)) this.vx = 0;
+        else this.vx = damp(this.vx, want, 0.0008, dt);
+        break;
+      }
+
+      case 'smashTelegraph': {
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0001, dt);
+        if (this.phase > S.windup * windupMul * 0.35) this.faceToward(player.x);
+        if (this.phase <= 0) {
+          this.state = 'smash';
+          this.phase = S.active;
+          this.chargeHitSet.clear();
+          this.ctx.audio?.play('slam');
+          this.ctx.shake?.(S.shake);
+          this.ctx.vfx.dust(this.x + this.facing * 1.8, this.y, 8);
+        }
+        break;
+      }
+
+      case 'lashTelegraph': {
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0001, dt);
+        if (this.phase > L.windup * windupMul * 0.35) this.faceToward(player.x);
+        if (this.phase <= 0) {
+          this.state = 'lash';
+          this.phase = L.active;
+          this.chargeHitSet.clear();
+          this.ctx.audio?.play('pounce');
+          this.ctx.shake?.(L.shake);
+        }
+        break;
+      }
+
+      case 'smash':
+      case 'lash': {
+        this.phase -= dt;
+        if (this.phase <= 0) {
+          const done = this.state === 'smash' ? S : L;
+          this.state = 'recover';
+          this.phase = done.recover;
+        }
+        break;
+      }
+
+      case 'recover': {
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0005, dt);
+        if (this.phase <= 0) {
+          this.state = 'chase';
+          this.cooldown = rand(this.cfg.cooldown[0], this.cfg.cooldown[1]);
+        }
+        break;
+      }
+
+      case 'hurt':
+        this.vx = damp(this.vx, 0, 0.06, dt);
+        break;
+    }
+
+    if (this.juggleT > 0) this.juggleT = this.grounded ? 0 : this.juggleT - dt;
+    this.applyGravity(dt, PHYS.gravity * (this.juggleT > 0 ? JUGGLE.gravityMul : 1));
+    this.moveAndCollide(dt);
+    this._animate(dt);
+    this.syncRig();
+  }
+
+  /** Both boxes are forward-biased — see `KAMSA.smash`'s own note. */
+  attackBox() {
+    if (this.dead) return null;
+    const A = this.state === 'smash' ? this.cfg.smash : this.state === 'lash' ? this.cfg.lash : null;
+    if (!A) return null;
+    return this.facing >= 0
+      ? { x0: this.x - A.reachBack, x1: this.x + A.reach, y0: this.y, y1: this.y + this.hh * 2 }
+      : { x0: this.x - A.reach, x1: this.x + A.reachBack, y0: this.y, y1: this.y + this.hh * 2 };
+  }
+
+  currentAttackDamage() {
+    if (this.state === 'smash') return { damage: this.cfg.smash.damage, knock: this.cfg.smash.knock };
+    if (this.state === 'lash') return { damage: this.cfg.lash.damage, knock: this.cfg.lash.knock };
+    return null;
+  }
+
+  _animate(dt) {
+    const n = this.n;
+    const k = 1 - Math.pow(0.0002, dt);
+    const S = this.cfg.smash;
+    const L = this.cfg.lash;
+    const windupMul = this.enraged ? this.cfg.enrageWindupMul : 1;
+    let bodyZ = 0;
+    let bodyY = 0;
+    let armZ = 0;
+    // Rest hang: the grip is built laid along +X, so a rotation is what
+    // brings the head down into a natural hang — the same job Kumbhakarna's
+    // own `REST_CLUB` does for his club.
+    let maceZ = REST_MACE;
+    let glow = 0;
+
+    if (this.state === 'smashTelegraph') {
+      const u = 1 - this.phase / (S.windup * windupMul);
+      bodyZ = -0.1 - u * 0.14;
+      bodyY = -0.06 - u * 0.06;
+      armZ = 0.3 + u * 1.0;
+      maceZ = lerp(REST_MACE, 1.6, u);
+      glow = 0.3 + u * 0.7;
+    } else if (this.state === 'smash') {
+      const u = clamp(1 - this.phase / S.active, 0, 1);
+      bodyZ = lerp(0.26, 0.06, u);
+      armZ = lerp(-1.0, -0.4, u);
+      maceZ = lerp(1.6, -2.0, u);
+      bodyY = -0.1;
+      glow = 1;
+    } else if (this.state === 'lashTelegraph') {
+      // The chains rattle rather than travel — a small, fast shudder on the
+      // shoulder chain-links, distinct from the mace's own wind, so the
+      // hunter reads which weapon is coming before either commits.
+      const u = 1 - this.phase / (L.windup * windupMul);
+      bodyZ = -0.08 - u * 0.1;
+      armZ = -0.2 - u * 0.4;
+      glow = 0.3 + u * 0.7;
+      for (const link of this.n.chainLinks) link.position.x = 0.28 + Math.sin(this.t * 40) * u * 0.02;
+    } else if (this.state === 'lash') {
+      const u = clamp(1 - this.phase / L.active, 0, 1);
+      bodyZ = lerp(-0.18, 0.04, u);
+      armZ = lerp(0.6, 0.1, u);
+      glow = 1;
+    } else if (this.state === 'recover') {
+      const total = Math.max(S.recover, L.recover);
+      const u = clamp(this.phase / total, 0, 1);
+      bodyZ = -0.1 * u;
+      bodyY = -0.06 * u;
+    } else if (this.state === 'hurt') {
+      bodyZ = 0.18;
+    } else if (Math.abs(this.vx) > 0.3) {
+      bodyY = Math.abs(Math.sin(this.t * 5)) * 0.03;
+    } else {
+      bodyY = Math.sin(this.t * 1.2) * 0.025;
+    }
+
+    n.torso.rotation.z = lerp(n.torso.rotation.z, bodyZ, k);
+    n.body.position.y = lerp(n.body.position.y, n.baseY + bodyY, k);
+    n.shoulderR.rotation.z = lerp(n.shoulderR.rotation.z, armZ, k);
+    n.shoulderL.rotation.z = lerp(n.shoulderL.rotation.z, -armZ * 0.3, k);
+    n.mace.rotation.z = lerp(n.mace.rotation.z, maceZ, k);
+
+    for (const key of ['L', 'R']) {
+      const e = n['eye' + key];
+      e.material.transparent = true;
+      e.material.opacity = lerp(e.material.opacity, 0.3 + glow * 0.5, k);
+    }
+    n.maceGlow.material.opacity = lerp(n.maceGlow.material.opacity, 0.2 + glow * 0.6, k);
   }
 }
 
