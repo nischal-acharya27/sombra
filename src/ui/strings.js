@@ -395,7 +395,6 @@ export const STRINGS = {
   GATE7_WARDEN_TITLE: 'KUMBHAKARNA',
   GATE7_RAMPARTS_TITLE: 'THREAT DETECTED',
   GATE7_RAMPARTS_BODY: 'Lanka Soldier × 3',
-  GATE7_RAMPARTS_NOTE: 'The <b>spear</b> reaches well past the shield you learned on. Read the plant, not the gap.',
   GATE7_KUMBHAKARNA_TITLE: 'GATE WARDEN',
 
   GATE7_KUMBHAKARNA_INTRO_1_BIG: 'Ten thousand years of penance, and I asked for the wrong thing.',

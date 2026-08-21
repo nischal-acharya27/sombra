@@ -133,10 +133,18 @@ const WARDEN = {
  * are the same "teach it, then complicate it" order gate 6's own combination
  * uses one gate back.
  *
- * The note names the reach outright. `docs/PLAYTEST.md` is unambiguous that
- * this game has never successfully taught a purely diegetic fact on the first
- * try, and "the range you are standing at is wrong" is exactly the kind of
- * fact a player misreads as the hitbox being broken.
+ * The reach is taught by the staging and by nothing else. There is no
+ * teaching `note` here: `docs/DECISIONS.md` § "regular-enemy encounter
+ * windows stop freezing the game and stop describing the enemy" cut those
+ * outright on 2026-08-09 — `docs/PLAYTEST.md` round 3's "reading the texts
+ * while fighting them is not very feasible" is the note's own obituary — and
+ * a grunt encounter now gets a non-blocking toast of `intro.body`, the
+ * archetype list, and that is all. Five earlier gate files still author a
+ * `note` key that nothing renders; this one does not add a sixth.
+ *
+ * So the first soldier arriving alone is not flavour, it is the entire
+ * lesson: one thrust to eat or dodge, at a distance the shield never
+ * reached, before there is a second tell on the field to confuse it with.
  */
 const ENCOUNTERS = [
   {
@@ -146,7 +154,6 @@ const ENCOUNTERS = [
     intro: {
       title: STRINGS.GATE7_RAMPARTS_TITLE,
       body: STRINGS.GATE7_RAMPARTS_BODY,
-      note: STRINGS.GATE7_RAMPARTS_NOTE,
     },
     spawns: [
       { ...SOLDIER, x: 44, delay: 0 },

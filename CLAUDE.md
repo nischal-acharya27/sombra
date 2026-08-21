@@ -95,3 +95,9 @@ Single-context: `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/
 
 How reference images + a written description become procedural three.js
 geometry for a campaign villain. See `docs/agents/villain-handoff.md`.
+
+### Gate build
+
+How a filled-in villain handoff becomes a playable gate — the file set in
+dependency order, the traps, and the verification protocol. Read it before
+building or rewriting a gate. See `docs/agents/gate-build.md`.
