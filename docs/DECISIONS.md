@@ -3613,3 +3613,122 @@ five recorded seeds sweep to the FAIL set captured before the change
 rows on every seed, plus the frozen `signed-rank` gate on four of five;
 `20260728` 5, `1` 4, `99991` 5, `20260802` 5, `7777777` 5), with no row moving
 in either direction.
+
+## Gate 10's rebuild, verified: what the composition seam bought, and the one number it cannot yet prove
+
+Authored 2026-08-21, closing the four-part rebuild the two sections above open.
+Part 1 (`bba44dd`) cut the `gate.landmarks` seam, part 2 (`915ab27`) built the
+five Gokul household kinds, part 3 (`85d0b45`) rewrote `src/game/gates/gate10.js`
+around them. This section is the record of what the finished thing measures,
+including the parts that did not come out clean.
+
+**The seam was spent, not merely opened.** Seventeen authored placements plus a
+hero, across four stations. The test that matters is not that the array exists
+but that the stations stopped being interchangeable: the courtyard has a shrine
+at its threshold, a well at its centre and the byre turned a quarter behind it;
+the loft has a rooftop tulsi shrine and the neighbour's ridge capping at 7.15
+against a floor of 6; the roof beams have a 0.75-scale house the hunter now
+looks *down* on; the nursery has an empty cradle lit from both shoulders. Every
+`pillars` count in the gate is gone and the boulder counts dropped with them,
+which is the honest confirmation — the composition no longer leans on scatter
+density at all, because it no longer needs to.
+
+**Three placements moved on measurement rather than on taste**, and the
+measurement is recorded next to each in the source so a later session does not
+retry them. A full-scale house behind the veranda put a twelve-unit mud wall at
+the hunter's own eye level: standing on a 3-unit riser is exactly the wrong
+height to be near a house that stands on 0. The hero house at z −15 crossed the
+cradle at the same screen height and the two read as one confused mass; at −19
+it frames the tableau instead. The loft neighbour went to z −17, four units
+behind every other house, because at −13 a roof that near eye level reads as a
+wall.
+
+**A fourth was tried during this verification pass and reverted.** Screenshot
+review found the loft house at x 44 and the roof house at x 82 both rendering
+as an anonymous brown plank with no gable, and a `rotY` was fitted to the loft
+house to break the square-on read. It was reverted: the turn adds a gable
+sliver and does not fix the cause, which is that the loft floor at y 6 grazes
+the house's eave line so the platform's own back lip occludes the walls. The
+two fixes that would work are moving the house nearer — already rejected above
+— or lifting it off y 0, which breaks the village plane. And on re-reading the
+intent the criticism was misapplied: x 44 is *meant* to be a roofline at eye
+level, since that is what makes the loft read as a loft, and the gable is
+supplied four seconds later at x 57. Recorded because "this looks flat" will
+occur to the next reviewer too, and the answer is that it is a roof, seen from
+a roof.
+
+**The village plane is y 0 and is load-bearing.** Every house sits at y 0
+whatever the segment in front of it is doing, because at z −13 there is no
+floor at all, only backdrop. One consistent ground plane behind the play plane
+is the whole mechanism by which the climb reads as a climb: at y 6 the hunter
+is level with a neighbour's ridge, by the third beam they are above one, and
+the nursery at y 3 reads as an upper storey rather than a field. Changing one
+house's y to suit one screenshot breaks all four stations at once.
+
+**The arena shortened 68 → 54 units and the encounter moved in with it**
+(trigger 148 → 136, warden spawn 150 → 138, lock [118, 172] → [116, 158],
+`exitX` 168 → 154, `end` 176 → 162). The pacing argument is specific: the old
+arena put 36 units of empty floor between the hatch and the trigger, six
+seconds of walking with nothing to meet and nothing to look at, and the single
+largest stretch of unrewarded ground in the gate. What is left is a three-second
+approach, lit on one side, ending at the cradle — and an arena still wider than
+gate 9's for a Warden whose longest reach is 6 units, so the flat-arena rule is
+not squeezed to buy the pacing.
+
+### The numbers
+
+Five recorded seeds match the captured baseline **exactly, not merely as a
+subset** — same FAIL count and same `signed-rank` W+ seed for seed:
+
+| seed | FAILs | signed-rank |
+|---|---|---|
+| 20260728 | 5 | W+ 30 of 9 |
+| 1 | 4 | W+ 96 of 14 (PASS) |
+| 99991 | 5 | W+ 35 of 13 |
+| 20260802 | 5 | W+ 52 of 11 |
+| 7777777 | 5 | W+ 27 of 9 |
+
+The four rows failing on every seed are the config-traceable ones — `ranged`,
+`ranged +chaya`, the charger `recovery-window` row and `leaves-remnant` — all
+downstream of the phone-playtest `hp: 5` in `config.js`. `signed-rank` is a
+frozen gate with a known false-negative rate and was not touched.
+
+Roughly two hundred meshes were added and `GATE TRANSITION` still reads **"the
+frame that crosses over costs nothing — 0 draws from the seeded stream"** on
+all five seeds. That is the measurement proving landmarks are construction-time
+only, and it is *why* the W+ values did not move: had any of those UUID draws
+landed inside the run, the whole downstream stream would have shifted and every
+enemy's jitter with it.
+
+All seven gate-10 tier-1 rows PASS on all five seeds: `jump reserve` tightest
+46% at 94→96.6 (3.28 of the 6.08 running jump), `reachability` x 2 → 154 with 7
+of 7 platforms, `encounter locks` 1 sealed with every spawn and trigger inside,
+plus `spawn points`, `enemy types`, `solo debut` and `story beats` (22).
+
+Traversal measured with a hold-right-and-jump-when-needed bot: spawn (x 2) to
+trigger (136) in **14.2 s over five jumps with no falls**.
+
+### The one number this build cannot produce
+
+The brief's 2–4 minute first playthrough is **not verified end to end, and
+cannot be on this build.** A bot walked in and killed Putana in 0.3 s of
+simulated time over 19 swings without losing a point of HP, because `PUTANA.hp`
+is the campaign-wide `hp: 5` phone-playtest value that stays until the Android
+port. That is the same root cause as the four permanently-failing suite rows,
+so it is a known condition rather than a new finding — but it means the fight
+contributes nothing measurable to the budget today. What is measurable is 14.2 s
+of traversal; what is arithmetic rather than measurement is the 22 paged beats,
+which at a four-to-six-second reading pace are roughly 90–130 s on their own.
+**The honest statement is that the beats and the fight own the budget and only
+the floor has been timed.** Re-time the gate when the playtest HP is reverted;
+until then, do not claim the target is hit.
+
+### Left alone deliberately
+
+A hunter who walks right off the courtyard and never jumps falls past x 20 into
+the void (`voidY: -20`) — there is no floor under the veranda. This is
+inherited from the pre-rebuild build and is the shape every climb gate in the
+campaign has, so it was not fixed here: giving the climb a ground floor is a
+recomposition well outside a rebuild's scope, and it is plausibly issue #51
+territory (platforms reading as boxes, fatal-fall confusion) rather than a gate
+10 bug. Recorded so it is a decision on the record and not an oversight.
