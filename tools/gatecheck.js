@@ -25,7 +25,7 @@
 // descriptor is authored correctly, that one asks whether `Level` built what
 // the descriptor said.
 
-import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, LANKA_SOLDIER, KUMBHAKARNA, GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR } from '../src/game/config.js';
+import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, LANKA_SOLDIER, KUMBHAKARNA, RAVANA, GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR } from '../src/game/config.js';
 import { ARCHETYPES } from '../src/game/game.js';
 import { GATES } from '../src/game/gates/index.js';
 
@@ -547,6 +547,17 @@ const TELLS = [
   // fights with for the rest of the encounter, not his groggy one.
   { archetype: 'kumbhakarna', tell: 'smash, awake', windup: KUMBHAKARNA.smash.windup * KUMBHAKARNA.phaseWindupMul },
   { archetype: 'kumbhakarna', tell: 'sweep, awake', windup: KUMBHAKARNA.sweep.windup * KUMBHAKARNA.phaseWindupMul },
+  // Ravana's four weapons are four entries in the same `attacks` block every
+  // boss below him carries, so the row is generated the same way and against
+  // the same enraged multiplier — the number the hunter actually answers is
+  // the post-threshold one, and his threshold moves the wind-ups exactly as
+  // every other boss's enrage does. The sweep is the tightest of the four at
+  // 0.60 × 0.8 = 0.480s.
+  ...Object.entries(RAVANA.attacks).map(([name, a]) => ({
+    archetype: 'ravana',
+    tell: `${name}, enraged`,
+    windup: a.windup * RAVANA.enrageWindupMul,
+  })),
   ...Object.entries(GUARDIAN.attacks).map(([name, a]) => ({
     archetype: 'guardian',
     tell: `${name}, enraged`,

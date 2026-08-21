@@ -281,5 +281,53 @@ export const P = {
   // heavy-lidded eyes flare it as the telegraph rather than inventing a hue.
   kumbhaEye: 0xffb347,
 
+  // Act 2 — gate 08's Ravana, and Lanka's court rather than its rank and file.
+  // The five names his roster entry reserved a gate ago, now spent: `lankaSkin`
+  // is a warm bronze/copper *human* tone, deliberately not the miniature
+  // painting's classical blue — the blue-violet family is already carrying
+  // `raakchyasBody`, `chayaBody`, `bossPlate`/`bossCore`, `wheelPlate` and
+  // `chargerHide`, and every other rakshasa on the roster already signals
+  // "monster" through an exotic skin (Shurpanakha's ash, Taraka's moss,
+  // Bakasura's sallow purple, Kumbhakarna's granite). His entry names that
+  // flattening as the exact thing to avoid for him specifically, so the skin
+  // argues "person" and the head-arc carries the "not merely human" read on
+  // its own.
+  //
+  // `lankaPlate`/`lankaPlateDark` are a full octave brighter and more ornate
+  // than gate 07's war-worn `lankaSoldierPlate` — "richly adorned" is explicit
+  // in his entry where it was not in Duryodhana's — and that gap between the
+  // king's gold and his soldiers' is the whole reason the two were given
+  // separate names instead of one value at two brightnesses.
+  lankaSkin: 0xa96f45,
+  lankaSkinDark: 0x6e4529,
+  lankaPlate: 0xe8c05a,
+  lankaPlateDark: 0x9c7a22,
+  // Both anchor references' red-and-saffron drapes.
+  lankaRobe: 0x8e1f24,
+  // The per-head telegraph flare. In the game's shared warm amber/gold danger
+  // family, but its own value inside it — the same relationship `kuruCore`,
+  // `devaCore` and `wheelCore` each have to that family rather than a reused
+  // hex. This is the one the hunter reads a wind-up off, five times over.
+  lankaCore: 0xffd166,
+  // The four weapons need two values between them, not four: the trishul and
+  // the chakra take the court's own gold above, since both are the king's
+  // regalia as much as his armament, and Chandrahas ("moon laughter") gets
+  // the one cold value in the block, per the Uttara Kanda tradition's
+  // moon-gift origin.
+  lankaSword: 0xcfd8e8,
+  // The torch's fire. Vermillion-crimson rather than anything in the orange
+  // band, because `aagoCore`/`aagoGlow` are the hunter's own fire and the two
+  // must never read as the same attack arriving from opposite sides. It ties
+  // to `lankaRobe` instead, which is where the red on this rig already lives.
+  lankaFlame: 0xd42032,
+
+  // Gate 08's Lanka royal guard: `Kawach` pulled from its own plate to court
+  // gold, one octave up from the soldier's war-worn kit and standing beside
+  // it. The soldier itself is *not* reskinned here — the hunter learned that
+  // spear's reach off that silhouette one gate ago, and repainting the thing
+  // whose tell was just taught is how a taught tell gets untaught.
+  lankaGuardPlate: 0x8a7434,
+  lankaGuardPlateDark: 0x453914,
+
   outline: 0x0a0813,
 };

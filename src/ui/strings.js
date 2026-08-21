@@ -451,20 +451,93 @@ export const STRINGS = {
   GATE7_KUMBHAKARNA_DEFEAT_8_BIG: 'Go on, hunter. Wake the next one.',
   GATE7_KUMBHAKARNA_DEFEAT_8_BODY: 'And if it argues with you first — let it finish arguing.',
 
-  // -- gate 8: Deva-lok -----------------------------------------------------
-  GATE8_NAME: 'Deva-lok',
-  GATE8_WARDEN_TITLE: 'CHIRANJIVI',
-  GATE8_TERRACE_TITLE: 'THREAT DETECTED',
-  GATE8_TERRACE_BODY: 'Raakchyas × 2  ·  Bhoot-Batti × 1',
-  GATE8_GARDEN_TITLE: 'THREAT DETECTED',
-  GATE8_GARDEN_BODY: 'Kawach × 1  ·  Tantrik × 1  ·  Raakchyas × 1',
-  GATE8_CHIRANJIVI_TITLE: 'GATE BOSS',
-  GATE8_BEAT_ENTER_TITLE: 'THE SYSTEM',
-  GATE8_BEAT_ENTER_BIG: 'NOTHING HERE HAS AGED',
-  GATE8_BEAT_ENTER_BODY: 'They do not notice the light is thinner than it was.',
-  GATE8_BEAT_CLEARED_TITLE: 'THE SYSTEM',
-  GATE8_BEAT_CLEARED_BIG: 'A LIGHT GOES OUT',
-  GATE8_BEAT_CLEARED_BODY: 'Even heaven ends. This one simply stopped pretending otherwise.',
+  // -- gate 8: Lanka’s Throne ----------------------------------------------
+  // Gate 8 — Ravana, and the hardest respectful-treatment note on the roster
+  // to find a home for.
+  //
+  // Two halves, and only one of them is answerable. The first is that Ravana
+  // is not a simple villain anywhere in the tradition: a Brahmin, a Vedic
+  // scholar, a devotee of Shiva credited with the Shiva Tandava Stotra, burned
+  // in effigy in some places and garlanded in others (Ravana Purnima). The
+  // beats below let him make his own case in his own voice — the palette
+  // already does the other half of that job, per `lankaSkin` in
+  // `palette.js` — and they never let the scene settle into "evil demon king".
+  //
+  // The second half is that this fight sits awkwardly against its source and
+  // cannot be made to stop: the boon's loophole exists *because* Ravana
+  // considered a mortal beneath asking protection from, and SOMBRA's hunter is
+  // explicitly not Rama. His roster entry is equally explicit that no win
+  // condition resolves this and nothing should try — no invented
+  // "the hunter is secretly not human" escape hatch, since nothing in this
+  // game's fiction earns one. So it is named instead, twice, and left open:
+  // once at the threshold (`GATE8_RAVANA_PHASE_*`, fired by `Ravana._enrage`)
+  // and once in the defeat beats, where he says out loud that whatever ended
+  // him was not the ending he was written.
+  //
+  // The pre-fight and phase-transition lines are the ones already locked in
+  // docs/SPEC-CAMPAIGN.md's dialogue table; the rest is written to arrive at
+  // them. The defeat beats use SORGI's escort framing throughout, never
+  // victory framing.
+  GATE8_NAME: 'Lanka\u2019s Throne',
+  GATE8_WARDEN_TITLE: 'RAVANA',
+  GATE8_BATTLEMENTS_TITLE: 'THREAT DETECTED',
+  GATE8_BATTLEMENTS_BODY: 'Lanka Soldier \u00d7 2  \u00b7  Royal Guard \u00d7 1',
+  GATE8_INNER_GATE_TITLE: 'THREAT DETECTED',
+  GATE8_INNER_GATE_BODY: 'Royal Guard \u00d7 2  \u00b7  Lanka Soldier \u00d7 2',
+  GATE8_RAVANA_TITLE: 'GATE BOSS',
+
+  GATE8_RAVANA_INTRO_1_BIG: 'I have read every Veda. I wrote hymns Shiva stopped to listen to.',
+  GATE8_RAVANA_INTRO_1_BODY: 'Nobody paints that on the effigies.',
+  GATE8_RAVANA_INTRO_2_BIG: 'Ten thousand years of penance. A head into the fire every thousand.',
+  GATE8_RAVANA_INTRO_2_BODY: 'Brahma caught my hand at the tenth. He was impressed. So was I.',
+  GATE8_RAVANA_INTRO_3_BIG: 'I asked to be safe from gods, gandharvas, yakshas, rakshasas.',
+  GATE8_RAVANA_INTRO_3_BODY: 'Everything that could conceivably matter. I listed them all out.',
+  GATE8_RAVANA_INTRO_4_BIG: 'I did not list men.',
+  GATE8_RAVANA_INTRO_4_BODY: 'Why would I? I had seen men. I had ruled better than all of them.',
+  GATE8_RAVANA_INTRO_5_BIG: 'Lanka was gold, and I built it. Every court in three worlds envied it.',
+  GATE8_RAVANA_INTRO_5_BODY: 'Even the people who tell my story do not dispute that part.',
+  GATE8_RAVANA_INTRO_6_BIG: 'Then my sister came home cut open, and asked what I intended to do.',
+  GATE8_RAVANA_INTRO_6_BODY: 'You have met her. You know what she was asking me for.',
+  GATE8_RAVANA_INTRO_7_BIG: 'I took his wife. I will not pretend that was for my sister.',
+  GATE8_RAVANA_INTRO_7_BODY: 'It was for me. I have had a long time to be sure of it.',
+  GATE8_RAVANA_INTRO_8_BIG: 'I never touched her. That is the one restraint I kept.',
+  GATE8_RAVANA_INTRO_8_BODY: 'It did not make me innocent. I can hold both of those now.',
+  GATE8_RAVANA_INTRO_9_BIG: 'My brother told me to give her back. In open court, in front of everyone.',
+  GATE8_RAVANA_INTRO_9_BODY: 'You fought him at the ramparts. He went out for me anyway.',
+  GATE8_RAVANA_INTRO_10_BIG: 'My other brother walked out and joined them. I let him go.',
+  GATE8_RAVANA_INTRO_10_BODY: 'I still cannot say whether that was mercy or contempt.',
+  GATE8_RAVANA_INTRO_11_BIG: 'They crossed the water on a bridge. A bridge, for me.',
+  GATE8_RAVANA_INTRO_11_BODY: 'Nothing smaller than an ocean had ever been in my way before.',
+  GATE8_RAVANA_INTRO_12_BIG: 'The Wheel stopped and left me holding a city that had already fallen.',
+  GATE8_RAVANA_INTRO_12_BODY: 'Everything stops eventually, they tell me. Nothing has stopped me yet.',
+  GATE8_RAVANA_INTRO_13_BIG: 'Ten heads bowed to no one. Explain to me what you are.',
+  GATE8_RAVANA_INTRO_13_BODY: 'Slowly. I would like to understand this before it finishes.',
+
+  // The threshold, fired by `Ravana._enrage` in `boss.js` through
+  // `Game.firePhaseBeat` — the fourth consumer of that machinery and the first
+  // that is not a Warden, which is the evidence it was never tier-locked.
+  // The locked line is the moment he reads his own boon back and finds the
+  // hole he left in it; the body is where the harder half of his note is
+  // named and deliberately not closed.
+  GATE8_RAVANA_PHASE_BIG: 'A man. He sent a man.',
+  GATE8_RAVANA_PHASE_BODY: 'Not even the one I was owed. Something wearing the shape. The terms do not care.',
+
+  GATE8_RAVANA_DEFEAT_1_BIG: 'There. Down to the last of the heads.',
+  GATE8_RAVANA_DEFEAT_1_BODY: 'It took an ocean and an avatar, the first time.',
+  GATE8_RAVANA_DEFEAT_2_BIG: 'You are not him. I would like that said out loud.',
+  GATE8_RAVANA_DEFEAT_2_BODY: 'Whatever ended me here, it was not the ending I was written.',
+  GATE8_RAVANA_DEFEAT_3_BIG: 'That is the part I cannot make sit right, and I have tried.',
+  GATE8_RAVANA_DEFEAT_3_BODY: 'Leave it where it is. Not everything closes.',
+  GATE8_RAVANA_DEFEAT_4_BIG: 'Do not simplify me on the way out.',
+  GATE8_RAVANA_DEFEAT_4_BODY: 'Some places burn me every year. Some lay flowers. Both are reading one life.',
+  GATE8_RAVANA_DEFEAT_5_BIG: 'Tell them I was a scholar before I was a thief.',
+  GATE8_RAVANA_DEFEAT_5_BODY: 'And that being the first never once stopped me being the second.',
+  GATE8_RAVANA_DEFEAT_6_BIG: 'The boon was not the mistake. The contempt was.',
+  GATE8_RAVANA_DEFEAT_6_BODY: 'I left one door open because I could not imagine anyone worth shutting it against.',
+  GATE8_RAVANA_DEFEAT_7_BIG: 'My sister is somewhere behind you. So is my brother.',
+  GATE8_RAVANA_DEFEAT_7_BODY: 'Neither of them was here for their own reasons. Carry that out with the rest.',
+  GATE8_RAVANA_DEFEAT_8_BIG: 'Go on. The throne is empty and the Wheel is still not turning.',
+  GATE8_RAVANA_DEFEAT_8_BODY: 'Whatever comes next was never going to be me.',
 
   // -- gate 9: Yama-sabha ---------------------------------------------------
   GATE9_NAME: 'Yama-sabha',

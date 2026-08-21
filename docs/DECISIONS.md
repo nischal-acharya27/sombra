@@ -3188,3 +3188,102 @@ The suite total is unchanged (6 FAIL, or 5 on seeds where the frozen
 untouched, and the row resolves when gate 03 is rebuilt as Duryodhana's,
 which is where the spec puts `Charger`'s debut. Fixing it from this gate
 would have meant re-adding an archetype the gate's table does not list.
+
+## Gate 8 becomes Ravana's throne room, and the campaign's first new locked boss gets built
+
+*2026-08-21.* Gate 8 was the retired ten-gate spec's Deva-lok, closed by
+`Chiranjivi`. Under `docs/SPEC-CAMPAIGN.md`'s fifteen-gate redesign it is
+Ravana's — Act 2's climax, Lanka's battlements into the throne room, and the
+first of issue #40's four locked bosses to actually exist as code. `Chiranjivi`
+and the other four old `Boss` subclasses stay in `boss.js` for now: the spec's
+own instruction is to delete all five once all four new bosses exist and no
+gate references the old names, and three of the four do not exist yet.
+
+**He is four weapons, not four shapes, and that is the whole tier-3 spend.**
+`docs/research/villain-roster.md` is explicit that the twenty-arms motif gets
+made mechanical rather than decorative: Chandrahas sweeps, the trishul closes
+distance, the chakra is thrown, the torch lands. Each hangs off its own arm and
+each is swung by the animator, but the *shapes* underneath are the
+`sweeping`/`charging`/`volley`/`leaping` vocabulary every boss since the
+Dwar-Rakshak has taught. Inventing four new mechanics to go with four new
+props would have made the fight unreadable and would have spent budget the
+entry deliberately did not.
+
+**He is the first boss since the Dwar-Rakshak to carry a `volley`, and it is
+corroborated rather than borrowed.** The Goru-Mukh, the Hakim, the Chiranjivi
+and the Maun-Ankur were all argued into three-attack melee kits on the grounds
+that the campaign's one ranged boss attack should stay gate 1's. The chakra is
+a thrown weapon in both of the reference images the rig was built against, so
+the ranged slot here comes from the source rather than from wanting a fourth
+attack.
+
+**The compressed head-arc is the telegraph, which is what keeps it from being
+decoration.** Ten heads is not buildable at this engine's per-boss node budget,
+and the entry's answer is three visible heads with the rest implied. Rather
+than spend that only on geometry, the head nearest the arm that is about to
+swing flares `lankaCore` before the attack commits — `RAVANA_HEADS` in
+`boss.js` is that mapping, and the slam is the one exception, lighting the
+whole arc because the torch is the only AOE in the kit. The alternative was a
+shared chest core like the other three locked bosses use, and it would have
+made the extra heads something the player stops looking at after the
+silhouette lands.
+
+**`_enrage` carries two payloads and skips one.** The two implied heads become
+real (3 visible to 5) and a held `Game.firePhaseBeat` window fires — the fourth
+consumer of that machinery and the first that is not a Warden, which settles
+that it was never actually tier-locked. What it skips is `ctx.onEnrage`, the
+generic timed ENRAGE system card: his own beat is the held one, and raising
+both would have put two HUD surfaces on the screen in the same frame. That is
+the only line of `Boss._enrage` he does not inherit, and it is repeated
+verbatim in his override rather than restructured into the base class for one
+caller.
+
+**The threshold is guarded on `hp > 0`, and the phone-playtest HP is why.**
+`Boss.takeHit` calls `_enrage()` *before* it decides whether the hit was
+lethal. At the `hp: 5` that `config.js` still carries, a single swing crosses
+the threshold and kills in the same frame, and without the guard that opens a
+held, player-advanced story window over a corpse.
+
+**The skin is bronze, and it is a design decision with a reason rather than a
+palette pick.** Every other rakshasa and asura on the roster signals "monster"
+through an exotic skin tone — Shurpanakha's ash, Taraka's moss, Bakasura's
+sallow purple, Kumbhakarna's granite — and his respectful-treatment note names
+that flattening as the exact thing to avoid for him specifically. The
+miniature painting's classical blue was also available and was rejected on a
+second ground: the blue-violet family is already carrying `raakchyasBody`,
+`chayaBody`, `bossPlate`/`bossCore`, `wheelPlate` and `chargerHide`. A human
+skin tone argues "person" and leaves the head-arc to carry the rest, which is
+the same move Kumbhakarna's actual-face read made for his own note.
+
+**The harder half of his note is named twice and closed neither time.** The
+boon's loophole exists *because* Ravana considered a mortal beneath asking
+protection from, and SOMBRA's hunter is explicitly not Rama. No win condition
+resolves that, and the entry is equally explicit that nothing should try — no
+invented "the hunter is secretly not human" escape hatch, since nothing in
+this game's fiction earns one. So the phase beat is him reading his own boon
+back and finding the hole, and the defeat beats have him say out loud that
+whatever ended him was not the ending he was written. Left open on purpose.
+
+**The rig needed a real visual pass, and `?sim` was green through every version
+of it.** Four things only a screenshot caught, each of which the suite has no
+opinion about. The four weapon-arms were built level with the neck with their
+props laid along +X, so every prop swung straight across his own face — they
+moved down and their props now hang from the wrist instead. The head-arc fanned
+only in Z, which is the axis pointing at the camera, so it collapsed to one
+head from the side; it now fans in X and Y as well. The backglow decal behind
+the arc was a 1.7×1.0 quad at 0.16 opacity and, being `toneMapped: false`,
+rendered as a solid pale panel rather than a glow. And the trishul's prongs
+were built in the same cold steel as Chandrahas, so the two read as two
+tridents; the trishul took the court gold `palette.js`'s own note already said
+it should. The per-head flare went through the same pass: face-sized and near
+opaque, it read as a mask over the eyes rather than as a head lighting up.
+
+**Verification.** Tier-1 static checks green for gate 8 on every row, four new
+`ravana · <attack>, enraged` telegraph rows all clearing the 0.42 s floor (the
+sweep is tightest at 0.480 s), and the five recorded seeds sweep to a FAIL set
+byte-identical to the baseline captured before the session — the same six rows,
+none of them gate 8's. The fight itself was driven headlessly through every
+state: all four attacks commit and recover, the volley spawns bolts, the
+threshold reveals both heads and holds a player-advanced beat, and the death
+transition runs to `dying`. `?sim` never fights a gate-8 boss, so none of that
+would have been covered by the suite.

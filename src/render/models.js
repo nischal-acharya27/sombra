@@ -2600,3 +2600,357 @@ export function buildMaunAnkur() {
   root.userData.nodes = n;
   return root;
 }
+
+// ---------------------------------------------------------------------------
+// Ravana — gate 8's boss, and Act 2's climax
+// ---------------------------------------------------------------------------
+
+/**
+ * The ten-headed king, compressed.
+ *
+ * Two compressions carry this rig, both named in `docs/research/villain-roster.md`
+ * and both spent on something functional rather than on saving geometry:
+ *
+ * **Heads.** Five, not ten — one main head with an arc of four fanned behind
+ * it, the crown/fan arrangement temple art and Ravana Purnima effigies both
+ * settle on. Only three are visible when the fight opens (`headC`, `headL1`,
+ * `headR1`); `headL2`/`headR2` are built at zero scale and revealed by
+ * `Ravana._enrage`. Each visible head owns a telegraph flare in `n.flares`,
+ * and which head lights says which weapon is about to swing — the compression
+ * is the tell, which is the one thing that keeps the extra heads from becoming
+ * decoration the player stops reading after the first "ten heads" beat lands.
+ *
+ * **Arms.** Twenty is not buildable here either, so four are real weapon-arms
+ * (`armSweep`/`armCharge`/`armVolley`/`armSlam`, each carrying its own prop
+ * and each swung by the animator), the ordinary pair is kept for walking and
+ * posing, and a fan of static stubs behind them implies the rest. The four
+ * weapons are not one prop reskinned per attack: Chandrahas, trishul, chakra
+ * and torch are four objects, each hanging off the arm that swings it, which
+ * is what makes the twenty-arms motif mechanical rather than flavor.
+ *
+ * The skin is a warm bronze — see `lankaSkin` in `palette.js` for why it is
+ * deliberately not blue and deliberately not an exotic monster tone.
+ */
+export function buildRavana() {
+  const root = new THREE.Group();
+  const n = {};
+  /** The per-head telegraph flares, index 0 = the main head. See `Ravana._animate`. */
+  n.flares = [];
+  /** The two heads that do not exist until the threshold. See `Ravana._enrage`. */
+  n.hiddenHeads = [];
+
+  const hips = new THREE.Group();
+  hips.position.y = 1.74;
+  root.add(hips);
+  n.hips = hips;
+
+  const torso = part(0.98, 1.3, 1.1, P.lankaPlate, { pivot: 'bottom', outline: 0.05 });
+  hips.add(torso);
+  n.torso = torso;
+
+  // The vermillion drape, worn over the plate — the one large non-gold mass on
+  // him, and what stops the chest reading as a slab. Kept just inside the
+  // torso's own width so it never becomes a separate floating box.
+  const robe = part(0.94, 0.86, 1.06, P.lankaRobe, { pivot: 'top', outline: 0.03 });
+  robe.position.y = 0.46;
+  torso.add(robe);
+
+  // Heavy court gold at the collar and the belt: "richly adorned" is explicit
+  // in his entry where it was not in Duryodhana's, and it is the ornament
+  // rather than the scale that separates the two kings' silhouettes.
+  const collar = part(1.06, 0.22, 1.2, P.lankaPlateDark, { outline: 0.034 });
+  collar.position.y = 1.18;
+  torso.add(collar);
+  const belt = part(1.02, 0.2, 1.14, P.lankaPlateDark, { outline: 0.034 });
+  belt.position.y = 0.1;
+  torso.add(belt);
+
+  // -- the head arc ---------------------------------------------------------
+
+  // The neck sits above the collar and above every arm root below, which is
+  // the whole reason the arc is legible: the first build put the weapon arms
+  // level with it and the props swung straight across his face.
+  const neck = new THREE.Group();
+  neck.position.y = 1.4;
+  torso.add(neck);
+  n.head = neck;
+
+  /**
+   * One head: skull, crown, a pair of eyes and the flare decal that is this
+   * head's own telegraph. `lateral` is the Z offset (paired limbs offset in Z,
+   * not X — models face +X), `back` pulls the outer heads behind the main one
+   * and `lift` raises them, so the arc reads as a fan from the three-quarter
+   * angle the camera actually holds rather than as a row of boxes.
+   */
+  const buildHead = (scale, lateral, back, lift, tilt) => {
+    const g = new THREE.Group();
+    g.position.set(back, lift, lateral);
+    g.rotation.z = tilt;
+    g.scale.setScalar(scale);
+    neck.add(g);
+
+    const skull = part(0.5, 0.5, 0.52, P.lankaSkin, { pivot: 'bottom', outline: 0.04 });
+    g.add(skull);
+
+    // A worn crown per head — ten crowned heads is what both anchor references
+    // independently agree on, and an uncrowned head in the arc would read as a
+    // severed one.
+    const crown = part(0.4, 0.34, 0.42, P.lankaPlate, { pivot: 'bottom', outline: 0.03 });
+    crown.position.y = 0.5;
+    g.add(crown);
+    const finial = part(0.14, 0.2, 0.14, P.lankaPlateDark, { pivot: 'bottom', outline: 0.02 });
+    finial.position.y = 0.84;
+    g.add(finial);
+
+    // The jaw, hung a crack open — the head that bares its teeth before its
+    // arm commits is the whole per-head telegraph, and a closed box cannot.
+    // Far enough forward to clear the skull's own 0.5-unit outline.
+    const jaw = part(0.24, 0.16, 0.36, P.lankaSkinDark, { pivot: 'top', outline: 0.02 });
+    jaw.position.set(0.26, 0.16, 0);
+    g.add(jaw);
+
+    for (const side of [-1, 1]) {
+      const eye = decal(0.12, 0.09, P.lankaCore);
+      eye.position.set(0.27, 0.34, side * 0.12);
+      eye.rotation.y = Math.PI / 2;
+      g.add(eye);
+    }
+
+    // The flare: a halo standing just off the face, driven per-head by the
+    // animator. Its `base` is stripped out of the hit-flash bookkeeping in
+    // `Ravana`'s constructor, or a sword swing would repaint every tell white.
+    // Wider than the face and never opaque: at full strength a face-sized quad
+    // stops reading as a glow and starts reading as a mask over the eyes, which
+    // costs the tell the one thing it is for.
+    const flare = decal(0.88, 0.88, P.lankaCore, { opacity: 0.0 });
+    flare.position.set(0.34, 0.3, 0);
+    flare.rotation.y = Math.PI / 2;
+    g.add(flare);
+    n.flares.push(flare);
+    return g;
+  };
+
+  // The main head, then the arc: inner pair, then the outer pair that is not
+  // there yet. Order matters — `n.flares[0]` is the main head's.
+  n.headC = buildHead(1.0, 0, 0.04, 0, 0);
+  n.headL1 = buildHead(0.78, -0.38, -0.36, 0.44, 0.3);
+  n.headR1 = buildHead(0.78, 0.38, -0.36, 0.44, -0.3);
+  n.headL2 = buildHead(0.6, -0.64, -0.76, 0.82, 0.58);
+  n.headR2 = buildHead(0.6, 0.64, -0.76, 0.82, -0.58);
+  for (const h of [n.headL2, n.headR2]) {
+    h.userData.shownScale = h.scale.x;
+    h.scale.setScalar(0.001);
+    n.hiddenHeads.push(h);
+  }
+
+  // The backglow the remaining five heads are implied by: one halo behind the
+  // whole arc, per the entry's "others implied by silhouette/backglow". Kept
+  // small enough to sit behind the heads rather than to become a panel.
+  const coreGlow = decal(1.4, 0.62, P.lankaCore, { opacity: 0.07 });
+  coreGlow.position.set(-0.66, 0.5, 0);
+  coreGlow.rotation.y = Math.PI / 2;
+  neck.add(coreGlow);
+  n.coreGlow = coreGlow;
+
+  // `Boss`'s constructor skips exactly one node when it clones materials for
+  // the hit-flash, and this is the name it looks for. The main head's flare
+  // takes it; the other four are filtered out in `Ravana`'s constructor.
+  n.core = n.flares[0];
+
+  // -- arms -----------------------------------------------------------------
+
+  // The ordinary pair: bare, ringed, and what the walk and the idle are posed
+  // on. They carry nothing — every weapon hangs off a dedicated arm below.
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const shoulder = new THREE.Group();
+    shoulder.position.set(-0.04, 1.04, side * 0.64);
+    torso.add(shoulder);
+    n['shoulder' + key] = shoulder;
+
+    const pauldron = part(0.5, 0.34, 0.44, P.lankaPlate, { outline: 0.04 });
+    pauldron.position.y = 0.06;
+    shoulder.add(pauldron);
+
+    const upper = part(0.3, 0.6, 0.3, P.lankaSkin, { pivot: 'top', outline: 0.03 });
+    upper.position.y = -0.12;
+    shoulder.add(upper);
+
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.7;
+    shoulder.add(elbow);
+    n['elbow' + key] = elbow;
+
+    const fore = part(0.28, 0.58, 0.28, P.lankaSkin, { pivot: 'top', outline: 0.03 });
+    elbow.add(fore);
+
+    const band = part(0.32, 0.1, 0.32, P.lankaPlateDark, { outline: 0.022 });
+    band.position.y = -0.5;
+    elbow.add(band);
+
+    const fist = part(0.32, 0.3, 0.32, P.lankaSkinDark, { pivot: 'top', outline: 0.03 });
+    fist.position.y = -0.58;
+    elbow.add(fist);
+  }
+
+  /**
+   * A weapon-arm: one shoulder group with an upper/forearm under it and its
+   * prop hanging from the wrist. The animator swings whichever one the
+   * committed attack belongs to and leaves the rest in the fan.
+   *
+   * Rotating `z` by +a swings the arm from hanging (-Y) toward forward (+X),
+   * which is the whole vocabulary the pose table below is written in. Every
+   * prop hangs *down* from the grip rather than being laid along +X: pointed
+   * forward at rest they crossed his own face, which is exactly the "look at
+   * the thing" failure `docs/agents/gate-build.md` warns a screenshot catches
+   * and `?sim` never will.
+   */
+  const buildArm = (name, lateral, rest) => {
+    const shoulder = new THREE.Group();
+    shoulder.position.set(-0.08, 0.92, lateral);
+    shoulder.rotation.z = rest;
+    torso.add(shoulder);
+    n[name] = shoulder;
+    /** The fanned pose the animator returns this arm to. Read, not re-derived. */
+    shoulder.userData.rest = rest;
+
+    const upper = part(0.24, 0.52, 0.24, P.lankaSkin, { pivot: 'top', outline: 0.026 });
+    shoulder.add(upper);
+
+    const cuff = part(0.28, 0.1, 0.28, P.lankaPlateDark, { outline: 0.02 });
+    cuff.position.y = -0.48;
+    shoulder.add(cuff);
+
+    const fore = part(0.22, 0.5, 0.22, P.lankaSkin, { pivot: 'top', outline: 0.026 });
+    fore.position.y = -0.54;
+    shoulder.add(fore);
+
+    const grip = new THREE.Group();
+    grip.position.y = -1.04;
+    shoulder.add(grip);
+    return grip;
+  };
+
+  // Chandrahas — the curved sword, and the one signature both anchor
+  // references carry. Cold moon-steel, on the near-camera side, because it is
+  // the weapon the player has to recognise fastest.
+  const swordGrip = buildArm('armSweep', -0.96, -0.35);
+  {
+    const hilt = part(0.12, 0.26, 0.12, P.lankaPlateDark, { pivot: 'top', outline: 0.02 });
+    swordGrip.add(hilt);
+    const guard = part(0.3, 0.09, 0.16, P.lankaPlate, { outline: 0.022 });
+    swordGrip.add(guard);
+    // Three tapering segments, each stepped in Z, so the "curved" read comes
+    // from the silhouette rather than from geometry this engine cannot bend.
+    for (let i = 0; i < 3; i++) {
+      const seg = part(0.2 - i * 0.03, 0.48, 0.07, P.lankaSword, { pivot: 'top', outline: 0.018 });
+      seg.position.set(0, -0.24 - i * 0.42, i * 0.03);
+      seg.rotation.x = i * 0.08;
+      swordGrip.add(seg);
+    }
+  }
+
+  // The trishul — the reach thrust. The longest prop on him, because this is
+  // the weapon that closes distance, and the rest angle is what keeps its
+  // prongs off the floor between attacks.
+  const trishulGrip = buildArm('armCharge', 0.46, 0.8);
+  {
+    const haft = part(0.1, 1.7, 0.1, P.lankaPlateDark, { pivot: 'top', outline: 0.02 });
+    trishulGrip.add(haft);
+    for (const off of [-0.15, 0, 0.15]) {
+      const prong = part(0.07, off === 0 ? 0.5 : 0.36, 0.07, P.lankaPlate, { pivot: 'top', outline: 0.016 });
+      prong.position.set(0, -1.7 - (off === 0 ? 0 : 0.07), off);
+      trishulGrip.add(prong);
+    }
+  }
+
+  // The chakra — thrown, so it is the one prop that has to read as a disc from
+  // the side. A ring of eight spokes around a gold hub, held flat against the
+  // camera so the throw is legible before it leaves his hand.
+  const chakraGrip = buildArm('armVolley', -0.46, -0.5);
+  {
+    const hub = part(0.18, 0.18, 0.08, P.lankaPlateDark, { outline: 0.022 });
+    hub.position.y = -0.24;
+    chakraGrip.add(hub);
+    n.chakra = hub;
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const spoke = part(0.3, 0.09, 0.06, P.lankaPlate, { outline: 0.016 });
+      spoke.position.set(Math.cos(a) * 0.27, Math.sin(a) * 0.27, 0);
+      spoke.rotation.z = a;
+      hub.add(spoke);
+    }
+    const rim = decal(0.72, 0.72, P.lankaCore, { opacity: 0.22 });
+    rim.position.z = 0.06;
+    hub.add(rim);
+  }
+
+  // The torch — the fourth weapon, replacing the miniature painting's hooked
+  // mace on purpose: Duryodhana's entire signature *is* a gada, and a second
+  // locked boss swinging one would dilute his one identity. The flame is
+  // `lankaFlame`, kept out of the orange band so it never reads as the
+  // hunter's own fire coming back at them.
+  const torchGrip = buildArm('armSlam', 0.96, 0.55);
+  {
+    const haft = part(0.12, 1.0, 0.12, P.lankaPlateDark, { pivot: 'top', outline: 0.022 });
+    torchGrip.add(haft);
+    const bowl = part(0.28, 0.24, 0.28, P.lankaPlate, { outline: 0.024 });
+    bowl.position.y = -1.06;
+    torchGrip.add(bowl);
+    const fire = part(0.22, 0.36, 0.22, P.lankaFlame, { pivot: 'top', outline: 0 });
+    fire.position.y = -1.16;
+    torchGrip.add(fire);
+    n.torchFire = fire;
+    const fireGlow = decal(0.5, 0.6, P.lankaFlame, { opacity: 0.4 });
+    fireGlow.position.y = -1.34;
+    torchGrip.add(fireGlow);
+    n.torchGlow = fireGlow;
+  }
+
+  // The remaining sixteen, implied: static stubs fanned *behind* the four that
+  // work, compressed exactly the way the heads are. They never move, and they
+  // sit at -X so they thicken the silhouette without joining the clutter in
+  // front of him.
+  for (const side of [-1, 1]) {
+    for (let i = 0; i < 2; i++) {
+      const stub = new THREE.Group();
+      stub.position.set(-0.34, 0.86 - i * 0.22, side * (0.3 + i * 0.34));
+      stub.rotation.z = -(0.6 + i * 0.4);
+      torso.add(stub);
+      const upper = part(0.17, 0.46, 0.17, P.lankaSkinDark, { pivot: 'top', outline: 0.022 });
+      stub.add(upper);
+      const fore = part(0.15, 0.4, 0.15, P.lankaSkinDark, { pivot: 'top', outline: 0.022 });
+      fore.position.y = -0.46;
+      fore.rotation.z = side * 0.4;
+      stub.add(fore);
+    }
+  }
+
+  // -- legs -----------------------------------------------------------------
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const hip = new THREE.Group();
+    hip.position.set(0, 0, side * 0.34);
+    hips.add(hip);
+    n['hip' + key] = hip;
+
+    const thigh = part(0.38, 0.88, 0.42, P.lankaPlateDark, { pivot: 'top', outline: 0.034 });
+    hip.add(thigh);
+
+    const knee = new THREE.Group();
+    knee.position.y = -0.88;
+    hip.add(knee);
+    n['knee' + key] = knee;
+
+    const shin = part(0.34, 0.8, 0.36, P.lankaPlate, { pivot: 'top', outline: 0.032 });
+    knee.add(shin);
+
+    const foot = part(0.62, 0.2, 0.46, P.lankaPlateDark, { pivot: 'top', outline: 0.03 });
+    foot.position.set(0.1, -0.8, 0);
+    knee.add(foot);
+  }
+
+  root.userData.nodes = n;
+  return root;
+}

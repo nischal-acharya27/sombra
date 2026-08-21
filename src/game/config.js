@@ -1035,6 +1035,50 @@ export const KUMBHAKARNA = {
   phaseSpeedMul: 1.35,
 };
 
+/**
+ * Ravana — Lanka's king, gate 08's boss and Act 2's climax
+ * (`docs/SPEC-CAMPAIGN.md` § Act 2, `docs/research/villain-roster.md`).
+ *
+ * The campaign's first tier-3 fight since Duryodhana, and the first boss whose
+ * four attacks are four *weapons* rather than four shapes: Chandrahas → sweep,
+ * trishul → charge (the reach thrust that closes distance), chakra → volley,
+ * torch → slam. The shapes themselves are the vocabulary `boss.js` already
+ * shares — his entry is explicit that the twenty-arms motif is spent on
+ * reskinning those four rather than on inventing four new mechanics, and it is
+ * also why he is the one boss since the Dwar-Rakshak to carry a `volley` at
+ * all: the chakra is a thrown weapon in both anchor references, so the ranged
+ * slot is corroborated here rather than borrowed.
+ *
+ * Scale is `hw 1.7, hh 2.0` — the top of the locked-boss cluster, and
+ * deliberately under Kumbhakarna's outlier `1.8/2.2` one gate back, per his
+ * entry's own instruction not to reach it. The head-arc and the arm-fan read
+ * wider than the box; `contactDamage: 0` roster-wide is what makes that a
+ * silhouette fact rather than a threat multiplier.
+ *
+ * Every wind-up clears `tools/gatecheck.js`'s 0.42s floor enraged: the sweep,
+ * the tightest of the four, is 0.60 × 0.8 = 0.480s — the same 60ms margin
+ * every other melee boss in the game holds its own by, and not a number to go
+ * shaving.
+ */
+export const RAVANA = {
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hw: 1.7,
+  hh: 2.0,
+  speed: 3.7,
+  exp: 640,
+  contactDamage: 0,
+  enrageAt: 0.5,
+  enrageSpeedMul: 1.3,
+  enrageWindupMul: 0.8,
+  attacks: {
+    charge: { windup: 0.72, speed: 20, dur: 0.82, recover: 0.9, damage: 25, knock: 14, shake: 0.3 },
+    slam: { windup: 0.68, rise: 0.34, fall: 0.24, recover: 1.0, damage: 28, radius: 6.0, knock: 16, shake: 0.58 },
+    sweep: { windup: 0.60, active: 0.30, recover: 0.8, damage: 21, reach: 5.6, knock: 12, shake: 0.28 },
+    volley: { windup: 0.70, shots: 3, gap: 0.24, recover: 0.85, damage: 15, speed: 18, shake: 0.12 },
+  },
+  cooldown: [0.8, 1.5],
+};
+
 export const GUARDIAN = {
   hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 1.5,
