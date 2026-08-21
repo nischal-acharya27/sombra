@@ -25,7 +25,7 @@
 // descriptor is authored correctly, that one asks whether `Level` built what
 // the descriptor said.
 
-import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, LANKA_SOLDIER, KUMBHAKARNA, RAVANA, GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR } from '../src/game/config.js';
+import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, LANKA_SOLDIER, KUMBHAKARNA, RAVANA, DURYODHANA, GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR } from '../src/game/config.js';
 import { ARCHETYPES } from '../src/game/game.js';
 import { GATES } from '../src/game/gates/index.js';
 
@@ -557,6 +557,13 @@ const TELLS = [
     archetype: 'ravana',
     tell: `${name}, enraged`,
     windup: a.windup * RAVANA.enrageWindupMul,
+  })),
+  // Duryodhana's three weapon-swings, same generated shape as every other
+  // boss's row below — the sweep is the tightest at 0.58 × 0.8 = 0.464s.
+  ...Object.entries(DURYODHANA.attacks).map(([name, a]) => ({
+    archetype: 'duryodhana',
+    tell: `${name}, enraged`,
+    windup: a.windup * DURYODHANA.enrageWindupMul,
   })),
   ...Object.entries(GUARDIAN.attacks).map(([name, a]) => ({
     archetype: 'guardian',

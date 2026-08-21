@@ -1060,6 +1060,48 @@ export const KUMBHAKARNA = {
  * every other melee boss in the game holds its own by, and not a number to go
  * shaving.
  */
+/**
+ * Duryodhana — the Kuru king, gate 3's boss and the act's climax, per
+ * `docs/SPEC-CAMPAIGN.md` and `docs/research/villain-roster.md`.
+ *
+ * Deliberately mortal-scale: `hw 0.68, hh 1.35`, well short of every other
+ * locked boss's `1.5`-`1.7`/`1.9`-`2.0`, since he is the roster's one
+ * "human-scale mortal rival" and has to read that way. The campaign's first
+ * tier-3 boss to actually swing a held prop — a gada — rather than attack
+ * with its own body, so `charge` is written as the weapon-first thrust
+ * `Duryodhana.attackBox` in `boss.js` gives it (the same forward-biased
+ * shape Ravana's trishul thrust uses two gates later), not the
+ * body-straddling box every fist/horn/seal boss before him carries.
+ *
+ * No phase-transition flag — no boon, no reveal, matching his "no
+ * monstrous features" iconography — so escalation is the ordinary
+ * `enrageAt`/`enrageSpeedMul`/`enrageWindupMul` tightening alone. His entry
+ * still asks for one authored line at the threshold rather than the generic
+ * enrage card, which `Duryodhana._enrage` in `boss.js` fires as a held
+ * `Game.firePhaseBeat` window with no rig-swap callback — Ravana's own
+ * precedent for a locked boss using that machinery without one.
+ *
+ * Every wind-up clears `tools/gatecheck.js`'s 0.42s floor enraged: the
+ * sweep, the tightest of the three, is 0.58 × 0.8 = 0.464s.
+ */
+export const DURYODHANA = {
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hw: 0.68,
+  hh: 1.35,
+  speed: 3.5,
+  exp: 400,
+  contactDamage: 0,
+  enrageAt: 0.5,
+  enrageSpeedMul: 1.3,
+  enrageWindupMul: 0.8,
+  attacks: {
+    charge: { windup: 0.72, speed: 18.5, dur: 0.78, recover: 0.9, damage: 20, knock: 13, shake: 0.3 },
+    slam: { windup: 0.68, rise: 0.34, fall: 0.24, recover: 1.0, damage: 24, radius: 5.2, knock: 15, shake: 0.55 },
+    sweep: { windup: 0.58, active: 0.28, recover: 0.75, damage: 18, reach: 5.0, knock: 11, shake: 0.26 },
+  },
+  cooldown: [0.9, 1.7],
+};
+
 export const RAVANA = {
   hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 1.7,

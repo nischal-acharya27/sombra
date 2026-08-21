@@ -9,7 +9,7 @@ import { Level } from './level.js';
 import { Player } from './player.js';
 import { Raakchyas, Charger, Kawach, BhootBatti, Tantrik, Shakuni, Bakasura, Taraka, Shurpanakha, LankaSoldier, Kumbhakarna, Bolt } from './enemies.js';
 import { Corpse } from './shadow.js';
-import { Guardian, GoruMukh, Hakim, Chiranjivi, MaunAnkur, Ravana } from './boss.js';
+import { Guardian, GoruMukh, Hakim, Chiranjivi, MaunAnkur, Ravana, Duryodhana } from './boss.js';
 import { GameCamera } from './camera.js';
 import { VFX } from '../render/vfx.js';
 import { buildShard } from '../render/models.js';
@@ -56,6 +56,7 @@ export const ARCHETYPES = {
   lankaSoldier: LankaSoldier,
   kumbhakarna: Kumbhakarna,
   ravana: Ravana,
+  duryodhana: Duryodhana,
   guardian: Guardian,
   goruMukh: GoruMukh,
   hakim: Hakim,

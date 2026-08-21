@@ -152,6 +152,24 @@ export const P = {
   bakasuraHand: 0xdb5a3c,
   bakasuraHair: 0x2e2318,
 
+  // Act 1 — Duryodhana, gate 3's boss. Per docs/research/villain-roster.md: a
+  // human warrior-king, not a monster — warm gold-bronze armour, deep
+  // maroon/oxblood rather than near-black (regal, not grim), a rich crimson
+  // gada-head flare in the game's existing danger hue-family, and a
+  // saturated green waist-wrap both reference images independently put him
+  // in. Deliberately distinct from Kamsa's dark bronze/black "prison-iron"
+  // coding so the two court tyrants don't read as reskins of each other, and
+  // from Ravana's own `lankaPlate`/`lankaCore` a few gates later.
+  kuruPlate: 0xc9973f,
+  kuruPlateLight: 0xe0b463,
+  kuruPlateDark: 0x5a2430,
+  kuruCore: 0xd6222f,
+  kuruWrap: 0x2f7d4a,
+  kuruCrown: 0xe8c34a,
+  kuruCrownDark: 0xb8901f,
+  kuruSkin: 0xc98a5b,
+  kuruEye: 0xff2a1a,
+
   // Act 2 — Taraka. Per docs/research/villain-roster.md: a clean two-state
   // curse, warm and human before it, forest-demon-coded moss-green-to-black
   // after — kept apart from every existing violet/iron/slate demon on the

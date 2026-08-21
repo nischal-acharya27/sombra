@@ -1079,6 +1079,285 @@ export function buildBakasura(skin = null) {
 }
 
 // ---------------------------------------------------------------------------
+// Duryodhana — gate 3's boss, the campaign's first
+// ---------------------------------------------------------------------------
+
+const roundedGeoCache = new Map();
+
+/**
+ * A box vertex projected onto the rounded-box SDF surface (clamp to the
+ * shrunk "inner" box, then push out by `radius`) — cheap, and it composes
+ * with the existing outline/toon pipeline unchanged since the result is
+ * still one ordinary `BufferGeometry`. Validated in the `/prototype` rig
+ * that settled Duryodhana's design: a human king reads wrong as a stack of
+ * hard-edged LEGO boxes in a way a rakshasa's or a machine's silhouette
+ * does not, so he is the rig this joins the box/decal toolkit for.
+ */
+function roundedBox(w, h, d, radius, segments = 3) {
+  const key = `${w.toFixed(3)},${h.toFixed(3)},${d.toFixed(3)},${radius.toFixed(3)},${segments}`;
+  let g = roundedGeoCache.get(key);
+  if (g) return g;
+
+  const hw = w / 2, hh = h / 2, hd = d / 2;
+  const r = Math.min(radius, hw, hh, hd);
+  g = new THREE.BoxGeometry(w, h, d, segments, segments, segments);
+  const pos = g.attributes.position;
+  const ix = hw - r, iy = hh - r, iz = hd - r;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const cx = THREE.MathUtils.clamp(x, -ix, ix);
+    const cy = THREE.MathUtils.clamp(y, -iy, iy);
+    const cz = THREE.MathUtils.clamp(z, -iz, iz);
+    const qx = x - cx, qy = y - cy, qz = z - cz;
+    const len = Math.sqrt(qx * qx + qy * qy + qz * qz);
+    if (len > 1e-6) {
+      const s = r / len;
+      pos.setXYZ(i, cx + qx * s, cy + qy * s, cz + qz * s);
+    }
+  }
+  pos.needsUpdate = true;
+  g.computeVertexNormals();
+  roundedGeoCache.set(key, g);
+  return g;
+}
+
+/** `part()`'s rounded-corner sibling — same pivot/outline contract, `radius` defaulting to a fifth of the part's smallest dimension. */
+function roundedPart(w, h, d, color, { pivot = 'center', outline = 0.022, radius, segments = 3, opts } = {}) {
+  const g = new THREE.Group();
+  const rad = radius != null ? radius : Math.min(w, h, d) * 0.2;
+  const geo = roundedBox(w, h, d, rad, segments);
+  const m = new THREE.Mesh(geo, mat(color, opts));
+  m.castShadow = true;
+  m.receiveShadow = true;
+  const dy = pivot === 'top' ? -h / 2 : pivot === 'bottom' ? h / 2 : 0;
+  m.position.y = dy;
+  g.add(m);
+  if (outline > 0) {
+    const o = outlineFor(geo, outline);
+    o.position.y = dy;
+    g.add(o);
+  }
+  g.userData.mesh = m;
+  return g;
+}
+
+/**
+ * The Kuru king. A human warrior-king in full war regalia, not a monster —
+ * `hw ≈ 0.68, hh ≈ 1.35` per the roster entry, deliberately well short of
+ * every other locked boss's scale since none of them read as human and he
+ * has to. A real neck part separates head from torso (no hump), a
+ * chest-plate sits proud of the torso's own front face, and the crown is
+ * worn low at the brow line rather than balanced on top — see
+ * `prototype-duryodhana-rig.html` for the pass that found each of those.
+ */
+export function buildDuryodhana() {
+  const root = new THREE.Group();
+  const n = {};
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const hip = new THREE.Group();
+    hip.position.set(0, 0.92, side * 0.19);
+    root.add(hip);
+    n['hip' + key] = hip;
+
+    const thigh = roundedPart(0.26, 0.5, 0.26, P.kuruPlateDark, { pivot: 'top' });
+    hip.add(thigh);
+
+    const knee = new THREE.Group();
+    knee.position.y = -0.5;
+    hip.add(knee);
+    n['knee' + key] = knee;
+
+    const shin = roundedPart(0.22, 0.46, 0.22, P.kuruPlateDark, { pivot: 'top' });
+    knee.add(shin);
+
+    const greave = roundedPart(0.25, 0.2, 0.25, P.kuruPlate, { pivot: 'top', outline: 0.028 });
+    greave.position.y = -0.06;
+    knee.add(greave);
+
+    const foot = roundedPart(0.3, 0.12, 0.24, P.kuruPlateDark, { pivot: 'top' });
+    foot.position.set(0.06, -0.46, 0);
+    knee.add(foot);
+  }
+
+  const hips = new THREE.Group();
+  hips.position.y = 0.92;
+  root.add(hips);
+  n.hips = hips;
+
+  const torso = roundedPart(0.5, 0.62, 0.34, P.kuruPlate, { pivot: 'bottom', outline: 0.034 });
+  hips.add(torso);
+  n.torso = torso;
+
+  // The chest-plate: a shallower, brighter box sitting proud of the torso's
+  // own front face (+X), plus a spine-ridge decal down its centre — the
+  // piece of "armour" a flat torso block never has.
+  const chestPlate = roundedPart(0.14, 0.5, 0.3, P.kuruPlateLight, { pivot: 'bottom', outline: 0.03 });
+  chestPlate.position.set(0.2, 0.06, 0);
+  torso.add(chestPlate);
+  const ridge = decal(0.08, 0.4, P.kuruPlateDark);
+  ridge.position.set(0.28, 0.28, 0);
+  ridge.rotation.y = Math.PI / 2;
+  chestPlate.add(ridge);
+
+  // The belt: the reference-corroborated green waist-wrap, worked in low
+  // rather than at the face, with the crimson danger accent as its own gem.
+  const belt = roundedPart(0.56, 0.12, 0.38, P.kuruWrap, { pivot: 'bottom', outline: 0.03 });
+  belt.position.y = 0.02;
+  torso.add(belt);
+  const beltGem = decal(0.1, 0.1, P.kuruCore);
+  beltGem.position.set(0.3, 0.06, 0);
+  beltGem.rotation.y = Math.PI / 2;
+  belt.add(beltGem);
+
+  // The neck — its own part, so the head has somewhere to sit above the
+  // shoulder line instead of sinking into it.
+  const neck = roundedPart(0.16, 0.14, 0.16, P.kuruSkin, { pivot: 'bottom', outline: 0.02 });
+  neck.position.y = 0.62;
+  torso.add(neck);
+  n.neck = neck;
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const shoulder = new THREE.Group();
+    shoulder.position.set(0.02, 0.6, side * 0.24);
+    torso.add(shoulder);
+    n['shoulder' + key] = shoulder;
+
+    const pauldron = roundedPart(0.22, 0.16, 0.22, P.kuruPlateLight, { pivot: 'center', outline: 0.03 });
+    pauldron.position.set(0, 0.02, side * 0.02);
+    shoulder.add(pauldron);
+
+    const upper = roundedPart(0.16, 0.32, 0.16, P.kuruPlate, { pivot: 'top' });
+    upper.position.y = -0.04;
+    shoulder.add(upper);
+
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.34;
+    shoulder.add(elbow);
+    n['elbow' + key] = elbow;
+
+    const fore = roundedPart(0.14, 0.3, 0.14, P.kuruSkin, { pivot: 'top' });
+    elbow.add(fore);
+
+    const vambrace = roundedPart(0.17, 0.16, 0.17, P.kuruPlateLight, { pivot: 'top', outline: 0.026 });
+    vambrace.position.y = -0.02;
+    elbow.add(vambrace);
+
+    const hand = roundedPart(0.13, 0.13, 0.12, P.kuruSkin, { pivot: 'top', radius: 0.045 });
+    hand.position.y = -0.3;
+    elbow.add(hand);
+    n['hand' + key] = hand;
+  }
+
+  const head = new THREE.Group();
+  head.position.y = 0.15;
+  neck.add(head);
+  n.head = head;
+
+  const skull = roundedPart(0.28, 0.26, 0.26, P.kuruSkin, { pivot: 'bottom', outline: 0.026, radius: 0.05 });
+  head.add(skull);
+
+  for (const side of [-1, 1]) {
+    const brow = decal(0.1, 0.03, 0x0a0813);
+    brow.position.set(0.148, 0.205 + side * 0.006, side * 0.075);
+    brow.rotation.set(0, Math.PI / 2, side * 0.4);
+    skull.add(brow);
+  }
+
+  // Eyes lit in a hot glowing red so the face itself reads as a threat, not
+  // just the mace.
+  for (const side of [-1, 1]) {
+    const eyeWhite = decal(0.065, 0.04, 0x0a0813);
+    eyeWhite.position.set(0.147, 0.16, side * 0.075);
+    eyeWhite.rotation.y = Math.PI / 2;
+    skull.add(eyeWhite);
+    const eyeGlow = decal(0.04, 0.022, P.kuruEye, { opacity: 0.6 });
+    eyeGlow.position.set(0.149, 0.16, side * 0.075);
+    eyeGlow.rotation.y = Math.PI / 2;
+    skull.add(eyeGlow);
+    n['eyeGlow' + (side < 0 ? 'L' : 'R')] = eyeGlow;
+  }
+
+  const mouth = decal(0.17, 0.028, 0x0a0813);
+  mouth.position.set(0.148, 0.065, 0);
+  mouth.rotation.y = Math.PI / 2;
+  skull.add(mouth);
+  for (const side of [-1, 1]) {
+    const corner = decal(0.06, 0.032, 0x0a0813);
+    corner.position.set(0.148, 0.095, side * 0.09);
+    corner.rotation.set(0, Math.PI / 2, side * -0.75);
+    skull.add(corner);
+    const fang = part(0.022, 0.05, 0.022, P.bone, { pivot: 'top', outline: 0.006 });
+    fang.position.set(0.148, 0.058, side * 0.065);
+    skull.add(fang);
+    const innerFang = part(0.016, 0.032, 0.016, P.bone, { pivot: 'top', outline: 0.005 });
+    innerFang.position.set(0.148, 0.052, side * 0.022);
+    skull.add(innerFang);
+  }
+
+  // The crown: worn, not balanced — every tier's front-back extent stays
+  // inside the skull's own front bound so it tucks behind the face instead
+  // of burying the eyes, starting low at the brow line and rising well past
+  // the skull's own top to top out the silhouette.
+  const crown = new THREE.Group();
+  crown.position.y = 0.18;
+  skull.add(crown);
+
+  const browBand = roundedPart(0.24, 0.06, 0.34, P.kuruCrown, { pivot: 'bottom', outline: 0.024, radius: 0.018 });
+  browBand.position.y = -0.01;
+  crown.add(browBand);
+
+  const baseBand = roundedPart(0.26, 0.18, 0.4, P.kuruCrown, { pivot: 'bottom', outline: 0.026, radius: 0.032 });
+  baseBand.position.y = 0.05;
+  crown.add(baseBand);
+
+  const upperTier = roundedPart(0.2, 0.09, 0.28, P.kuruCrownDark, { pivot: 'bottom', outline: 0.022, radius: 0.02 });
+  upperTier.position.y = 0.23;
+  crown.add(upperTier);
+
+  for (let i = -3; i <= 3; i++) {
+    const h = 0.24 - Math.abs(i) * 0.04;
+    const spike = roundedPart(0.05, h, 0.05, P.kuruCrown, { pivot: 'bottom', outline: 0.015, radius: 0.016 });
+    spike.position.set(0, 0.32, i * 0.038);
+    crown.add(spike);
+  }
+
+  const gem = decal(0.08, 0.08, 0x3aa0d6);
+  gem.position.set(0.135, 0.09, 0);
+  gem.rotation.y = Math.PI / 2;
+  baseBand.add(gem);
+  const gemGlow = decal(0.05, 0.05, P.kuruCore);
+  gemGlow.position.set(0.14, 0.09, 0);
+  gemGlow.rotation.y = Math.PI / 2;
+  baseBand.add(gemGlow);
+
+  // The gada — the source's own signature weapon, held two-handed at idle,
+  // a shaft topped with a knobbed head that flares as the fight's one
+  // telegraph.
+  const gadaGrip = new THREE.Group();
+  gadaGrip.position.set(0.02, -0.28, 0);
+  n.handR.add(gadaGrip);
+  n.gadaGrip = gadaGrip;
+
+  const shaft = roundedPart(0.05, 0.5, 0.05, P.bone, { pivot: 'top', outline: 0.012, radius: 0.02 });
+  gadaGrip.add(shaft);
+  const gadaHead = roundedPart(0.24, 0.24, 0.24, P.kuruPlateDark, { pivot: 'top', outline: 0.03, radius: 0.09 });
+  gadaHead.position.y = -0.5;
+  gadaGrip.add(gadaHead);
+  n.gadaHead = gadaHead;
+  const gadaGlow = decal(0.26, 0.26, P.kuruCore, { opacity: 0 });
+  gadaGlow.position.set(0.13, -0.62, 0);
+  gadaGlow.rotation.y = Math.PI / 2;
+  gadaGrip.add(gadaGlow);
+  n.gadaGlow = gadaGlow;
+
+  root.userData.nodes = n;
+  return root;
+}
+
+// ---------------------------------------------------------------------------
 // Taraka — gate 4's Warden, two curse-phase rigs sharing one node vocabulary
 // ---------------------------------------------------------------------------
 

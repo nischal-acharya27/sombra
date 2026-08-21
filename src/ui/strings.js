@@ -651,8 +651,8 @@ export const STRINGS = {
   GATE3_DURYODHANA_INTRO_10_BODY: 'I chose the mace. I chose Bhima. I have wanted this exact match for years.',
   GATE3_DURYODHANA_INTRO_11_BIG: 'He swore an oath over that dice table, to break these legs of mine.',
   GATE3_DURYODHANA_INTRO_11_BODY: 'An oath is a debt like any other. I intend to make him work for collection.',
-  GATE3_DURYODHANA_INTRO_12_BIG: 'Balarama taught us both this weapon. He will not enjoy watching either of us use it.',
-  GATE3_DURYODHANA_INTRO_12_BODY: 'Watch him leave, if it comes to that. It will tell you which of us he expected to win.',
+  GATE3_DURYODHANA_INTRO_12_BIG: 'Balarama taught us both this weapon. He will not enjoy watching us use it.',
+  GATE3_DURYODHANA_INTRO_12_BODY: 'Watch him leave, if it comes to that. It tells you which of us he expected.',
   GATE3_DURYODHANA_INTRO_13_BIG: 'I hid because the war was already lost. I do not hide from you.',
   GATE3_DURYODHANA_INTRO_13_BODY: 'Whatever happens here happens standing up. Come and make it happen.',
 
@@ -673,7 +673,19 @@ export const STRINGS = {
   GATE3_DURYODHANA_DEFEAT_6_BIG: 'I lived as a king and I die on a battlefield, standing, weapon in hand.',
   GATE3_DURYODHANA_DEFEAT_6_BODY: "Ask any Kshatriya which of those deaths he'd choose. It was never the wrong one.",
   GATE3_DURYODHANA_DEFEAT_7_BIG: 'Tell Krishna I saw exactly what he signaled. I want that written down somewhere.',
-  GATE3_DURYODHANA_DEFEAT_7_BODY: "Not for pity. For the record. Some things should just be true, even if they don't matter.",
+  GATE3_DURYODHANA_DEFEAT_7_BODY: "Not for pity. For the record. Some things should be true, even if they don't matter.",
   GATE3_DURYODHANA_DEFEAT_8_BIG: 'Go on, then. The lake will be still again by morning.',
   GATE3_DURYODHANA_DEFEAT_8_BODY: 'It kept me whole for eighteen days. It will keep my name a while longer than that.',
+
+  // Gate 3 itself, now wired: the descent to Kurukshetra's lake, then the two
+  // encounters before Duryodhana — `Charger` reskinned as charging cavalry,
+  // `Kawach` as an infantry line, per `docs/SPEC-CAMPAIGN.md`'s gate-03 row.
+  // New keys rather than reused ones: the old `GATE3_*` block above this one
+  // is Naraka/Goru-Mukh, the pre-redesign gate 3, and stays as-authored
+  // rather than overwritten now that this gate has actually moved on.
+  GATE3_DURYODHANA_NAME: 'Kurukshetra',
+  GATE3_CAVALRY_TITLE: 'THREAT DETECTED',
+  GATE3_CAVALRY_BODY: 'Charger × 1',
+  GATE3_INFANTRY_TITLE: 'THREAT DETECTED',
+  GATE3_INFANTRY_BODY: 'Kawach × 1',
 };

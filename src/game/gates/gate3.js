@@ -1,160 +1,200 @@
-// Gate 3 — Naraka.
+// Gate 3 — Kurukshetra, and the lake Duryodhana hides in.
 //
-// The first hard evidence the Wheel has stopped: a processing floor for souls
-// awaiting judgment, and the queue has not moved. `docs/SPEC-CAMPAIGN.md` is
-// explicit about the register — a bureaucracy that broke, not a torture
-// chamber — so the beats below name a jam rather than a horror.
+// This is gate 3 under the fifteen-gate redesign (docs/SPEC-CAMPAIGN.md):
+// Duryodhana, not the retired Naraka/Goru-Mukh. Act 1's boss gate and its
+// most eventful — a descent from the battlefield down to the lake he hides
+// in per the source text (*Shalya Parva*), before the ground flattens into
+// the duel arena every boss fight holds to. Two sequential single-archetype
+// encounters first — `Charger` reskinned as charging cavalry, then `Kawach`
+// as an infantry line — keeping the act's own rule that no two archetypes
+// ever share a lock until Act 2 opens combination encounters.
 //
-// Two new things arrive here. Kawach, the armoured grunt whose whole idea is
-// that most of the move list does nothing to it — met alone first, same as
-// the crossing taught the charger alone, so the tell (`GATE3_KAWACH_NOTE`) is
-// learned before it is ever inferred out of a crowd. And Goru-Mukh, the
-// gate's Warden and the campaign's second boss — see `Boss` in
-// `src/game/boss.js` for what it shares with the Dwar-Rakshak and what it
-// does not.
-//
-// Flat throughout, like the crossing: three chambers and the arena, joined by
-// the same 3.8-unit gap gate 1 and gate 2 both settled on, which is the
-// measured 26% reserve against this build's running jump. Nothing here climbs
-// — Naraka is a floor to be processed on, not a summit.
+// Duryodhana is the campaign's first tier-3 boss to swing a held prop — a
+// gada — rather than attack with its own body. See `Duryodhana` in
+// `src/game/boss.js` for the kit, and `buildDuryodhana` in
+// `src/render/models.js` for the rig his roster entry's `/grilling` pass
+// settled on.
 
-import { GORU_MUKH } from '../config.js';
+import { DURYODHANA } from '../config.js';
 import { STRINGS } from '../../ui/strings.js';
-
-const ARENA_TOP = 0;
+import { P } from '../../render/palette.js';
 
 /**
- * Iron and red-black, per `docs/SPEC-CAMPAIGN.md`'s table. Where gate 1's fog
- * is violet and gate 2's is grey-blue, this one is ember behind a haze of
- * rust — the crystal accent doubles as the one warm colour in the realm, the
- * same trick gate 1's violet crystal and gate 2's cyan one both play.
+ * Dusk over the battlefield, going to ember at the horizon — Act 1's own
+ * "bronze, iron, regal-but-grounded" register (per docs/SPEC-CAMPAIGN.md's
+ * per-act table), pushed warmer and redder than gate 1's court hall and
+ * gate 2's forest road so this reads as the war's own aftermath rather than
+ * a third variation on the same light. The crystal accent doubles as
+ * `kuruCore`, his own gada-head telegraph, the same trick every prior
+ * gate's crystal plays against its Warden's core.
  */
 const REALM = {
-  sky: { zenith: 0x120606, mid: 0x3a1210, horizon: 0x8a3420 },
-  fog: { color: 0x4a1c14, near: 22, far: 118 },
+  sky: { zenith: 0x1c0e08, mid: 0x5a2e16, horizon: 0xc46a30 },
+  fog: { color: 0x6a3a1c, near: 22, far: 120 },
 
-  // Cinder and ash rather than grass — the same fields, the realm's own tone.
-  grass: 0x3a2420,
-  grassBlade: 0x5a2e22,
-  grassBladeTip: 0xb5502c,
-  rock: 0x4a2e28,
-  rockDark: 0x241412,
-  rockMoss: 0x6a2c1a,
-  stone: 0x5c3a34,
-  crystal: 0xff5a3a,
+  grass: 0x4a3a20,
+  grassBlade: 0x5c4826,
+  grassBladeTip: 0xd4a050,
+  rock: 0x4a3624,
+  rockDark: 0x241810,
+  rockMoss: 0x3a2c18,
+  stone: 0x6e5638,
+  crystal: P.kuruCore,
 
-  mist: { back: 0x8a4030, front: 0x4a1c14 },
-  ridges: [0x241412, 0x3a2018, 0x4a2820],
+  mist: { back: 0xa06838, front: 0x4a2410 },
+  ridges: [0x1c1008, 0x2e1e10, 0x4a3420],
 };
 
+const ARENA_TOP = -6;
+
 /**
- * Four chambers, every gap 3.8 — the same figure gate 1 and gate 2 measured
- * their reserve against, so nothing here needed re-deriving. Flat throughout:
- * a processing floor has no summit to offer, and gate 1 already owns the
- * climb.
+ * The battlefield, then the descent, then the lake's own flat basin.
+ *
+ * The stacked-ledge climb gate 2 measured is reused here upside down: the
+ * same 4-unit x-overlap and `thickness: 1.0` `?vtest`-validated clearance,
+ * stepping the ground *down* by 3 a ledge instead of up. The one real gap —
+ * 3.8 wide, the same width every gate's own gap is measured against per
+ * `docs/DECISIONS.md`'s "6.08-unit running jump" entry — sits at the lake's
+ * own edge, so the last thing crossed before the duel is the gap itself.
+ * Flat and barren from there on, like every boss arena in the campaign: his
+ * sweep reaches 5.0 units and his slam's shockwave 5.2, and a boulder in
+ * here is a thing to be pinned against, not cover.
  */
 const SEGMENTS = [
-  // Approach: nothing to fight yet, room to read the realm.
-  { x0: -6, x1: 28, top: 0, boulders: 3, pillars: 2, crystals: 1 },
+  // The battlefield: bare ground, the war's own debris rather than forest
+  // scatter.
+  { x0: -6, x1: 30, top: 0, barren: true, depth: 9, boulders: 3, pillars: 2 },
 
-  // Kawach's chamber: sealed, and nothing else spawns in it — the same
-  // isolation gate 2's causeway gave the charger.
-  { x0: 31.8, x1: 64, top: 0, boulders: 2, pillars: 3, crystals: 1 },
+  // The cavalry's own ground — wide and flat, clear sightlines for a
+  // charge's telegraph, the same "room to read it" call gate 1's hall
+  // makes for Shakuni's die. Thin `thickness`, not the usual flat-ground 6:
+  // this floor's x-range overlaps the descent ledge just past it, and a
+  // thick floor's solid body reaches down far enough to bury that ledge —
+  // `tools/gatecheck.js`'s `headroomClear` is what caught it.
+  { x0: 30, x1: 66, top: 0, barren: true, depth: 9, pillars: 2, thickness: 1.0 },
 
-  // The mixed chamber: Kawach alongside what gate 1 already taught.
-  { x0: 67.8, x1: 104, top: 0, boulders: 3, pillars: 2, crystals: 2 },
+  // The descent toward the lake: two stacked ledges, stepping down.
+  { x0: 62, x1: 74, top: -3, barren: true, depth: 5, thickness: 1.0, boulders: 1 },
+  { x0: 70, x1: 86, top: -6, barren: true, depth: 5, thickness: 1.0, boulders: 1 },
 
-  // Goru-Mukh's arena — long, flat, nowhere to run.
-  { x0: 107.8, x1: 150, top: ARENA_TOP, boulders: 2, pillars: 2, crystals: 2, thickness: 6 },
+  // The infantry's line, at grade with the lake.
+  { x0: 86, x1: 120, top: -6, barren: true, depth: 9, pillars: 2, thickness: 6 },
+
+  // The one real gap, at the lake's own edge.
+  { x0: 123.8, x1: 190, top: ARENA_TOP, barren: true, depth: 10, thickness: 6, boulders: 2, pillars: 2 },
 ];
 
 /**
- * Naraka's Warden: the campaign's second boss. `GoruMukh extends Boss` in
- * `src/game/boss.js`; the numbers are its own rather than the Dwar-Rakshak's
- * elevated, because a boss is bespoke by definition — see `CONTEXT.md`.
+ * Charger, reskinned as Kuru cavalry — Act 1's own manav bronze, the same
+ * skin gate 1's court guards wear, since this is the same king's army met
+ * a gate later. Per docs/SPEC-CAMPAIGN.md's gate-03 table ("Charger →
+ * cavalry"). Its solo debut here — met alone, ahead of Kawach — is what
+ * resolves the archetype's own debut across the campaign: gate 9 combines
+ * it with Kawach and Tantrik, and a hunter who has never met it alone would
+ * be reading three tells at once.
+ */
+const CAVALRY_SKIN = { body: P.manavPlate, dark: P.manavPlateDark, eye: P.manavCore };
+
+/**
+ * Kawach, left at its own iron-brown plate rather than reskinned. Not every
+ * archetype in a gate's table needs a palette override — its default already
+ * reads as "armoured infantry" on its own, and a second manav-toned reskin
+ * beside the cavalry's would blur the two into one force instead of two.
  */
 const WARDEN = {
-  archetype: 'goruMukh',
-  title: STRINGS.GATE3_WARDEN_TITLE,
-  stats: GORU_MUKH,
+  archetype: 'duryodhana',
+  title: STRINGS.GATE3_DURYODHANA_WARDEN_TITLE,
+  stats: DURYODHANA,
 };
 
 /**
- * Three encounters: Kawach alone, Kawach alongside a raakchyas pair, then the
- * Warden. `tools/gatecheck.js`'s `soloDebut` check is what makes "alone" a
- * fact rather than an intention — Kawach's kind is the only one in the first
- * encounter's spawn list, so it is met and read before it is ever asked to
- * share a fight.
+ * Three encounters, the table's own count: two before him, single-archetype
+ * throughout, holding Act 1's own no-combination rule even at its boss gate.
  */
 const ENCOUNTERS = [
   {
-    id: 'kawach-alone',
-    trigger: 40,
-    lock: [33, 62],
+    id: 'cavalry',
+    trigger: 46,
+    lock: [32, 64],
     intro: {
-      title: STRINGS.GATE3_KAWACH_TITLE,
-      body: STRINGS.GATE3_KAWACH_BODY,
-      note: STRINGS.GATE3_KAWACH_NOTE,
+      title: STRINGS.GATE3_CAVALRY_TITLE,
+      body: STRINGS.GATE3_CAVALRY_BODY,
     },
-    spawns: [{ type: 'kawach', x: 50, delay: 0.3 }],
+    spawns: [{ type: 'charger', x: 50, delay: 0.3, skin: CAVALRY_SKIN }],
   },
   {
-    id: 'the-queue',
-    trigger: 76,
-    lock: [69, 102],
+    id: 'infantry',
+    trigger: 100,
+    lock: [88, 118],
     intro: {
-      title: STRINGS.GATE3_PROCESSING_TITLE,
-      body: STRINGS.GATE3_PROCESSING_BODY,
+      title: STRINGS.GATE3_INFANTRY_TITLE,
+      body: STRINGS.GATE3_INFANTRY_BODY,
     },
-    spawns: [
-      { type: 'kawach', x: 85, delay: 0 },
-      { type: 'raakchyas', x: 80, delay: 1.0 },
-      { type: 'raakchyas', x: 92, delay: 1.8 },
-    ],
+    spawns: [{ type: 'kawach', x: 103, delay: 0.3 }],
   },
   {
-    id: 'goru-mukh',
-    trigger: 120,
-    lock: [109, 149],
+    id: 'duryodhana',
+    trigger: 150,
+    lock: [126, 188],
     boss: true,
-    intro: { title: STRINGS.GATE3_GORUMUKH_TITLE, body: WARDEN.title },
-    spawns: [{ type: 'warden', x: 135, delay: 0.9 }],
+    intro: { title: STRINGS.GATE3_DURYODHANA_TITLE, body: WARDEN.title },
+    spawns: [{ type: 'warden', x: 160, delay: 0.9 }],
   },
 ];
 
 /**
- * Two boundary beats, the same shape gate 2's own take: the System naming
- * what it sees on arrival, and a shorter line once the Warden is down.
- * Naraka is not the glitch gate2's crossing was — the realm is already
- * catalogued (`docs/DECISIONS.md`'s naming table: unchanged, already Nepali)
- * — so neither beat carries `glitch`.
+ * `docs/DECISIONS.md` § "A Warden's intro and defeat are a scene, not a
+ * line", extended to the act's boss per docs/SPEC-CAMPAIGN.md's own call:
+ * thirteen paged 'intro' beats and eight paged 'cleared' beats, with one
+ * 'phase' beat between them fired by `Duryodhana._enrage` in `boss.js`
+ * through `Game.firePhaseBeat` — his "no phase-transition" flag is about the
+ * rig, not the line, per his roster entry.
  */
+const introBeat = (big, body) => ({ at: 'intro', title: STRINGS.GATE3_DURYODHANA_WARDEN_TITLE, big, body });
+const clearedBeat = (big, body) => ({ at: 'cleared', title: STRINGS.GATE3_DURYODHANA_WARDEN_TITLE, big, body });
+
 const BEATS = [
+  introBeat(STRINGS.GATE3_DURYODHANA_INTRO_1_BIG, STRINGS.GATE3_DURYODHANA_INTRO_1_BODY),
+  introBeat(STRINGS.GATE3_DURYODHANA_INTRO_2_BIG, STRINGS.GATE3_DURYODHANA_INTRO_2_BODY),
+  introBeat(STRINGS.GATE3_DURYODHANA_INTRO_3_BIG, STRINGS.GATE3_DURYODHANA_INTRO_3_BODY),
+  introBeat(STRINGS.GATE3_DURYODHANA_INTRO_4_BIG, STRINGS.GATE3_DURYODHANA_INTRO_4_BODY),
+  introBeat(STRINGS.GATE3_DURYODHANA_INTRO_5_BIG, STRINGS.GATE3_DURYODHANA_INTRO_5_BODY),
+  introBeat(STRINGS.GATE3_DURYODHANA_INTRO_6_BIG, STRINGS.GATE3_DURYODHANA_INTRO_6_BODY),
+  introBeat(STRINGS.GATE3_DURYODHANA_INTRO_7_BIG, STRINGS.GATE3_DURYODHANA_INTRO_7_BODY),
+  introBeat(STRINGS.GATE3_DURYODHANA_INTRO_8_BIG, STRINGS.GATE3_DURYODHANA_INTRO_8_BODY),
+  introBeat(STRINGS.GATE3_DURYODHANA_INTRO_9_BIG, STRINGS.GATE3_DURYODHANA_INTRO_9_BODY),
+  introBeat(STRINGS.GATE3_DURYODHANA_INTRO_10_BIG, STRINGS.GATE3_DURYODHANA_INTRO_10_BODY),
+  introBeat(STRINGS.GATE3_DURYODHANA_INTRO_11_BIG, STRINGS.GATE3_DURYODHANA_INTRO_11_BODY),
+  introBeat(STRINGS.GATE3_DURYODHANA_INTRO_12_BIG, STRINGS.GATE3_DURYODHANA_INTRO_12_BODY),
+  introBeat(STRINGS.GATE3_DURYODHANA_INTRO_13_BIG, STRINGS.GATE3_DURYODHANA_INTRO_13_BODY),
   {
-    at: 'enter',
-    title: STRINGS.GATE3_BEAT_ENTER_TITLE,
-    big: STRINGS.GATE3_BEAT_ENTER_BIG,
-    body: STRINGS.GATE3_BEAT_ENTER_BODY,
+    at: 'phase',
+    title: STRINGS.GATE3_DURYODHANA_WARDEN_TITLE,
+    big: STRINGS.GATE3_DURYODHANA_ENRAGE_BIG,
+    body: STRINGS.GATE3_DURYODHANA_ENRAGE_BODY,
   },
-  {
-    at: 'cleared',
-    title: STRINGS.GATE3_BEAT_CLEARED_TITLE,
-    big: STRINGS.GATE3_BEAT_CLEARED_BIG,
-    body: STRINGS.GATE3_BEAT_CLEARED_BODY,
-  },
+  clearedBeat(STRINGS.GATE3_DURYODHANA_DEFEAT_1_BIG, STRINGS.GATE3_DURYODHANA_DEFEAT_1_BODY),
+  clearedBeat(STRINGS.GATE3_DURYODHANA_DEFEAT_2_BIG, STRINGS.GATE3_DURYODHANA_DEFEAT_2_BODY),
+  clearedBeat(STRINGS.GATE3_DURYODHANA_DEFEAT_3_BIG, STRINGS.GATE3_DURYODHANA_DEFEAT_3_BODY),
+  clearedBeat(STRINGS.GATE3_DURYODHANA_DEFEAT_4_BIG, STRINGS.GATE3_DURYODHANA_DEFEAT_4_BODY),
+  clearedBeat(STRINGS.GATE3_DURYODHANA_DEFEAT_5_BIG, STRINGS.GATE3_DURYODHANA_DEFEAT_5_BODY),
+  clearedBeat(STRINGS.GATE3_DURYODHANA_DEFEAT_6_BIG, STRINGS.GATE3_DURYODHANA_DEFEAT_6_BODY),
+  clearedBeat(STRINGS.GATE3_DURYODHANA_DEFEAT_7_BIG, STRINGS.GATE3_DURYODHANA_DEFEAT_7_BODY),
+  clearedBeat(STRINGS.GATE3_DURYODHANA_DEFEAT_8_BIG, STRINGS.GATE3_DURYODHANA_DEFEAT_8_BODY),
 ];
 
 export const GATE_3 = {
   id: 'gate-3',
-  name: STRINGS.GATE3_NAME,
+  name: STRINGS.GATE3_DURYODHANA_NAME,
   realm: REALM,
   beats: BEATS,
 
   spawnX: 2,
-  voidY: -26,
+  /** Below the descent's lowest ledge and the lake's own arena floor. */
+  voidY: -32,
   arenaTop: ARENA_TOP,
-  exitX: 140,
-  end: 150,
+  exitX: 184,
+  end: 190,
 
   segments: SEGMENTS,
   encounters: ENCOUNTERS,

@@ -3287,3 +3287,89 @@ state: all four attacks commit and recover, the volley spawns bolts, the
 threshold reveals both heads and holds a player-advanced beat, and the death
 transition runs to `dying`. `?sim` never fights a gate-8 boss, so none of that
 would have been covered by the suite.
+
+## Gate 3 becomes Duryodhana's Kurukshetra, and the campaign's second new locked boss gets built
+
+*2026-08-21.* Gate 3 was the retired ten-gate spec's Naraka, closed by
+`GoruMukh`. Under `docs/SPEC-CAMPAIGN.md`'s fifteen-gate redesign it is
+Duryodhana's — Act 1's own climax, a descent from the battlefield down to the
+lake he hides in per the *Shalya Parva*, then the flat duel arena every boss
+fight holds to. `GoruMukh` and the rest of the old five `Boss` subclasses stay
+in `boss.js`: two of issue #40's four locked bosses (Hiranyakashipu,
+Mahishasura) still don't exist, so the spec's own delete-all-five condition
+isn't met yet. The old gate 3's `GATE3_*` strings (Naraka/Goru-Mukh) are left
+as-authored rather than deleted or overwritten — dead now that this gate has
+moved on, but nothing else references them, so removing them would be tidying
+with no reader to matter to.
+
+**He is the first tier-3 boss to swing a held prop, and the kit had to say so
+by shape, not just by rig.** Every locked boss before him — Guardian,
+Goru-Mukh, Hakim, Chiranjivi — hits with its own body, so their `charge`
+attack straddles the body in a fixed box. Duryodhana's roster entry is
+explicit that the gada, not his fists, is the signature, so `charge` is
+written the way Ravana's own trishul thrust is two gates later: a
+forward-biased box computed off `facing`, because a mace swung from a
+mortal-scale `hw: 0.68` body reads as a fist-check if the box is centred on
+him instead of on where the weapon actually lands.
+
+**No phase-transition flag still fires a phase beat — Ravana's own precedent,
+used here for the first time by the boss it was written about.** His roster
+entry is explicit the "no phase-transition" flag is about the rig (no boon,
+no reveal, nothing to swap) and not about speech: the enrage threshold is
+still the authored hook for a line about his own grievance
+(`GATE3_DURYODHANA_ENRAGE_BIG/BODY`). `Duryodhana._enrage` in `boss.js`
+therefore skips the generic timed `ctx.onEnrage` card and calls
+`ctx.firePhaseBeat?.()` with no rig-swap callback, exactly the substitution
+gate 8's own `Ravana._enrage` makes — except gate 8 was written second and
+cites this fight as where the precedent was heading. Guarded on `hp > 0` for
+the same reason Ravana's is: `Boss.takeHit` calls `_enrage()` before it knows
+whether the hit was lethal, and at the phone-playtest `hp: 5` one swing can
+cross the threshold and kill in the same frame.
+
+**The rig is the campaign's first to use rounded-box geometry, ported from
+`prototype-duryodhana-rig.html`'s validated pass.** Every rig before his is
+built from bare `BoxGeometry` via `part()`, and a first painted-sprite pass at
+his design read wrong for exactly the reason every other rig gets away with
+hard edges: a human king has to read as a person before he reads as a
+silhouette, and a stack of LEGO-edged boxes fights that. The prototype's
+`roundedBox`/`roundedPart` helpers — vertices projected onto a rounded-box SDF
+surface, cached by dimensions like every other geometry in `models.js` — carry
+over into `buildDuryodhana` unchanged. No other rig was converted: this is
+Duryodhana's own build spending the design pass that validated the technique,
+not a campaign-wide migration, which stays future work.
+
+**The battlefield realm needed its own thickness fix, not a new gap number.**
+The descent toward the lake reuses gate 2's validated stacked-ledge shape (a
+4-unit x-overlap, `thickness: 1.0` on each ledge) run downward instead of up.
+The first pass kept the flat cavalry chamber's floor at the campaign's usual
+flat-ground `thickness: 6`, which — since descending means *that* floor is now
+the "high" side of the overlap — reached down far enough to bury the ledge
+below it entirely; `tools/gatecheck.js`'s `headroomClear` caught it as a 23%
+jump reserve where 4.68 units were being asked of a 6.08-unit running jump for
+a crossing that should have been a free drop. Thinning that one floor to
+`thickness: 1.0` (it plays the same "ledge" role in the overlap that an actual
+ledge does) fixed it without touching the gap width or the ledge shape gate 2
+already validated.
+
+**Two of the pre-drafted intro/defeat lines were over the 30-word glance
+budget, first read by a gate that could actually enforce it.** The 13
+intro/8 defeat beats were drafted into `strings.js` as prep content before
+this gate existed (`docs/SPEC-CAMPAIGN.md`'s gate-03 section names the exact
+keys), so `tools/gatecheck.js`'s `storyBeats` check had never run against
+them. `INTRO_12` (35 words) and `DEFEAT_7` (31 words) were trimmed to 30 and
+30 respectively, preserving the line rather than cutting a sentence — the
+same "beat count, not cramming" instruction `docs/agents/gate-build.md` gives.
+
+**Verification.** Tier-1 static checks green for gate 3 on every row,
+including `solo debut` for both `charger` (met alone in the cavalry
+encounter) and `duryodhana` — the `charger` row is what resolves gate 9's
+standing FAIL, since gate 9 was the archetype's first appearance anywhere in
+the campaign until now and combined it with three other types on arrival.
+Three new `duryodhana · <attack>, enraged` telegraph rows all clear the
+0.42 s floor (the sweep is tightest at 0.464 s), and the five recorded seeds
+sweep to the same six-row baseline FAIL set as before the session, none of
+them gate 3's or gate 9's. The fight was driven headlessly through the
+enrage threshold (confirmed `firePhaseBeat` opens and drains), the kill, and
+the death transition, with no thrown exceptions; a screenshot at the arena
+confirmed the crown, armor palette and gada read as designed and that the
+telegraph-state pose is legible next to the hunter for scale.
