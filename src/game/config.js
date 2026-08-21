@@ -193,7 +193,7 @@ export const MAGIC = {
 };
 
 export const RAAKCHYAS = {
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 46, // restored: pre-hack value, verified before the phone-playtest hack
   hw: 0.52,
   hh: 0.5,
   speed: 4.4,
@@ -239,7 +239,7 @@ export const RAAKCHYAS = {
  * the hunter; only what it *does*.
  */
 export const CHARGER = {
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 64, // restored: pre-hack value — `charge.recover` measures 59 of its 64 HP
   hw: 0.62,
   hh: 0.62,
   // Slower on its feet than a raakchyas. It is not a chaser — walking away from a
@@ -301,7 +301,7 @@ export const CHARGER = {
  * decides "nothing" from "everything".
  */
 export const KAWACH = {
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 72, // the armoured grunt, so the campaign's toughest regular
   hw: 0.66,
   hh: 0.76,
   speed: 2.6,
@@ -444,7 +444,7 @@ export const CHAYA = {
  */
 export const KEVAT = {
   ...CHARGER,
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 210, // restored: pre-hack FERRYMAN value. Not spawned by any gate
   hw: 0.7,
   hh: 0.7,
   speed: 3.2,
@@ -466,7 +466,7 @@ export const KEVAT = {
 };
 
 export const BHOOT_BATTI = {
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 30, // restored: pre-hack WISP value
   hw: 0.38,
   hh: 0.38,
   speed: 3.0,
@@ -513,7 +513,7 @@ export const BHOOT_BATTI = {
  * stops casting rather than stacking a fight nobody could clear in time.
  */
 export const TANTRIK = {
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 38, // a summoner is fragile — the threat is what it raises, not its body
   hw: 0.42,
   hh: 0.64,
   speed: 2.4,
@@ -548,7 +548,7 @@ export const TANTRIK = {
  */
 export const ATRIPTA = {
   ...TANTRIK,
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 190, // not spawned by any gate
   hw: 0.56,
   hh: 0.82,
   speed: 2.1,
@@ -581,7 +581,7 @@ export const ATRIPTA = {
  */
 export const VYAGHRI = {
   ...CHARGER,
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 88, // not spawned by any gate
   hw: 0.72,
   hh: 0.7,
   speed: 3.4,
@@ -621,7 +621,7 @@ export const VYAGHRI = {
  */
 export const AMAR_YODDHA = {
   ...CHARGER,
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 210, // not spawned by any gate
   hw: 0.7,
   hh: 0.72,
   speed: 3.5,
@@ -669,7 +669,7 @@ export const AMAR_YODDHA = {
  * the fan risks several cards landing at once, not one.
  */
 export const SHAKUNI = {
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 200, // gate 1: the campaign's first Warden, anchored near the pre-hack KEVAT 210
   hw: 0.46,
   hh: 1.15,
   speed: 3.2,
@@ -726,7 +726,7 @@ export const SHAKUNI = {
  * `SHAKUNI` above establishes for a tier-2 Warden.
  */
 export const BAKASURA = {
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 260, // gate 2
   hw: 1.0,
   hh: 1.25,
   speed: 2.3,
@@ -780,7 +780,7 @@ export const BAKASURA = {
  */
 export const TARAKA = {
   ...CHARGER,
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 340, // gate 4
   hw: 0.78,
   hh: 1.3,
   speed: 4.0,
@@ -850,7 +850,7 @@ export const KAIKEYI_FORK = { jumpY: 0.4 };
  */
 export const SHURPANAKHA = {
   ...RAAKCHYAS,
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 420, // gate 6
   hw: 0.46,
   hh: 0.95,
   // Slower than the grunt she extends and much slower than Taraka's 4.0
@@ -918,7 +918,7 @@ export const SHURPANAKHA = {
  */
 export const LANKA_SOLDIER = {
   ...KAWACH,
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 54, // rank-and-file, between the raakchyas and the charger
   // Taller and narrower than the shield it extends (0.66/0.76), which is the
   // silhouette half of the same "this is not that" job the reach does.
   hw: 0.5,
@@ -967,7 +967,7 @@ export const LANKA_SOLDIER = {
  * Taraka two gates back.
  */
 export const KUMBHAKARNA = {
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 500, // gate 7
   hw: 1.8,
   hh: 2.2,
   // Slowest thing in the game that still chases. The size is not the threat;
@@ -1085,7 +1085,7 @@ export const KUMBHAKARNA = {
  * sweep, the tightest of the three, is 0.58 × 0.8 = 0.464s.
  */
 export const DURYODHANA = {
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 640, // gate 3: a locked boss, so a spike above the Warden curve
   hw: 0.68,
   hh: 1.35,
   speed: 3.5,
@@ -1103,7 +1103,7 @@ export const DURYODHANA = {
 };
 
 export const RAVANA = {
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 900, // gate 8: act 2's locked boss, at the pre-hack GUARDIAN 900
   hw: 1.7,
   hh: 2.0,
   speed: 3.7,
@@ -1137,7 +1137,7 @@ export const RAVANA = {
  */
 export const MATHURA_WRESTLER = {
   ...CHARGER,
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 68, // a wrestler trades reach for bulk
   hw: 0.4,
   hh: 0.88,
   speed: 3.6,
@@ -1181,7 +1181,7 @@ export const MATHURA_WRESTLER = {
  * it as spectacle.
  */
 export const KAMSA = {
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 620, // gate 9
   hw: 0.58,
   hh: 1.05,
   speed: 2.3,
@@ -1238,7 +1238,7 @@ export const KAMSA = {
  * tighten together at the reveal rather than one escalating on its own.
  */
 export const PUTANA = {
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 560, // gate 10: her table asks for intimate, not for a damage sponge
   hw: 0.62,
   hh: 1.15,
   speed: 2.6,
@@ -1293,7 +1293,7 @@ export const PUTANA = {
 };
 
 export const GUARDIAN = {
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 900, // restored: pre-hack value. Not spawned by any gate
   hw: 1.5,
   hh: 1.9,
   speed: 3.6,
@@ -1333,7 +1333,7 @@ export const GUARDIAN = {
  * `telegraphs()` holds every tell to. Worth knowing, not a number to shave.
  */
 export const GORU_MUKH = {
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 420, // not spawned by any gate
   hw: 1.7,
   hh: 2.0,
   speed: 3.4,
@@ -1366,7 +1366,7 @@ export const GORU_MUKH = {
  * hold theirs by.
  */
 export const HAKIM = {
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 470, // retired with gate 6's rebuild; not spawned by any gate
   hw: 1.6,
   hh: 1.95,
   speed: 3.5,
@@ -1401,7 +1401,7 @@ export const HAKIM = {
  * the same margin the campaign's other melee bosses hold theirs by.
  */
 export const CHIRANJIVI = {
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 520, // not spawned by any gate
   hw: 1.65,
   hh: 2.0,
   speed: 3.6,
@@ -1437,7 +1437,7 @@ export const CHIRANJIVI = {
  */
 export const BAKAYA = {
   ...TANTRIK,
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 700, // retired with gate 9's rebuild; not spawned by any gate
   hw: 0.6,
   hh: 0.86,
   speed: 2.0,
@@ -1474,7 +1474,7 @@ export const BAKAYA = {
  * melee bosses hold theirs by.
  */
 export const MAUN_ANKUR = {
-  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hp: 900, // retired with gate 10's rebuild; not spawned by any gate
   hw: 1.7,
   hh: 2.05,
   speed: 3.7,
