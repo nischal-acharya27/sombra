@@ -192,5 +192,44 @@ export const P = {
   kaikeyiSkin: 0xa87454,
   kaikeyiHair: 0x241610,
 
+  // Act 2 — Shurpanakha. Per docs/research/villain-roster.md: two rigs, one
+  // person. The human disguise lifts straight off the TV-serial reference —
+  // gold jewelry, a cowrie-shell-banded headdress, a red drape, heavy kohl —
+  // and needs no invention. `shurpaDrape` is the fresh crimson Kaikeyi's own
+  // `kaikeyiRobe` was deliberately pulled away from (dried wine, not this),
+  // and `shurpaGold` sits between Kaikeyi's ornament-bright gold and
+  // Duryodhana's armor-toned plate.
+  shurpaSkin: 0xb07a54,
+  shurpaDrape: 0xa8202c,
+  shurpaDrapeDark: 0x5e1018,
+  shurpaGold: 0xc9a03e,
+  shurpaShell: 0xe4dcc8,
+  // Black in BOTH forms, not the second reference's red — the transformation
+  // has to read as violence done to a person rather than a costume change,
+  // the same logic Taraka's pelts carry across her own two phases.
+  shurpaHair: 0x160f0c,
+  // True form: pale ash-grey with dull, dried-blood vein-cracks. The maroon is
+  // deliberately duller than the game's danger-red (`raakchyasEye`'s 0xff3b52)
+  // so a marking on her skin never competes with an actual attack telegraph.
+  shurpaAsh: 0x9a9690,
+  shurpaAshDark: 0x5c5a56,
+  shurpaVein: 0x6e2028,
+  // The shared damage-signal amber again (Bakasura's hands, Taraka's eye) —
+  // the roster spends no new telegraph hue on her, by her own entry's call.
+  shurpaEye: 0xffb347,
+
+  // Gate 6's two reskins, per docs/SPEC-CAMPAIGN.md's gate-06 table. The
+  // forest rakshasa pulls the grunt's court-violet toward Panchavati bark and
+  // leaf-rot; the jungle summoner-priest pulls the Tantrik's ash-linen robe
+  // toward river-clay and bone. Only colour moves in either — the pounce and
+  // the plant-and-cast underneath are the archetypes' own, unchanged, the
+  // same reskin discipline gate 2's village rakshasa and gate 4's wisps keep.
+  forestRakshasaBody: 0x2e3620,
+  forestRakshasaDark: 0x161c10,
+  forestRakshasaSpine: 0x4a3420,
+  junglePriestRobe: 0x8a7a5c,
+  junglePriestRobeDark: 0x54492f,
+  junglePriestSigil: 0xd8f0a8,
+
   outline: 0x0a0813,
 };

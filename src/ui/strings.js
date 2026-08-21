@@ -288,22 +288,84 @@ export const STRINGS = {
   GATE5_REGRET_JUMP_BIG: 'Bharata never forgave me either. He wears the crown like a wound.',
   GATE5_REGRET_JUMP_BODY: 'So do I, if you look closely enough.',
 
-  // -- gate 6: Manav-lok -----------------------------------------------------
-  GATE6_NAME: 'Manav-lok',
-  GATE6_WARDEN_TITLE: 'HAKIM',
-  GATE6_MARKET_TITLE: 'THREAT DETECTED',
-  GATE6_MARKET_BODY: 'Raakchyas × 2  ·  Bhoot-Batti × 1',
-  GATE6_ANTECHAMBER_TITLE: 'THREAT DETECTED',
-  GATE6_ANTECHAMBER_BODY: 'Kawach × 1  ·  Tantrik × 1  ·  Raakchyas × 1',
-  GATE6_HAKIM_TITLE: 'GATE BOSS',
-  GATE6_BEAT_ENTER_TITLE: 'THE SYSTEM',
-  GATE6_BEAT_ENTER_BIG: 'HOME, ALMOST',
-  GATE6_BEAT_ENTER_BODY: 'Every door here opens. Nothing behind them is right.',
-  // Not "THE SYSTEM" — the first real conversation in the game, and the
-  // reveal `docs/SPEC-CAMPAIGN.md` names as gate 6's whole job.
-  GATE6_BEAT_CLEARED_TITLE: 'HAKIM',
-  GATE6_BEAT_CLEARED_BIG: 'YAMA STOPPED JUDGING',
-  GATE6_BEAT_CLEARED_BODY: 'He could not bear it. Someone still has to.',
+  // -- gate 6: Panchavati ----------------------------------------------------
+  //
+  // Gate 6 under the fifteen-gate redesign: Shurpanakha, not the retired
+  // Manav-lok/Hakim. Her roster entry (docs/research/villain-roster.md) flags
+  // her as the second-highest respectful-treatment risk on the list and
+  // leaves exactly one thing open for whoever writes these beats: her
+  // *interiority* — the text's own flattening of her into Ravana's sister,
+  // the catalyst, a plot device. So her thirteen intro beats are hers rather
+  // than her brother's: the forest, the asking, the refusal, the nose. Khara
+  // and Ravana arrive late and briefly, and the war she is blamed for
+  // starting is named once, by her, as something done in her name rather
+  // than at her word.
+  //
+  // The defeat beats use SORGI's escort framing throughout, never victory
+  // framing — an unjudged soul the stopped Wheel is holding, not a monster
+  // put down. The mutilation is never staged as something the hunter
+  // delivers, witnesses, or approves of; it is already done when she arrives,
+  // and the only person who describes it is her.
+  GATE6_NAME: 'Panchavati',
+  GATE6_WARDEN_TITLE: 'SHURPANAKHA',
+  GATE6_PRIEST_TITLE: 'THREAT DETECTED',
+  GATE6_PRIEST_BODY: 'Tantrik × 1',
+  GATE6_PRIEST_NOTE: 'It cannot harm you at all. It <b>raises</b> what can, and it plants itself to do it.',
+  GATE6_CLEARING_TITLE: 'THREAT DETECTED',
+  GATE6_CLEARING_BODY: 'Raakchyas × 2  ·  Tantrik × 1',
+  GATE6_CLEARING_NOTE: 'The <b>priest</b> deals no damage and raises what does. Choose what you kill first.',
+  GATE6_SHURPANAKHA_TITLE: 'GATE WARDEN',
+
+  GATE6_SHURPANAKHA_INTRO_1_BIG: 'This forest was mine before it was anyone\u2019s story.',
+  GATE6_SHURPANAKHA_INTRO_1_BODY: 'Panchavati. I walked it alone for years and wanted nothing from it.',
+  GATE6_SHURPANAKHA_INTRO_2_BIG: 'Then two brothers built a hut in it, and a woman swept its floor.',
+  GATE6_SHURPANAKHA_INTRO_2_BODY: 'I watched them a long while before I said a single word.',
+  GATE6_SHURPANAKHA_INTRO_3_BIG: 'I took a shape I thought would be easier to look at.',
+  GATE6_SHURPANAKHA_INTRO_3_BODY: 'That was the first thing I did wrong, and I did it to be kind.',
+  GATE6_SHURPANAKHA_INTRO_4_BIG: 'I asked the elder one to have me. He said he was already married.',
+  GATE6_SHURPANAKHA_INTRO_4_BODY: 'A true answer, gently given. I have never held that part against him.',
+  GATE6_SHURPANAKHA_INTRO_5_BIG: 'He sent me to his brother. His brother sent me back, laughing.',
+  GATE6_SHURPANAKHA_INTRO_5_BODY: 'Between them I went twice, and was a joke by the second trip.',
+  GATE6_SHURPANAKHA_INTRO_6_BIG: 'No is a whole answer. I would have taken no.',
+  GATE6_SHURPANAKHA_INTRO_6_BODY: 'What I could not take was being handed back and forth like a bowl.',
+  GATE6_SHURPANAKHA_INTRO_7_BIG: 'So I stopped being easy to look at. I went at the woman instead.',
+  GATE6_SHURPANAKHA_INTRO_7_BODY: 'That was mine. I have never pretended otherwise, and I would not now.',
+  GATE6_SHURPANAKHA_INTRO_8_BIG: 'The younger brother drew his sword and took my nose.',
+  GATE6_SHURPANAKHA_INTRO_8_BODY: 'Not my life. My face. He wanted me walking around afterward.',
+  GATE6_SHURPANAKHA_INTRO_9_BIG: 'There is a word for a punishment shaped to be seen.',
+  GATE6_SHURPANAKHA_INTRO_9_BODY: 'I have had a long time here to think of it and never found one.',
+  GATE6_SHURPANAKHA_INTRO_10_BIG: 'I ran to Khara. He died. I ran to Ravana. Everyone died.',
+  GATE6_SHURPANAKHA_INTRO_10_BODY: 'They call that war mine. It was fought in my name, not at my word.',
+  GATE6_SHURPANAKHA_INTRO_11_BIG: 'The Wheel never came for me. It came for all of them and not for me.',
+  GATE6_SHURPANAKHA_INTRO_11_BODY: 'The spark does not get an ending. The spark just keeps burning here.',
+  GATE6_SHURPANAKHA_INTRO_12_BIG: 'You will meet me wearing the face I chose. It will not last the fight.',
+  GATE6_SHURPANAKHA_INTRO_12_BODY: 'When it goes, look. Everyone else has looked away at that part.',
+  GATE6_SHURPANAKHA_INTRO_13_BIG: 'I only asked to be looked at.',
+  GATE6_SHURPANAKHA_INTRO_13_BODY: 'Come and do it properly.',
+
+  // The phase-transition line, per docs/SPEC-CAMPAIGN.md's dialogue table.
+  // Taraka's own reveal one gate back carries no line at all; this one does,
+  // because hers is a disguise she drops rather than a curse landing on her —
+  // she is the one narrating what the hunter is now allowed to see.
+  GATE6_SHURPANAKHA_PHASE_BIG: 'This is what your prince\u2019s brother left me.',
+  GATE6_SHURPANAKHA_PHASE_BODY: 'Look at it properly, this time.',
+
+  GATE6_SHURPANAKHA_DEFEAT_1_BIG: 'You looked. You did not make a face about it.',
+  GATE6_SHURPANAKHA_DEFEAT_1_BODY: 'That is the smallest thing anyone has done for me in a very long time.',
+  GATE6_SHURPANAKHA_DEFEAT_2_BIG: 'I am not asking you to say I was right. I was not.',
+  GATE6_SHURPANAKHA_DEFEAT_2_BODY: 'I went at a woman who had done nothing to me. That stays true.',
+  GATE6_SHURPANAKHA_DEFEAT_3_BIG: 'But the sword answered the asking, not the going-at-her.',
+  GATE6_SHURPANAKHA_DEFEAT_3_BODY: 'It came out before she was ever in reach. I have gone over it.',
+  GATE6_SHURPANAKHA_DEFEAT_4_BIG: 'Khara went to his death for a sister\u2019s ruined face.',
+  GATE6_SHURPANAKHA_DEFEAT_4_BODY: 'Ravana went for a slight to the family name. Neither one went for me.',
+  GATE6_SHURPANAKHA_DEFEAT_5_BIG: 'Fourteen thousand men, a burned city, a war of the whole world.',
+  GATE6_SHURPANAKHA_DEFEAT_5_BODY: 'And not one line about what happened to the woman who started it.',
+  GATE6_SHURPANAKHA_DEFEAT_6_BIG: 'You are not here to sentence me. Your Wheel is not even turning.',
+  GATE6_SHURPANAKHA_DEFEAT_6_BODY: 'Whatever it decides when it starts, I would rather be moved than kept.',
+  GATE6_SHURPANAKHA_DEFEAT_7_BIG: 'Take me out of this forest. I was in it longer than it was mine.',
+  GATE6_SHURPANAKHA_DEFEAT_7_BODY: 'Panchavati will not miss me. It stopped being somewhere I lived.',
+  GATE6_SHURPANAKHA_DEFEAT_8_BIG: 'Tell it I asked, hunter. That is all I ever did.',
+  GATE6_SHURPANAKHA_DEFEAT_8_BODY: 'Let something finally answer.',
 
   // -- gate 7: Asura-lok -----------------------------------------------------
   GATE7_NAME: 'Asura-lok',

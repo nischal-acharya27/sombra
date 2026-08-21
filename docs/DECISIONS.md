@@ -3015,3 +3015,76 @@ gestures at every other gate holding a soul in the same kind of loop
 without naming Yama or the Wheel — gate 6's and gate 9's reveals stay
 theirs. `docs/research/villain-roster.md`'s Shakuni entry is unchanged;
 this is gate-content, the layer that entry always deferred.
+
+## Gate 6 becomes Panchavati, and the first combination encounter has to buy its own solo debut
+
+Gate 6 was Manav-lok, the ten-gate campaign's third boss gate (Hakim). Under
+the fifteen-gate campaign it is Shurpanakha's, rewritten in place the way
+gates 4 and 5 already were. `docs/SPEC-CAMPAIGN.md`'s gate-06 table hands it
+the campaign's **first combination encounter** — `Raakchyas` as a Panchavati
+forest-rakshasa alongside `Tantrik` as a jungle summoner-priest — on the
+reasoning that `Tantrik` deals no damage itself and exists to be
+deprioritized at the player's peril, making it the existing archetype best
+built to teach target-prioritization at the moment combination fights open.
+
+**The spec's own premise for that encounter was not true yet, and
+`soloDebut` said so.** Building the gate exactly as its table describes
+turned `tools/gatecheck.js`'s `soloDebut` check red: `tantrik debuts
+alongside tantrik + raakchyas`. Under the retired ten-gate content `Tantrik`
+debuted alone at that campaign's gate 4. The fifteen-gate Act 1 spends
+`Kawach`, `Raakchyas` and `Charger`; Act 2's own new-archetype budget goes to
+the Lanka soldier at gate 07 — so nothing anywhere in the new campaign ever
+introduces `Tantrik`, and the "first combination" would have been its first
+appearance of any kind. That is precisely the failure the check exists to
+catch (user story 14): a hunter meeting two unknown tells at once learns
+neither, and the combination cannot teach "kill the priest first" to someone
+who has never been shown what a priest does.
+
+**Resolved by spending the debut inside gate 6 rather than deferring it.**
+The gate carries three encounters, not the table's two: the priest alone on
+the approach, then the combination, then Shurpanakha. It costs one short
+encounter and it makes the combination land the way its own spec intends —
+still the campaign's first *combination*, now combining two things the hunter
+has actually been taught. Deferring it to a later gate was rejected because no
+later gate has a table entry for `Tantrik` either; the archetype has no other
+home in the fifteen-gate campaign. This is a gap in the spec's archetype
+budget, found by building against it, not a licence taken with it.
+
+**Her reveal is the machinery's second consumer, not a second wiring job.**
+Taraka's curse-reveal two gates back built `Game.firePhaseBeat` — a held,
+player-advanced beat that pauses the fight while a pre-built second rig is
+swapped in on a `visible` flag. Shurpanakha uses it unchanged. Two differences
+are deliberate. Hers carries **text** where Taraka's is wordless: a curse
+landing on someone is not a disguise they were holding up themselves finally
+dropping, and only the second of those has anything to say. And `Raakchyas`
+gained the `buildRig` constructor parameter `Charger` already had, so her rig
+is built once instead of a throwaway grunt rig being built and discarded — not
+merely waste, but a correctness problem, since three.js draws four
+`Math.random()` values per object for its UUID and the suite seeds
+`Math.random` globally.
+
+**The rig has to show the wound, because her line points at it.** Her
+phase-transition line is "This is what your prince's brother left me. Look at
+it properly, this time." The first build of the true form carried ash-grey
+skin, vein-cracks and claws but no wound, which made the reveal narrate a
+mutilation the model did not actually show — the reveal failing at the one job
+it has. The true form now carries a recessed dried-blood notch at the centre
+of the face. Consistent with `docs/research/villain-roster.md`'s
+respectful-treatment note, it is never staged as something the hunter delivers
+or witnesses: it is already old when she arrives, and she is the only one who
+ever describes it.
+
+**Her interiority was the one thing her roster entry left open, and these
+beats are where it lands.** That entry resolves the first half of its
+respectful-treatment flag (escort framing over victory framing) in the design
+itself, and explicitly defers the second half — "treating her only as
+Ravana's-sister-the-catalyst without any interiority" — to whoever authors her
+dialogue. So the thirteen `'intro'` beats are hers rather than her brother's:
+the forest before anyone's story happened in it, the shape she took to be
+easier to look at, the asking, being handed between two brothers, what she
+then did to Sita (owned, not excused), the nose, and a punishment shaped to be
+seen. Khara and Ravana arrive tenth and briefly, and the war she is blamed for
+is named once, by her, as something fought in her name rather than at her
+word. The eight `'cleared'` beats hold the same line: she does not ask to be
+told she was right, and the gate's mechanical clear is identical to every
+other Warden's.

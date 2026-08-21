@@ -832,6 +832,62 @@ export const TARAKA = {
  */
 export const KAIKEYI_FORK = { jumpY: 0.4 };
 
+/**
+ * Shurpanakha — gate 6's Warden, and the roster's second phase-transition
+ * after Taraka (`docs/research/villain-roster.md`).
+ *
+ * A `RAAKCHYAS` at heart, not a `CHARGER`: her entry's tier call is explicit
+ * that the class extends the grunt directly and reuses its chase → windup →
+ * pounce shape, because rakshasi is the feminine of the same demon-word the
+ * grunt is named for. Every number below is that block, elevated — the same
+ * "Wardens are configuration, not code" relationship `KEVAT` has to
+ * `CHARGER` and `ATRIPTA` has to `TANTRIK`.
+ *
+ * One hitbox, not two. Her rig swaps at the reveal and her hitbox never
+ * does — it is the true form's `hw 0.46 / hh 0.95` from the first hit, so
+ * the swap can never be a fairness change. Exactly Taraka's precedent, and
+ * for exactly her reason.
+ */
+export const SHURPANAKHA = {
+  ...RAAKCHYAS,
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hw: 0.46,
+  hh: 0.95,
+  // Slower than the grunt she extends and much slower than Taraka's 4.0
+  // "lightning speed" two gates back — her threat is the one committed swipe,
+  // not the approach, and the act does not need two fast Wardens in a row.
+  speed: 3.4,
+  chaseRange: 26,
+  pounce: {
+    ...RAAKCHYAS.pounce,
+    // A step-in swipe rather than the grunt's full leap: she closes less
+    // ground and lands sooner, which is what lets the same hitbox read as a
+    // conjured feint before the reveal and a bare claw after it.
+    range: 5.0,
+    windup: 0.5,
+    vx: 11.0,
+    vy: 8.5,
+    damage: 18,
+    active: 0.42,
+    recover: 0.9,
+  },
+  stopAt: 2.2,
+  exp: 66,
+  contactDamage: 0,
+  // The reveal: an HP threshold firing a paged, held story beat
+  // (`Game.firePhaseBeat`), same machinery Taraka's curse-reveal built and
+  // this is its second consumer rather than a second bespoke wiring job. Kit
+  // and hitbox are identical either side of it; `phaseWindupMul` is the only
+  // thing that tightens, the same "escalation is the windup, not the kit"
+  // call every enrage on the roster already makes.
+  phaseAt: 0.5,
+  // 0.5 × 0.88 = 0.44s against `tools/gatecheck.js`'s 0.42s telegraph floor —
+  // a 20ms margin, tighter than Taraka's but still above the shortest tell
+  // gate 1 ever taught, and `telegraphs()` holds the revealed number rather
+  // than the disguised one for exactly that reason.
+  phaseWindupMul: 0.88,
+};
+
 export const GUARDIAN = {
   hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 1.5,

@@ -8,8 +8,8 @@
 
 import * as THREE from 'three';
 import { Actor, boxHit } from './actor.js';
-import { buildRaakchyas, buildCharger, buildKawach, buildBhootBatti, buildTantrik, buildShakuni, buildBakasura, buildTaraka } from '../render/models.js';
-import { RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, PHYS, JUGGLE } from './config.js';
+import { buildRaakchyas, buildCharger, buildKawach, buildBhootBatti, buildTantrik, buildShakuni, buildBakasura, buildTaraka, buildShurpanakha } from '../render/models.js';
+import { RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, PHYS, JUGGLE } from './config.js';
 import { P } from '../render/palette.js';
 import { clamp, damp, lerp, rand } from '../engine/mathx.js';
 
@@ -152,9 +152,18 @@ export class Raakchyas extends Enemy {
   /** The block it is built from when a gate does not hand it another. */
   static stats = RAAKCHYAS;
 
-  constructor(level, ctx, x, y, cfg = RAAKCHYAS, skin = null) {
+  /**
+   * `buildRig` lets a subclass reuse this whole chase → windup → pounce →
+   * recover skeleton under a genuinely new silhouette (see `Shurpanakha`
+   * below) without a throwaway `buildRaakchyas` rig getting built and
+   * discarded first — which would not merely be waste but a correctness
+   * problem, since three.js draws four `Math.random()` values per object for
+   * its UUID and the suite seeds `Math.random` globally. Exactly the
+   * parameter, and exactly the reasoning, `Charger` already carries.
+   */
+  constructor(level, ctx, x, y, cfg = RAAKCHYAS, skin = null, buildRig = buildRaakchyas) {
     super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
-    this.root = buildRaakchyas(skin);
+    this.root = buildRig(skin);
     this.n = this.root.userData.nodes;
     this.finishSetup();
     this.pounceCd = rand(0.4, 1.2);
@@ -1816,6 +1825,150 @@ export class Taraka extends Charger {
     for (const key of ['L', 'R']) {
       const g = n['handGlow' + key];
       g.material.opacity = lerp(g.material.opacity, 0.3 + glow * 0.7, k);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Shurpanakha
+// ---------------------------------------------------------------------------
+
+/**
+ * Gate 6's Warden — a wronged, humiliated soul the stopped Wheel is holding,
+ * not a monster to be put down. Extends `Raakchyas` directly rather than
+ * copying its chase → windup → pounce skeleton: her entry's kit-shape call is
+ * one attack, reskinned rather than replaced across the reveal, and the
+ * grunt's pounce is that shape already.
+ *
+ * The reveal changes **presentation only**. Same hitbox, same timings, same
+ * one move — a conjured decoy lands the hit before it, a bare claw lands the
+ * identical hit after. This was never a design option rather than a
+ * presentation one: tier 3 is reserved for the four locked bosses (issue
+ * #40), and Taraka's precedent one act-slot back is explicitly cosmetic-only
+ * for the same reason.
+ *
+ * `_animate` is the one thing this class overrides in full — the base
+ * `Raakchyas._animate` drives a quadruped's neck/tail/four legs, and
+ * `buildShurpanakha`'s rig is a biped. Same override, same reason, as
+ * `Taraka` against `Charger`.
+ */
+export class Shurpanakha extends Raakchyas {
+  static stats = SHURPANAKHA;
+
+  constructor(level, ctx, x, y, cfg = SHURPANAKHA, skin = null) {
+    super(level, ctx, x, y, cfg, skin, buildShurpanakha);
+    this.forms = this.root.userData.forms;
+    this.form = 'disguised';
+    this.n = this.forms.disguised.nodes;
+    /** Fires once, at the HP threshold — see `takeHit` below. */
+    this.phaseFired = false;
+  }
+
+  /**
+   * The reveal. An HP threshold rather than the generic enrage toast the
+   * bosses fire, because this one is staged as a held, player-advanced story
+   * beat (`Game.firePhaseBeat`) — her entry puts the weight of its
+   * respectful-treatment note on exactly this moment, and a beat the hunter
+   * has to page through is what keeps it from being something they cheer
+   * past. Kit and hitbox never move here; only `this.form`/`this.n` do, once
+   * the beat drains.
+   */
+  takeHit(hit) {
+    const landed = super.takeHit(hit);
+    if (landed && !this.dead && !this.phaseFired && this.hp <= this.maxHp * this.cfg.phaseAt) {
+      this.phaseFired = true;
+      this.ctx.firePhaseBeat?.(() => this._reveal());
+    }
+    return landed;
+  }
+
+  /** Swaps the visible rig and the node table `_animate`/`syncRig` read. */
+  _reveal() {
+    this.form = 'revealed';
+    this.forms.disguised.root.visible = false;
+    this.forms.revealed.root.visible = true;
+    this.n = this.forms.revealed.nodes;
+    this.ctx.audio?.play('illusionBreak');
+    this.syncRig();
+  }
+
+  /**
+   * The windup shortens after the reveal — the one number that moves, held to
+   * `tools/gatecheck.js`'s telegraph floor at its post-reveal value by
+   * `TELLS`'s own `shurpanakha` row.
+   */
+  get _windup() {
+    return this.cfg.pounce.windup * (this.phaseFired ? this.cfg.phaseWindupMul : 1);
+  }
+
+  update(dt, player) {
+    super.update(dt, player);
+    // `Raakchyas` sets `phase` to the base windup on commit; re-scale it the
+    // frame it does, so the tightening lands without a second copy of the
+    // whole state machine living here.
+    if (this.state === 'windup' && this.phase > this._windup) this.phase = this._windup;
+  }
+
+  _animate(dt) {
+    const n = this.n;
+    const k = 1 - Math.pow(0.0002, dt);
+    const P_ = this.cfg.pounce;
+    let bodyZ = 0;
+    let bodyY = 0;
+    let armZ = 0;
+    let glow = 0;
+    let legSwing = 0;
+
+    if (this.state === 'windup') {
+      // The arm draws back and across rather than the body gathering low:
+      // a swipe reads as a wind, not a crouch, which is what separates her
+      // tell from the grunt's leap the hunter has been reading since gate 1.
+      const u = clamp(1 - this.phase / this._windup, 0, 1);
+      bodyZ = 0.1 + u * 0.1;
+      bodyY = -0.04 - u * 0.04;
+      armZ = -0.3 - u * 0.9;
+      glow = 0.3 + u * 0.7;
+      this.legPhase += dt * 10;
+      legSwing = Math.sin(this.legPhase) * 0.18;
+    } else if (this.state === 'pounce') {
+      // The swipe itself: the arm comes through, the body follows it.
+      bodyZ = -0.3;
+      armZ = 0.8;
+      glow = 1;
+      legSwing = -0.5;
+      if (Math.random() < 0.4) this.ctx.vfx.dust(this.x - this.facing * 0.4, this.y, 1);
+    } else if (this.state === 'recover') {
+      const u = clamp(this.phase / P_.recover, 0, 1);
+      bodyZ = -0.16 * u;
+      armZ = 0.4 * u;
+    } else if (this.state === 'hurt') {
+      bodyZ = 0.24;
+    } else if (this.state === 'chase' && Math.abs(this.vx) > 0.3) {
+      this.legPhase += dt * (6 + Math.abs(this.vx));
+      legSwing = Math.sin(this.legPhase) * 0.5;
+      bodyY = Math.abs(Math.cos(this.legPhase)) * 0.04;
+    } else {
+      bodyY = Math.sin(this.t * 1.8) * 0.025;
+    }
+
+    n.torso.rotation.z = lerp(n.torso.rotation.z, bodyZ, k);
+    n.body.position.y = lerp(n.body.position.y, n.baseY + bodyY, k);
+    n.shoulderL.rotation.z = lerp(n.shoulderL.rotation.z, -armZ * 0.4, k);
+    n.shoulderR.rotation.z = lerp(n.shoulderR.rotation.z, armZ, k);
+    n.hipL.rotation.z = lerp(n.hipL.rotation.z, legSwing, k);
+    n.hipR.rotation.z = lerp(n.hipR.rotation.z, -legSwing, k);
+
+    // The eyes flare with the windup, the same tell `Raakchyas` teaches — the
+    // hunter reads the same signal on a different silhouette.
+    const eyeGlow = this.form === 'revealed' ? 0.35 + glow * 0.65 : 0.25 + glow * 0.5;
+    n.eyeL.material.opacity = lerp(n.eyeL.material.opacity, eyeGlow, k);
+    n.eyeR.material.opacity = n.eyeL.material.opacity;
+    n.eyeL.material.transparent = true;
+    n.eyeR.material.transparent = true;
+
+    for (const key of ['L', 'R']) {
+      const g = n['handGlow' + key];
+      g.material.opacity = lerp(g.material.opacity, 0.2 + glow * 0.8, k);
     }
   }
 }

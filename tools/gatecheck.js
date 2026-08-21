@@ -25,7 +25,7 @@
 // descriptor is authored correctly, that one asks whether `Level` built what
 // the descriptor said.
 
-import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR } from '../src/game/config.js';
+import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR } from '../src/game/config.js';
 import { ARCHETYPES } from '../src/game/game.js';
 import { GATES } from '../src/game/gates/index.js';
 
@@ -532,6 +532,11 @@ const TELLS = [
   // rows — the number that has to clear the floor is the one she fights with
   // for the rest of the encounter, not her pre-reveal one.
   { archetype: 'taraka', tell: 'claw, revealed', windup: TARAKA.charge.windup * TARAKA.phaseWindupMul },
+  // Shurpanakha's swipe windup tightens at her reveal (`SHURPANAKHA.phaseWindupMul`),
+  // same reasoning as every row above it — the number that has to clear the
+  // floor is the one she fights with for the rest of the encounter. At 0.44s
+  // it is the tightest non-boss tell in the game, 20ms over the floor.
+  { archetype: 'shurpanakha', tell: 'swipe, revealed', windup: SHURPANAKHA.pounce.windup * SHURPANAKHA.phaseWindupMul },
   ...Object.entries(GUARDIAN.attacks).map(([name, a]) => ({
     archetype: 'guardian',
     tell: `${name}, enraged`,

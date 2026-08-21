@@ -1256,6 +1256,247 @@ export function buildTaraka(skin = null) {
 }
 
 // ---------------------------------------------------------------------------
+// Shurpanakha — gate 6's Warden, the roster's second phase-transition
+// ---------------------------------------------------------------------------
+
+/**
+ * One of Shurpanakha's two rigs. `true_` selects the rakshasi form; the other
+ * is the human disguise she wears into the fight.
+ *
+ * Both are deliberately **human-scaled** (`hw 0.46 / hh 0.95` true, `0.38 /
+ * 0.88` disguised, per docs/research/villain-roster.md) — the giant-scale
+ * demon-form reference is overridden on purpose, because Taraka is already a
+ * giant two gates back and Kumbhakarna is one two gates ahead, and three
+ * giants in a row would flatten the act's silhouette read.
+ *
+ * The two forms share a hair colour and a body plan and differ in skin,
+ * jewelry and hair discipline: bound and ornate under the headdress in the
+ * disguise, loose and wild at the reveal. Hair stays black in both, the same
+ * "violence done to a person, not a costume change" call Taraka's pelt makes
+ * across her own pair. No horns anywhere — one demon-form reference has them,
+ * the other does not, and the roster already spends that motif on Charger's
+ * windup tell and Bakasura's skull-crest.
+ */
+function buildShurpanakhaForm(true_, c) {
+  const skin = true_ ? c.ash : c.skin;
+  const dark = true_ ? c.ashDark : c.drapeDark;
+  const s = true_ ? 1 : 0.93; // broader and slightly taller after the reveal
+
+  const root = new THREE.Group();
+  const n = {};
+
+  const body = new THREE.Group();
+  body.position.y = 0.72 * s;
+  root.add(body);
+  n.body = body;
+  /** `_animate`'s idle-bob baseline, read back rather than re-derived — the same guard `buildTaraka`'s own forms use against the pair drifting apart. */
+  n.baseY = body.position.y;
+
+  const torso = part(0.34 * s, 0.66 * s, 0.3 * s, skin, { pivot: 'bottom', outline: 0.03 });
+  body.add(torso);
+  n.torso = torso;
+
+  // The red drape, worn across the torso — the disguise's own reference
+  // detail, and shed at the reveal, where the true form wears nothing over
+  // ash-grey skin.
+  if (!true_) {
+    const drape = part(0.37, 0.36, 0.33, c.drape, { pivot: 'top', outline: 0.024 });
+    drape.position.y = 0.56;
+    torso.add(drape);
+
+    // Gold at the waist and throat — jewelry, not armour, and simpler than
+    // Kaikeyi's three-strand coin cascade one gate back, which is the
+    // concrete difference her entry asks these two women's palettes to carry.
+    const sash = part(0.39, 0.06, 0.35, c.gold, { outline: 0.016 });
+    sash.position.y = 0.14;
+    torso.add(sash);
+  } else {
+    // Dried-blood vein-cracks across the chest, dull rather than danger-red
+    // so they never compete with a live telegraph.
+    for (let i = 0; i < 3; i++) {
+      const vein = part(0.02, 0.3 - i * 0.06, 0.02, c.vein, { pivot: 'top', outline: 0 });
+      vein.position.set(0.16, 0.6 - i * 0.08, (i - 1) * 0.08);
+      torso.add(vein);
+    }
+  }
+
+  const head = new THREE.Group();
+  head.position.y = 0.64 * s;
+  torso.add(head);
+  n.head = head;
+
+  const skull = part(0.2 * s, 0.21 * s, 0.21 * s, skin, { pivot: 'bottom', outline: 0.022 });
+  head.add(skull);
+
+  if (true_) {
+    // The vein-cracks again, on the face this time — the one place the
+    // hunter is actually looking when the reveal lands.
+    for (const side of [-1, 1]) {
+      const crack = part(0.02, 0.14, 0.02, c.vein, { pivot: 'top', outline: 0 });
+      crack.position.set(0.1, 0.2, side * 0.07);
+      skull.add(crack);
+    }
+    // The wound itself, at the centre of the face: the nose Lakshmana took.
+    // Recessed rather than added — a notch of dried blood where the rig's
+    // other faces carry nothing — because her phase-transition line points
+    // straight at it ("look at it properly, this time"), and a reveal that
+    // narrates a mutilation the model does not actually show is the reveal
+    // failing at the one job it has. It is never staged as something the
+    // hunter delivers or witnesses: it is already old when she arrives, and
+    // she is the only one who ever describes it.
+    const wound = part(0.05, 0.07, 0.06, c.vein, { pivot: 'top', outline: 0.01 });
+    wound.position.set(0.1, 0.14, 0);
+    skull.add(wound);
+
+    // Loose, wild hair — the disguise's headdress gone, the same black
+    // underneath it always was.
+    const mane = part(0.3, 0.3, 0.3, c.hair, { pivot: 'top', outline: 0.024 });
+    mane.position.set(-0.08, 0.24, 0);
+    skull.add(mane);
+  } else {
+    // Bound hair under a cowrie-shell-banded headdress: the shell band is the
+    // silhouette tell that vanishes at the reveal.
+    const bound = part(0.22, 0.2, 0.22, c.hair, { pivot: 'top', outline: 0.02 });
+    bound.position.set(-0.04, 0.2, 0);
+    skull.add(bound);
+
+    const band = part(0.24, 0.05, 0.24, c.shell, { outline: 0.014 });
+    band.position.y = 0.17;
+    skull.add(band);
+
+    const crest = part(0.16, 0.1, 0.16, c.gold, { pivot: 'bottom', outline: 0.014 });
+    crest.position.y = 0.2;
+    skull.add(crest);
+  }
+
+  // Heavy kohl in the disguise, amber flare in the true form — one accent
+  // slot, two readings, so the eye the hunter tracks for a windup never
+  // moves on the rig.
+  for (const side of [-1, 1]) {
+    const eye = decal(true_ ? 0.08 : 0.06, true_ ? 0.05 : 0.03, c.eye, { opacity: true_ ? 1 : 0.7 });
+    eye.position.set(0.11 * s, 0.11 * s, side * 0.07 * s);
+    eye.rotation.y = Math.PI / 2;
+    skull.add(eye);
+    n[side < 0 ? 'eyeL' : 'eyeR'] = eye;
+  }
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const shoulder = new THREE.Group();
+    shoulder.position.set(0.04 * s, 0.5 * s, side * 0.2 * s);
+    torso.add(shoulder);
+    n['shoulder' + key] = shoulder;
+
+    const upper = part(0.12 * s, 0.3 * s, 0.12 * s, skin, { pivot: 'top', outline: 0.02 });
+    shoulder.add(upper);
+
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.3 * s;
+    shoulder.add(elbow);
+    n['elbow' + key] = elbow;
+
+    const fore = part(0.11 * s, 0.28 * s, 0.11 * s, skin, { pivot: 'top', outline: 0.018 });
+    elbow.add(fore);
+
+    const hand = part(0.11 * s, 0.13 * s, 0.11 * s, skin, { pivot: 'top', outline: 0.016 });
+    hand.position.y = -0.28 * s;
+    elbow.add(hand);
+    n['hand' + key] = hand;
+
+    if (true_) {
+      // Claws — natural, not wielded, matching both demon-form references and
+      // the source's own language. The disguise's hands are bare: the swipe
+      // that lands after the reveal is the feint that landed before it.
+      for (let i = -1; i <= 1; i++) {
+        const claw = part(0.028, 0.2, 0.028, P.bone, { pivot: 'top', outline: 0.007 });
+        claw.position.set(0.09, -0.36, i * 0.05);
+        elbow.add(claw);
+      }
+    } else {
+      // Gold bangles where the claws will be — the disguise wearing ornament
+      // exactly where the true form carries the weapon.
+      const bangle = part(0.13, 0.04, 0.13, c.gold, { outline: 0.01 });
+      bangle.position.y = -0.26 * s;
+      elbow.add(bangle);
+    }
+
+    // The one attack's telegraph flare, in the shared damage-signal amber
+    // (`P.amber`, via `c.eye`). It sits on the same node in both forms, so
+    // the tell the hunter learned pre-reveal is the tell they read after it —
+    // which is the whole point of a reskinned kit rather than a replaced one.
+    const glow = decal(0.16 * s, 0.16 * s, c.eye, { opacity: 0.4 });
+    glow.position.set(0.08, -0.28 * s, 0);
+    glow.rotation.y = Math.PI / 2;
+    elbow.add(glow);
+    n['handGlow' + key] = glow;
+  }
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const hip = new THREE.Group();
+    hip.position.set(0, 0, side * 0.12 * s);
+    body.add(hip);
+    n['hip' + key] = hip;
+
+    const thigh = part(0.15 * s, 0.36 * s, 0.15 * s, dark, { pivot: 'top', outline: 0.022 });
+    hip.add(thigh);
+
+    const knee = new THREE.Group();
+    knee.position.y = -0.36 * s;
+    hip.add(knee);
+    n['knee' + key] = knee;
+
+    const shin = part(0.13 * s, 0.32 * s, 0.13 * s, dark, { pivot: 'top', outline: 0.02 });
+    knee.add(shin);
+
+    const foot = part(0.15 * s, 0.08 * s, 0.18 * s, dark, { pivot: 'top', outline: 0.016 });
+    foot.position.set(0.04, -0.32 * s, 0);
+    knee.add(foot);
+  }
+
+  root.userData.nodes = n;
+  return root;
+}
+
+/**
+ * Both of Shurpanakha's rigs, pre-built and toggled by `visible` — never
+ * rebuilt mid-run, the same rule `buildTaraka` and `Game`'s own gate
+ * transitions follow, and for the same reason: three.js draws four
+ * `Math.random()` values per object for its UUID, and a rig built mid-run
+ * spends the gameplay stream the suite seeds.
+ *
+ * `Shurpanakha.constructor` in `enemies.js` reads `root.userData.forms` and
+ * swaps both the `visible` flag and its own `this.n` at the reveal.
+ */
+export function buildShurpanakha(skin = null) {
+  const c = skin || {
+    skin: P.shurpaSkin,
+    drape: P.shurpaDrape,
+    drapeDark: P.shurpaDrapeDark,
+    gold: P.shurpaGold,
+    shell: P.shurpaShell,
+    hair: P.shurpaHair,
+    ash: P.shurpaAsh,
+    ashDark: P.shurpaAshDark,
+    vein: P.shurpaVein,
+    eye: P.shurpaEye,
+  };
+  const root = new THREE.Group();
+
+  const disguised = buildShurpanakhaForm(false, c);
+  const revealed = buildShurpanakhaForm(true, c);
+  revealed.visible = false;
+  root.add(disguised, revealed);
+
+  root.userData.forms = {
+    disguised: { root: disguised, nodes: disguised.userData.nodes },
+    revealed: { root: revealed, nodes: revealed.userData.nodes },
+  };
+  root.userData.nodes = disguised.userData.nodes;
+  return root;
+}
+
+// ---------------------------------------------------------------------------
 // Kaikeyi — gate 5's tier-0 figure (no Enemy/Boss ancestry, see figure.js)
 // ---------------------------------------------------------------------------
 
