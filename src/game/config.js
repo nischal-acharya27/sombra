@@ -1292,6 +1292,80 @@ export const PUTANA = {
   phaseWindupMul: 0.85,
 };
 
+export const NARAKASURA = {
+  // Gate 11. Above Kamsa's 620 as the act escalates, well short of the locked
+  // bosses — he is the act's third Warden, not its climax.
+  hp: 660,
+  // Deliberately a notch under Kamsa's `hw 0.58, hh 1.05` so two tyrant-Wardens
+  // two gates apart do not read as the same bulk. The horn-crown sits outside
+  // this box as a visual topper, the same precedent as Kumbhakarna's tusks, so
+  // he still reads *taller* than Kamsa on a smaller hitbox.
+  hw: 0.54,
+  hh: 1.0,
+  // Slower than Kamsa. A territorial king holds ground; his entry rules out
+  // `Charger` explicitly, and the speed is where that call becomes legible.
+  speed: 2.1,
+  chaseRange: 28,
+  stopAt: 3.2,
+  /**
+   * The close move: the committed spear thrust his entry names, telegraphed by
+   * the stolen earrings flaring amber before the step-in. Damage lands on the
+   * committed attack, the same shape as every other Warden's melee — there is
+   * no passive contact damage anywhere in this game.
+   *
+   * Longer `reach` than Kamsa's mace smash and a narrower window: a spear is a
+   * distinct threat silhouette from a mace, and it has to *feel* like one from
+   * outside its range rather than only in the rig.
+   */
+  thrust: {
+    range: 4.4,
+    windup: 0.7,
+    active: 0.22,
+    recover: 1.1,
+    damage: 21,
+    knock: 12,
+    reach: 3.7,
+    reachBack: 0.3,
+    shake: 0.22,
+  },
+  /**
+   * The mid/long move: the spear butt driven down, cracking a fissure of stone
+   * toward the hunter — the earth motif made mechanical rather than only
+   * painted on, which is his entry's explicit ask.
+   *
+   * Reuses `ctx.shockwaveFromBoss`, the same telegraph-on-the-ground-then-
+   * resolve mechanism Shakuni's die and Putana's breath already spend. That
+   * reuse is the point: a lingering damage-over-time patch would be a new
+   * combat subsystem, and this gate is not the place to introduce one.
+   */
+  fissure: {
+    range: 9.5,
+    windup: 0.78,
+    active: 0.3,
+    recover: 1.15,
+    damage: 17,
+    reach: 4.6,
+    radius: 1.8,
+    shake: 0.16,
+  },
+  cooldown: [1.05, 1.8],
+  exp: 72,
+  contactDamage: 0,
+  // No phase transition and no rig swap — he is a tyrant king defeated in
+  // battle, not unmasked as something else, the same call Kamsa's and
+  // Duryodhana's entries both reached. What he does carry is the ordinary
+  // enrage, plus (unlike Kamsa) an authored dialogue beat on it: his
+  // mass-liberation resolution is the roster's strongest fit for the
+  // campaign's own release-focused ending, so the threshold gets a voice.
+  enrageAt: 0.5,
+  enrageSpeedMul: 1.22,
+  // 0.70 × 0.85 = 0.595s (thrust) and 0.78 × 0.85 = 0.663s (fissure) against
+  // `tools/gatecheck.js`'s 0.42s telegraph floor — both hold comfortable
+  // margin. Escalation is the windup tightening, never a move the hunter has
+  // not already been taught to read.
+  enrageWindupMul: 0.85,
+};
+
 export const GUARDIAN = {
   hp: 900, // restored: pre-hack value. Not spawned by any gate
   hw: 1.5,

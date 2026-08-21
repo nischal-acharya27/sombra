@@ -25,7 +25,7 @@
 // descriptor is authored correctly, that one asks whether `Level` built what
 // the descriptor said.
 
-import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, LANKA_SOLDIER, KUMBHAKARNA, MATHURA_WRESTLER, KAMSA, PUTANA, RAVANA, DURYODHANA, GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR } from '../src/game/config.js';
+import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, LANKA_SOLDIER, KUMBHAKARNA, MATHURA_WRESTLER, KAMSA, PUTANA, NARAKASURA, RAVANA, DURYODHANA, GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR } from '../src/game/config.js';
 import { ARCHETYPES } from '../src/game/game.js';
 import { GATES } from '../src/game/gates/index.js';
 
@@ -563,6 +563,13 @@ const TELLS = [
   // the rest of the encounter, not her disguised one.
   { archetype: 'putana', tell: 'embrace, revealed', windup: PUTANA.embrace.windup * PUTANA.phaseWindupMul },
   { archetype: 'putana', tell: 'breath, revealed', windup: PUTANA.breath.windup * PUTANA.phaseWindupMul },
+  // Narakasura's two wind-ups both tighten on enrage
+  // (`NARAKASURA.enrageWindupMul`), same reasoning as Kamsa's own rows two
+  // gates back — the number that has to clear the floor is the one he fights
+  // with once cornered, not his opening one. He carries no phase transition
+  // and no rig swap, so `enrageWindupMul` is the only multiplier in play.
+  { archetype: 'narakasura', tell: 'thrust, enraged', windup: NARAKASURA.thrust.windup * NARAKASURA.enrageWindupMul },
+  { archetype: 'narakasura', tell: 'fissure, enraged', windup: NARAKASURA.fissure.windup * NARAKASURA.enrageWindupMul },
   // Ravana's four weapons are four entries in the same `attacks` block every
   // boss below him carries, so the row is generated the same way and against
   // the same enraged multiplier — the number the hunter actually answers is

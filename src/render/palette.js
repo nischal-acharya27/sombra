@@ -427,5 +427,38 @@ export const P = {
   // green in the gate.
   gokulTulsi: 0x4e6b34,
 
+  // Narakasura (gate 11), and Pragjyotishapura's ironwork.
+  //
+  // Named `bhauma*` rather than `naraka*` deliberately: "Bhaumasura", an
+  // attested alternate name meaning "son of Bhumi", because `naraka*` is
+  // already claimed by gate 3's realm palette — an unrelated coincidental
+  // name match, and one place is enough for a name to mean two things.
+  //
+  // His armour is **stone, not metal** — "carved from the earth he commands",
+  // per his roster entry, which is the whole differentiator against Kamsa's
+  // cold shackle-iron two gates back. `bhaumaSkin` is pulled deliberately
+  // browner than `mathuraIron`'s cold grey `0x6e7176` so plate and flesh do
+  // not merge into one mass at silhouette distance, and kept clear of Taraka's
+  // and Putana's greens.
+  bhaumaStone: 0x6b5344,
+  bhaumaStoneDark: 0x3d2e25,
+  bhaumaSkin: 0x8a7462,
+  // A rust-magma crack accent — ambient and passive only, never a telegraph.
+  // The lava-fissure detail one reference carried, kept as body decoration so
+  // that a hunter reads the *amber* flare as the attack tell and nothing else.
+  bhaumaEmber: 0xc4522a,
+
+  // The stolen earrings: Aditi's, looted, and mounted on his spear as a
+  // trophy. Reuses `devaGold` above rather than inventing a fourth royal gold
+  // — it is the one deliberately wrong-feeling colour on his body, which is
+  // the point. The theft is legible at the palette level instead of only in
+  // backstory.
+
+  // Pragjyotishapura's prison iron. Colder and bluer than `bhaumaStone`, so
+  // the cages read as *brought here* rather than quarried with the fortress —
+  // the captives' architecture is not the king's.
+  pragIron: 0x4a4f58,
+  pragIronDark: 0x272b31,
+
   outline: 0x0a0813,
 };

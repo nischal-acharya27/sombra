@@ -3772,3 +3772,260 @@ export function buildPutana(skin = null) {
   root.userData.nodes = disguised.userData.nodes;
   return root;
 }
+
+// ---------------------------------------------------------------------------
+// Narakasura — gate 11's Warden, king of Pragjyotishapura
+// ---------------------------------------------------------------------------
+
+/**
+ * A tyrant-king in the same register as Kamsa two gates back, differentiated
+ * at the material level rather than the pose: his armour is **stone**, not
+ * metal — "carved from the earth he commands", per his roster entry — where
+ * Kamsa's is cold shackle-iron. That is the whole reason `bhaumaStone` exists
+ * as a separate palette entry instead of borrowing `mathuraPlate`.
+ *
+ * Three calls from the roster entry that are decisions, not detail:
+ *
+ * - **Horns, not a snout.** All five reference images independently gave him
+ *   large horns while agreeing on nothing else, which is weak evidence of a
+ *   convergent shorthand worth adopting. They grow from an otherwise humanoid
+ *   demon face — gate 3's Goru-Mukh is already "the Ox-Headed" with a bestial
+ *   horned skull, and the two must not converge on "horned boss" as one
+ *   silhouette category. The horn-crown sits *outside* the collision box as a
+ *   visual topper, the same precedent as Kumbhakarna's tusks: it makes him
+ *   read taller than Kamsa despite a deliberately smaller hitbox.
+ * - **Two arms.** Two of the five references gave him four, dual-wielding.
+ *   Rejected: Ravana's entry already owns multi-armed iconography on this
+ *   roster, and a second multi-armed villain would collide with that signature
+ *   directly.
+ * - **A spear with the stolen earrings fused to it.** No single canonical
+ *   weapon is well attested, so his entry combines the two candidates into one
+ *   prop rather than choosing. It also keeps him off the roster's third mace
+ *   (Kamsa and Duryodhana) and second sword (Ravana). The earrings are
+ *   `devaGold` — Aditi's gold, looted — which is the one deliberately
+ *   wrong-feeling colour on his body, so the theft is legible in the palette
+ *   and not only in the backstory.
+ *
+ * The ember cracks are ambient and passive. The attack tell is `amber` flaring
+ * at the earrings, the same convention every other Warden's weapon-flare
+ * already holds, and nothing else on this rig is allowed to compete with it.
+ */
+export function buildNarakasura(skin = null) {
+  const c = skin || {
+    stone: P.bhaumaStone,
+    stoneDark: P.bhaumaStoneDark,
+    skin: P.bhaumaSkin,
+    ember: P.bhaumaEmber,
+    gold: P.devaGold,
+    eye: P.amber,
+  };
+  const root = new THREE.Group();
+  const n = {};
+
+  const body = new THREE.Group();
+  body.position.y = 0.88;
+  root.add(body);
+  n.body = body;
+  n.baseY = body.position.y;
+
+  // Rounded plate rather than hard boxes: the roster's design language for a
+  // crowned villain (see `buildDuryodhana`), and here it also reads as rock
+  // weathered round rather than forged square.
+  const torso = roundedPart(0.6, 0.7, 0.5, c.stone, { pivot: 'bottom', outline: 0.04, radius: 0.06 });
+  body.add(torso);
+  n.torso = torso;
+
+  const belt = part(0.64, 0.13, 0.54, c.stoneDark, { pivot: 'top', outline: 0.026 });
+  belt.position.y = 0.02;
+  torso.add(belt);
+
+  // Strata across the chest — the earth motif carried as geology rather than
+  // as ornament. Passive decoration; see the note above about the tell.
+  for (let i = 0; i < 3; i++) {
+    const seam = part(0.02, 0.05, 0.46, c.stoneDark, { outline: 0 });
+    seam.position.set(0.3, 0.2 + i * 0.17, 0);
+    torso.add(seam);
+  }
+
+  // The ember cracks: rust-magma fissures in the plate, lit but never flaring.
+  n.embers = [];
+  for (const [ex, ey, ez, ew] of [
+    [0.31, 0.16, 0.1, 0.16],
+    [0.31, 0.42, -0.14, 0.12],
+    [0.31, 0.56, 0.06, 0.1],
+  ]) {
+    const crack = decal(0.03, ew, c.ember, { opacity: 0.55 });
+    crack.position.set(ex, ey, ez);
+    crack.rotation.y = Math.PI / 2;
+    crack.rotation.x = 0.4;
+    torso.add(crack);
+    n.embers.push(crack);
+  }
+
+  for (const side of [-1, 1]) {
+    const pauldron = roundedPart(0.22, 0.18, 0.26, c.stoneDark, { outline: 0.024, radius: 0.05 });
+    pauldron.position.set(0.02, 0.58, side * 0.32);
+    torso.add(pauldron);
+  }
+
+  const head = new THREE.Group();
+  head.position.y = 0.84;
+  torso.add(head);
+  n.head = head;
+
+  const skull = roundedPart(0.31, 0.31, 0.31, c.skin, { pivot: 'bottom', outline: 0.03, radius: 0.05 });
+  head.add(skull);
+
+  // A low stone diadem, not a jewelled crown — he is a king, but the horns are
+  // the silhouette and a tall crown would fight them for the same space.
+  const diadem = part(0.29, 0.07, 0.3, c.stoneDark, { pivot: 'bottom', outline: 0.018 });
+  diadem.position.y = 0.29;
+  skull.add(diadem);
+
+  // The horns. Swept up and back in three tapering segments a side, growing
+  // from the temples of a humanoid face. This is the read the whole rig is
+  // built around, so it is the one thing given real size.
+  n.horns = [];
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const hornRoot = new THREE.Group();
+    hornRoot.position.set(-0.02, 0.24, side * 0.15);
+    // Splayed out along Z as well as swept back, so the pair reads as a spread
+    // from the three-quarter angle `actor.js`'s TILT yaws every rig to. The
+    // first build kept them near the centre line and they disappeared into the
+    // skull at gameplay distance — which fails the one thing his roster entry
+    // asks this rig to do, since the horns *are* his distinguishing silhouette.
+    hornRoot.rotation.x = side * -0.5;
+    skull.add(hornRoot);
+    n['horn' + key] = hornRoot;
+
+    let parent = hornRoot;
+    let w = 0.14;
+    for (let i = 0; i < 4; i++) {
+      const seg = part(w, 0.26, w, i >= 2 ? c.stoneDark : c.stone, { pivot: 'bottom', outline: 0.016 });
+      parent.add(seg);
+      const next = new THREE.Group();
+      next.position.y = 0.26;
+      // Curving back over the crown rather than straight up: a straight horn
+      // reads as a spike, and a spike is Kamsa's circlet two gates back. Gentle
+      // per-segment, so four segments arc rather than fold flat.
+      next.rotation.z = -0.2;
+      parent.add(next);
+      parent = next;
+      w *= 0.78;
+    }
+    n.horns.push(hornRoot);
+  }
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const eye = decal(0.06, 0.045, c.eye, { opacity: 0.75 });
+    eye.position.set(0.15, 0.07, side * 0.075);
+    eye.rotation.y = Math.PI / 2;
+    skull.add(eye);
+    n['eye' + key] = eye;
+  }
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const shoulder = new THREE.Group();
+    shoulder.position.set(0.02, 0.56, side * 0.33);
+    torso.add(shoulder);
+    n['shoulder' + key] = shoulder;
+
+    const upper = part(0.19, 0.33, 0.19, c.skin, { pivot: 'top', outline: 0.026 });
+    shoulder.add(upper);
+
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.33;
+    shoulder.add(elbow);
+    n['elbow' + key] = elbow;
+
+    const fore = part(0.17, 0.31, 0.17, c.skin, { pivot: 'top', outline: 0.024 });
+    elbow.add(fore);
+
+    // Stone vambrace — the plate motif reaching down the arm, so the spear is
+    // held by something that matches the body it grows out of.
+    const vambrace = part(0.19, 0.12, 0.19, c.stoneDark, { outline: 0.016 });
+    vambrace.position.y = -0.22;
+    elbow.add(vambrace);
+
+    const hand = part(0.16, 0.15, 0.16, c.skin, { pivot: 'top', outline: 0.022 });
+    hand.position.y = -0.31;
+    elbow.add(hand);
+    n['hand' + key] = hand;
+  }
+
+  // The spear, right hand, laid along +X like Kumbhakarna's club and the Lanka
+  // soldier's haft. Reach is the point: it reads as a mechanically distinct
+  // silhouette from a mace or a sword before it is ever swung.
+  const spear = new THREE.Group();
+  spear.position.set(0.06, -0.3, 0);
+  n.elbowR.add(spear);
+  n.spear = spear;
+
+  const grip = new THREE.Group();
+  grip.rotation.z = -Math.PI / 2;
+  spear.add(grip);
+
+  const haft = part(0.075, 2.1, 0.075, c.stoneDark, { pivot: 'bottom', outline: 0.016 });
+  haft.position.y = -0.5;
+  grip.add(haft);
+
+  // The head: a leaf blade of the same stone as his plate.
+  const blade = part(0.14, 0.46, 0.05, c.stone, { pivot: 'bottom', outline: 0.02 });
+  blade.position.y = 1.6;
+  grip.add(blade);
+  const tip = part(0.05, 0.16, 0.04, c.stone, { pivot: 'bottom', outline: 0.014 });
+  tip.position.y = 2.06;
+  grip.add(tip);
+
+  // Aditi's earrings, fused to the haft below the blade. Looted gold on a
+  // stone weapon: the one thing on him that does not belong to him.
+  n.earrings = [];
+  for (const side of [-1, 1]) {
+    const hoop = part(0.1, 0.11, 0.035, c.gold, { outline: 0.012 });
+    hoop.position.set(0, 1.46, side * 0.07);
+    grip.add(hoop);
+    const drop = part(0.05, 0.09, 0.03, c.gold, { outline: 0.01 });
+    drop.position.set(0, 1.37, side * 0.07);
+    grip.add(drop);
+    n.earrings.push(hoop, drop);
+  }
+
+  // The tell. Flares amber at the earrings before a thrust — the same
+  // convention every other Warden's weapon-flare holds, which is why it is
+  // `amber` and not `bhaumaEmber`: the ember cracks are ambient, and a hunter
+  // must never have to tell two oranges apart to read an attack.
+  const flare = decal(0.44, 0.44, c.eye, { opacity: 0 });
+  flare.position.y = 1.46;
+  flare.rotation.y = Math.PI / 2;
+  grip.add(flare);
+  n.spearGlow = flare;
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const hip = new THREE.Group();
+    hip.position.set(0, 0, side * 0.19);
+    body.add(hip);
+    n['hip' + key] = hip;
+
+    const thigh = part(0.23, 0.39, 0.23, c.stoneDark, { pivot: 'top', outline: 0.03 });
+    hip.add(thigh);
+
+    const knee = new THREE.Group();
+    knee.position.y = -0.39;
+    hip.add(knee);
+    n['knee' + key] = knee;
+
+    const shin = part(0.19, 0.35, 0.19, c.stoneDark, { pivot: 'top', outline: 0.026 });
+    knee.add(shin);
+
+    const foot = part(0.23, 0.1, 0.27, c.stoneDark, { pivot: 'top', outline: 0.02 });
+    foot.position.set(0.05, -0.35, 0);
+    knee.add(foot);
+  }
+
+  root.userData.nodes = n;
+  return root;
+}

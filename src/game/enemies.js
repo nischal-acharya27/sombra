@@ -8,8 +8,8 @@
 
 import * as THREE from 'three';
 import { Actor, boxHit } from './actor.js';
-import { buildRaakchyas, buildCharger, buildKawach, buildBhootBatti, buildTantrik, buildShakuni, buildBakasura, buildTaraka, buildShurpanakha, buildLankaSoldier, buildKumbhakarna, buildMathuraWrestler, buildKamsa, buildPutana } from '../render/models.js';
-import { RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, LANKA_SOLDIER, KUMBHAKARNA, MATHURA_WRESTLER, KAMSA, PUTANA, PHYS, JUGGLE } from './config.js';
+import { buildRaakchyas, buildCharger, buildKawach, buildBhootBatti, buildTantrik, buildShakuni, buildBakasura, buildTaraka, buildShurpanakha, buildLankaSoldier, buildKumbhakarna, buildMathuraWrestler, buildKamsa, buildPutana, buildNarakasura } from '../render/models.js';
+import { RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, LANKA_SOLDIER, KUMBHAKARNA, MATHURA_WRESTLER, KAMSA, PUTANA, NARAKASURA, PHYS, JUGGLE } from './config.js';
 import { P } from '../render/palette.js';
 import { clamp, damp, lerp, rand } from '../engine/mathx.js';
 
@@ -3157,3 +3157,336 @@ export class Bolt {
 }
 
 const WHITE = new THREE.Color(0xffffff);
+
+// ---------------------------------------------------------------------------
+// Narakasura
+// ---------------------------------------------------------------------------
+
+/** The spear hangs butt-down at rest; the grip is built laid along +X. */
+const REST_SPEAR = -1.15;
+
+/**
+ * Gate 11's Warden, king of Pragjyotishapura. Extends `Enemy` directly — the
+ * same chase → telegraph → attack → recover skeleton `Kamsa` and `Putana`
+ * already reskin, and explicitly *not* `Charger`: his entry rules that out,
+ * because a territorial king holds ground rather than speed-chasing. The
+ * lower `speed` in his config is where that call becomes something the hunter
+ * can feel.
+ *
+ * Two moves picked by range, the roster's standard pair:
+ *
+ * - **thrust** — the close, committed spear lunge, telegraphed by the stolen
+ *   earrings flaring amber. Longer reach than any mace on the roster, which is
+ *   what makes "there is a spear in this fight" legible from outside its range.
+ * - **fissure** — the mid/long ground-slam, cracking stone toward the hunter.
+ *   Resolved through `ctx.shockwaveFromBoss`, the shared ground-telegraph-then-
+ *   resolve zone Shakuni's die and Putana's breath already spend. Reused, not
+ *   reinvented: a lingering damage-over-time patch would be a new combat
+ *   subsystem, and nothing about this gate justifies one.
+ *
+ * No rig swap and no second form — he is a tyrant king defeated in battle, not
+ * unmasked as something else. What he does have, unlike Kamsa, is a *voice* on
+ * the enrage threshold: `firePhaseBeat` pages a held, player-advanced beat
+ * foreshadowing the coming liberation. His roster entry commits to that
+ * explicitly, on the grounds that the mass-liberation resolution is the
+ * strongest fit anywhere on the roster for the campaign's own release-focused
+ * ending — so the theme gets a mechanical home rather than a closing note.
+ */
+export class Narakasura extends Enemy {
+  static stats = NARAKASURA;
+
+  constructor(level, ctx, x, y, cfg = NARAKASURA, skin = null) {
+    super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
+    this.root = buildNarakasura(skin);
+    this.n = this.root.userData.nodes;
+    this.finishSetup();
+    this.phase = 0;
+    this.cooldown = rand(cfg.cooldown[0], cfg.cooldown[1]);
+    this.chargeHitSet = new Set();
+    this.leavesCorpse = true;
+    this.enraged = false;
+    // Held while the enrage beat is paging, so the fight does not continue
+    // under a dialogue window the player is still reading.
+    this.speaking = false;
+  }
+
+  /** Always, for a hostile Narakasura. Mirrors `Kamsa._canCommit`. */
+  _canCommit() {
+    return !this.speaking;
+  }
+
+  takeHit(hit) {
+    const landed = super.takeHit(hit);
+    if (landed && !this.dead && !this.enraged && this.hp <= this.maxHp * this.cfg.enrageAt) this._enrage();
+    return landed;
+  }
+
+  /**
+   * The threshold, with a line on it. `firePhaseBeat` is `Game`'s own
+   * player-advanced pager — the same one Taraka's curse-reveal uses — and it
+   * falls straight through to `onComplete` for a gate that authors no
+   * `at: 'phase'` beat, so this is safe for any future reskin that wants the
+   * kit without the speech.
+   */
+  _enrage() {
+    this.enraged = true;
+    this.ctx.audio?.play('enrage');
+    // Drop out of whatever was wound up. Speaking through a committed thrust
+    // would leave the hitbox live behind the window.
+    if (this.state !== 'dying') {
+      this.state = 'idle';
+      this.vx = 0;
+    }
+    this.speaking = true;
+    this.ctx.firePhaseBeat?.(() => {
+      this.speaking = false;
+      this.cooldown = rand(this.cfg.cooldown[0], this.cfg.cooldown[1]);
+    });
+    if (!this.ctx.firePhaseBeat) this.speaking = false;
+  }
+
+  update(dt, player) {
+    this.t += dt;
+    this.hitFlash -= dt;
+    this._flash(dt);
+
+    if (this.state === 'dying') return this._dieAnim(dt);
+    if (this.spawnT > 0) this._spawnAnim(dt);
+
+    const T = this.cfg.thrust;
+    const F = this.cfg.fissure;
+    const dx = player.x - this.x;
+    const dist = Math.abs(dx);
+    const canSee = dist < this.cfg.chaseRange && Math.abs(player.y - this.y) < 6;
+    const windupMul = this.enraged ? this.cfg.enrageWindupMul : 1;
+    const speed = this.cfg.speed * (this.enraged ? this.cfg.enrageSpeedMul : 1);
+
+    if (this.stagger > 0) {
+      this.stagger -= dt;
+      if (this.stagger <= 0 && this.state === 'hurt') this.state = 'idle';
+    }
+
+    // Frozen mid-sentence. Gravity and collision still run below, so he does
+    // not hang in the air if the beat opens while he is falling.
+    if (this.speaking && this.state !== 'hurt') {
+      this.vx = damp(this.vx, 0, 0.0005, dt);
+      this.applyGravity(dt, PHYS.gravity);
+      this.moveAndCollide(dt);
+      this._animate(dt);
+      this.syncRig();
+      return;
+    }
+
+    switch (this.state) {
+      case 'idle':
+      case 'chase': {
+        this.cooldown -= dt;
+        if (!canSee) {
+          this.state = 'idle';
+          this.vx = damp(this.vx, 0, 0.001, dt);
+          break;
+        }
+        this.state = 'chase';
+        this.faceToward(player.x);
+
+        // The thrust takes the close band, the fissure everything out to its
+        // own range — the same range-picked pair Kamsa's smash/lash and
+        // Kumbhakarna's smash/sweep use, for the same reason: standing just
+        // outside the close move must not be a fight he cannot answer.
+        if (this._canCommit() && this.cooldown <= 0 && this.grounded) {
+          if (dist < T.range) {
+            this.state = 'thrustTelegraph';
+            this.phase = T.windup * windupMul;
+            this.vx = 0;
+            this.chargeHitSet.clear();
+            this.ctx.audio?.play('growl');
+            break;
+          } else if (dist < F.range) {
+            this.state = 'fissureTelegraph';
+            this.phase = F.windup * windupMul;
+            this.vx = 0;
+            this.chargeHitSet.clear();
+            this.ctx.audio?.play('growl');
+            break;
+          }
+        }
+
+        const want = dist > this.cfg.stopAt ? this.facing * speed : 0;
+        const ahead = this.x + Math.sign(want || this.facing) * 1.1;
+        if (want !== 0 && !this.level.hasFloorAhead(ahead, this.y)) this.vx = 0;
+        else this.vx = damp(this.vx, want, 0.0008, dt);
+        break;
+      }
+
+      case 'thrustTelegraph': {
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0001, dt);
+        if (this.phase > T.windup * windupMul * 0.35) this.faceToward(player.x);
+        if (this.phase <= 0) {
+          this.state = 'thrust';
+          this.phase = T.active;
+          this.chargeHitSet.clear();
+          this.ctx.audio?.play('slam');
+          this.ctx.shake?.(T.shake);
+        }
+        break;
+      }
+
+      case 'fissureTelegraph': {
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0001, dt);
+        if (this.phase > F.windup * windupMul * 0.35) this.faceToward(player.x);
+        if (this.phase <= 0) {
+          this.state = 'fissure';
+          this.phase = F.active;
+          this.ctx.audio?.play('slam');
+          this.ctx.shake?.(F.shake);
+          // The crack opens a fixed distance ahead rather than under the
+          // hunter — a fissure travelling out from where he struck, not a
+          // homing hit. Standing still is what it punishes.
+          const cx = this.x + this.facing * F.reach;
+          const cy = this.level.groundAt(cx) + 0.4;
+          this.ctx.vfx.groundBurst(cx, cy, F.radius * 0.6);
+          this.ctx.vfx.dust(this.x + this.facing * 1.0, this.y, 10);
+          this.ctx.shockwaveFromBoss(cx, cy, { radius: F.radius, damage: F.damage, knock: 0 });
+        }
+        break;
+      }
+
+      case 'thrust':
+      case 'fissure': {
+        this.phase -= dt;
+        if (this.phase <= 0) {
+          const done = this.state === 'thrust' ? T : F;
+          this.state = 'recover';
+          this.phase = done.recover;
+        }
+        break;
+      }
+
+      case 'recover': {
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0005, dt);
+        if (this.phase <= 0) {
+          this.state = 'chase';
+          this.cooldown = rand(this.cfg.cooldown[0], this.cfg.cooldown[1]);
+        }
+        break;
+      }
+
+      case 'hurt':
+        this.vx = damp(this.vx, 0, 0.06, dt);
+        break;
+    }
+
+    if (this.juggleT > 0) this.juggleT = this.grounded ? 0 : this.juggleT - dt;
+    this.applyGravity(dt, PHYS.gravity * (this.juggleT > 0 ? JUGGLE.gravityMul : 1));
+    this.moveAndCollide(dt);
+    this._animate(dt);
+    this.syncRig();
+  }
+
+  /**
+   * Only the thrust has a box. The fissure does its damage through
+   * `shockwaveFromBoss`'s own resolve zone, so giving it a body box too would
+   * hit the hunter twice for one telegraph.
+   */
+  attackBox() {
+    if (this.dead || this.state !== 'thrust') return null;
+    const A = this.cfg.thrust;
+    return this.facing >= 0
+      ? { x0: this.x - A.reachBack, x1: this.x + A.reach, y0: this.y, y1: this.y + this.hh * 2 }
+      : { x0: this.x - A.reach, x1: this.x + A.reachBack, y0: this.y, y1: this.y + this.hh * 2 };
+  }
+
+  /**
+   * `{ damage, knock }`, or null when nothing is live — the contract
+   * `Game.attackInfo` reads, the same shape `Kamsa` and `Putana` return.
+   *
+   * Returning a bare number here instead of the pair is what sent the
+   * player's HP to `NaN` the first time this class was wired up:
+   * `attackInfo` reads `.damage` off whatever it is handed, a number has no
+   * such property, and `hp -= undefined` is silent. The 223-row suite stayed
+   * green through it — nothing in `?sim` drives a hunter into gate 11's
+   * Warden — and it took a screenshot with `NaN/120` in the corner to find.
+   */
+  currentAttackDamage() {
+    if (this.state === 'thrust') return { damage: this.cfg.thrust.damage, knock: this.cfg.thrust.knock };
+    return null;
+  }
+
+  _animate(dt) {
+    const n = this.n;
+    const k = Math.min(1, dt * 14);
+    const T = this.cfg.thrust;
+    const F = this.cfg.fissure;
+    const windupMul = this.enraged ? this.cfg.enrageWindupMul : 1;
+    let bodyZ = 0;
+    let bodyY = 0;
+    let armZ = 0;
+    let spearZ = REST_SPEAR;
+    let glow = 0;
+
+    if (this.state === 'thrustTelegraph') {
+      // Draws back and levels the spear — the wind-up reads as *aiming*, not
+      // as a raised overhead, so it never reads as Kamsa's mace two gates back.
+      const u = 1 - this.phase / (T.windup * windupMul);
+      bodyZ = 0.08 + u * 0.12;
+      bodyY = -0.04 - u * 0.05;
+      armZ = -0.15 - u * 0.5;
+      spearZ = lerp(REST_SPEAR, -0.05, u);
+      glow = 0.3 + u * 0.7;
+    } else if (this.state === 'thrust') {
+      const u = clamp(1 - this.phase / T.active, 0, 1);
+      bodyZ = lerp(-0.22, -0.04, u);
+      armZ = lerp(-0.95, -0.55, u);
+      spearZ = lerp(-0.05, 0.06, u);
+      bodyY = -0.08;
+      glow = 1;
+    } else if (this.state === 'fissureTelegraph') {
+      // Spear raised butt-first, both hands, before it comes down. A
+      // deliberately *vertical* wind against the thrust's horizontal one, so
+      // which move is coming is legible from the silhouette alone.
+      const u = 1 - this.phase / (F.windup * windupMul);
+      bodyZ = -0.06 - u * 0.16;
+      bodyY = u * 0.06;
+      armZ = 0.3 + u * 0.95;
+      spearZ = lerp(REST_SPEAR, 1.5, u);
+      glow = 0.3 + u * 0.7;
+    } else if (this.state === 'fissure') {
+      const u = clamp(1 - this.phase / F.active, 0, 1);
+      bodyZ = lerp(0.3, 0.08, u);
+      armZ = lerp(-0.9, -0.3, u);
+      spearZ = lerp(1.5, -1.9, u);
+      bodyY = -0.12;
+      glow = 1;
+    } else if (this.state === 'recover') {
+      const total = Math.max(T.recover, F.recover);
+      const u = clamp(this.phase / total, 0, 1);
+      bodyZ = -0.1 * u;
+      bodyY = -0.05 * u;
+    } else if (this.state === 'hurt') {
+      bodyZ = 0.18;
+    } else if (Math.abs(this.vx) > 0.3) {
+      bodyY = Math.abs(Math.sin(this.t * 4.4)) * 0.03;
+    } else {
+      bodyY = Math.sin(this.t * 1.1) * 0.025;
+    }
+
+    n.torso.rotation.z = lerp(n.torso.rotation.z, bodyZ, k);
+    n.body.position.y = lerp(n.body.position.y, n.baseY + bodyY, k);
+    n.shoulderR.rotation.z = lerp(n.shoulderR.rotation.z, armZ, k);
+    n.shoulderL.rotation.z = lerp(n.shoulderL.rotation.z, -armZ * 0.3, k);
+    n.spear.rotation.z = lerp(n.spear.rotation.z, spearZ, k);
+
+    for (const key of ['L', 'R']) {
+      const e = n['eye' + key];
+      e.material.transparent = true;
+      e.material.opacity = lerp(e.material.opacity, 0.3 + glow * 0.5, k);
+    }
+    // The tell lives on the earrings, and only there. The ember cracks below
+    // hold a constant low glow on purpose — a hunter must never have to tell
+    // two oranges apart to read an incoming attack.
+    n.spearGlow.material.opacity = lerp(n.spearGlow.material.opacity, glow * 0.8, k);
+  }
+}

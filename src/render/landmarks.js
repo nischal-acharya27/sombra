@@ -330,6 +330,145 @@ function gokulCradle() {
   return g;
 }
 
+/**
+ * Pragjyotishapura's materials — basalt, prison iron, and one burning brazier.
+ *
+ * This is the first landmark set built after the no-asset-files rule was lifted
+ * (`docs/DECISIONS.md`), and the two textures it asks for are the reason the
+ * fortress can be basalt at all: `stone.basalt` puts columnar fracture into a
+ * wall that would otherwise be a flat brown box at this scale, and `iron.plate`
+ * puts rivets and panel seams into the cages. Both are multiply maps over the
+ * material's own colour, which is why one grain file serves the warm wall and
+ * the cold cage without a second asset.
+ *
+ * If neither file is present, `toonMaterial` resolves `map` to null and every
+ * surface below falls back to the flat cel colour the rest of the game uses.
+ * That is a supported configuration, not a degraded one — nothing here carries
+ * meaning that lives only in a texture.
+ */
+function fortressMaterials() {
+  return {
+    basalt: toonMaterial({ color: P.bhaumaStone, steps: 3, rim: 0.32, rimColor: P.bhaumaEmber, map: 'stone.basalt' }),
+    basaltDark: toonMaterial({ color: P.bhaumaStoneDark, steps: 3, rim: 0.22, rimColor: P.bhaumaEmber, map: 'stone.basalt' }),
+    // Finer tiling on the small stuff: a merlon is a fifth the size of a wall,
+    // and the same repeat on both makes the small piece look like a decal of
+    // the big one. Two manifest entries rather than a runtime clone — a clone
+    // costs eight `Math.random()` draws.
+    basaltFine: toonMaterial({ color: P.bhaumaStone, steps: 3, rim: 0.3, rimColor: P.bhaumaEmber, map: 'stone.basalt.fine' }),
+    iron: toonMaterial({ color: P.pragIron, steps: 3, rim: 0.35, rimColor: P.skyFill, map: 'iron.plate' }),
+    ironDark: toonMaterial({ color: P.pragIronDark, steps: 3, rim: 0.2, rimColor: P.skyFill }),
+    // Bare — bars are thin, and a rivet pattern on a 0.18-unit rod is noise.
+    bar: toonMaterial({ color: P.pragIron, steps: 2, rim: 0.5, rimColor: P.skyFill }),
+    gold: toonMaterial({ color: P.devaGold, steps: 3, rim: 0.6, rimColor: P.amber }),
+  };
+}
+
+/**
+ * A captive cell: a basalt cell-block with an iron-barred front.
+ *
+ * The gate's repeated unit and the thing its story is about — Narakasura's
+ * roster entry ends on the captives being freed, so the cells have to be
+ * somewhere the hunter actually walks past rather than a line of dialogue.
+ * Placed through `landmarks` (plural) at authored positions, several times
+ * over, which is the seam gate 10 opened.
+ *
+ * Empty, and deliberately so. Nothing in this game renders a person in a cage:
+ * the cells read as held space, and the liberation lands in the cleared beats.
+ */
+function pragCell() {
+  const g = new THREE.Group();
+  const M = fortressMaterials();
+
+  addBox(g, 7, 0.6, 5, 0, 0.3, 0, M.basaltDark);   // plinth
+  addBox(g, 7, 5.4, 5, 0, 3.3, -0.9, M.basalt);    // the block itself
+  addBox(g, 7.4, 0.5, 5.4, 0, 6.2, -0.9, M.basaltDark); // cap course
+
+  // The barred face, set into a recessed iron frame. Bars run floor to lintel
+  // with a mid-rail across, which is what stops them reading as a fence.
+  addBox(g, 5.6, 4.6, 0.5, 0, 2.9, 1.5, M.ironDark);
+  for (let i = -3; i <= 3; i++) addBox(g, 0.18, 4.2, 0.18, i * 0.8, 2.9, 1.75, M.bar);
+  addBox(g, 5.4, 0.2, 0.22, 0, 2.9, 1.78, M.bar);
+  addBox(g, 5.8, 0.42, 0.6, 0, 5.3, 1.5, M.iron);  // lintel
+
+  return g;
+}
+
+/**
+ * The gate tower: Pragjyotishapura's hero silhouette, and the shape the
+ * title-card camera drifts across.
+ *
+ * Basalt raised in stepped courses rather than one shaft, so it reads as
+ * something the earth pushed up in layers — his entry's "nothing here was
+ * built, it was told to stand". The ember seam up the spine is the same
+ * passive `bhaumaEmber` accent his rig carries, and like the rig's it is
+ * ambient: it never flares, because the only flare in this gate that means
+ * anything is the amber at his spearhead.
+ */
+function pragGateTower() {
+  const g = new THREE.Group();
+  const M = fortressMaterials();
+
+  const courses = [
+    [16, 5, 11, 0, 2.5],
+    [14, 6, 10, 0, 7.8],
+    [12, 7, 9, 0, 14.2],
+    [9.5, 6.5, 8, 0, 21],
+  ];
+  for (const [w, h, d, x, y] of courses) addBox(g, w, h, d, x, y, 0, M.basalt);
+  for (const [w, , d, x, y] of courses) addBox(g, w + 0.7, 0.6, d + 0.7, x, y + 3.4, 0, M.basaltDark);
+
+  // Merlons along the top course — the rampart read, at the scale the
+  // silhouette needs it.
+  for (let i = -3; i <= 3; i++) addBox(g, 0.9, 1.6, 1.4, i * 1.35, 25.4, 0, M.basaltFine);
+
+  // The arch: a dark opening under the lowest course, framed in iron. The one
+  // place the tower reads as a door rather than a cliff.
+  addBox(g, 4.2, 5, 0.6, 0, 2.4, 5.4, M.ironDark);
+  addBox(g, 5, 0.5, 0.9, 0, 5.1, 5.4, M.iron);
+  for (const side of [-1, 1]) addBox(g, 0.6, 5, 0.9, side * 2.3, 2.4, 5.4, M.iron);
+
+  // The ember seam, up the spine of the tower. Passive.
+  for (let i = 0; i < 5; i++) {
+    const crack = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 2.2), glowMaterial({ color: P.bhaumaEmber, transparent: true, opacity: 0.4 }));
+    crack.position.set(-4.4 + i * 0.3, 3 + i * 4.6, 4.6);
+    crack.rotation.z = 0.22 * (i % 2 ? 1 : -1);
+    g.add(crack);
+  }
+
+  return g;
+}
+
+/**
+ * A rampart brazier. Stone bowl on a plinth, burning amber.
+ *
+ * Does the same job gate 10's lamps do at the roof gaps: a light standing just
+ * past a landing lip, so a jump at night aims at something instead of guessing
+ * at a dark edge. Scenery, never a fight, and never a telegraph — it borrows
+ * the shared `amber` the same way gate 10's lamps do, and for the same reason
+ * that costs the hunter nothing.
+ */
+function pragBrazier() {
+  const g = new THREE.Group();
+  const M = fortressMaterials();
+
+  addBox(g, 1.5, 0.4, 1.5, 0, 0.2, 0, M.basaltDark);
+  addBox(g, 0.7, 2.2, 0.7, 0, 1.4, 0, M.basaltFine);
+  addBox(g, 1.9, 0.7, 1.9, 0, 2.8, 0, M.iron);
+  addFlame(
+    g,
+    {
+      flame: glowMaterial({ color: P.amber, transparent: true, opacity: 0.9 }),
+      lampGlow: glowMaterial({ color: P.amber, transparent: true, opacity: 0.11, depthWrite: false }),
+    },
+    0,
+    3.3,
+    0,
+    1.15
+  );
+
+  return g;
+}
+
 const KINDS = {
   'kneeling-stone': kneelingStone,
   'fallen-die': fallenDie,
@@ -338,6 +477,9 @@ const KINDS = {
   'gokul-lamp': gokulLamp,
   'gokul-shrine': gokulShrine,
   'gokul-cradle': gokulCradle,
+  'prag-cell': pragCell,
+  'prag-gate-tower': pragGateTower,
+  'prag-brazier': pragBrazier,
 };
 
 /** Build a gate's landmark by kind. Unknown kinds are a descriptor error. */

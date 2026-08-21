@@ -651,6 +651,62 @@ export const STRINGS = {
   GATE10_PUTANA_DEFEAT_8_BIG: 'Let the door finally close behind me the way it should have that night.',
   GATE10_PUTANA_DEFEAT_8_BODY: 'That is all I am asking of you, hunter. Go on.',
 
+  // -- gate 11: Pragjyotishapura, Narakasura ---------------------------------
+  //
+  // His research entry asks the telling to end on the liberation and to leave
+  // out the epilogue in which the freed women are married off — a real part of
+  // the source, but one pop adaptations routinely play as a punchline. The
+  // captives here are people the fortress is holding, and the gate's story
+  // closes on them being let go. Nothing below refers to them as a prize.
+  GATE11_GUARD_TOAST: 'Fortress guard — the walls answer to him.',
+  GATE11_GARRISON_TOAST: 'The garrison holds the hall mouth.',
+  GATE11_NAME: 'Pragjyotishapura',
+  GATE11_WARDEN_TITLE: 'NARAKASURA',
+  GATE11_NARAKASURA_TITLE: 'GATE WARDEN',
+
+  GATE11_NARAKASURA_INTRO_1_BIG: 'Sixteen thousand voices, and every one of them mine to keep.',
+  GATE11_NARAKASURA_INTRO_1_BODY: 'That is not a boast. It is an inventory, and I have never once miscounted it.',
+  GATE11_NARAKASURA_INTRO_2_BIG: 'My mother is the earth. Every wall here came up when I asked it to.',
+  GATE11_NARAKASURA_INTRO_2_BODY: 'Nothing in Pragjyotishapura was built. It was told to stand, and it stood.',
+  GATE11_NARAKASURA_INTRO_3_BIG: 'I took Indra\u2019s seat and I took Aditi\u2019s earrings off her head.',
+  GATE11_NARAKASURA_INTRO_3_BODY: 'The gods keep a long list of what is theirs. I have only ever kept a longer one.',
+  GATE11_NARAKASURA_INTRO_4_BIG: 'A king is measured by what he can hold. That is the whole arithmetic.',
+  GATE11_NARAKASURA_INTRO_4_BODY: 'I learned it early, and no sum has ever disagreed with me.',
+  GATE11_NARAKASURA_INTRO_5_BIG: 'They were not prisoners. They were held. There is a difference in the ledger.',
+  GATE11_NARAKASURA_INTRO_5_BODY: 'I said that often enough that it started sounding true from the inside.',
+  GATE11_NARAKASURA_INTRO_6_BIG: 'Every cell here has a door, and every door has my hand on it.',
+  GATE11_NARAKASURA_INTRO_6_BODY: 'I never turned a key. Stone does what the earth\u2019s son asks.',
+  GATE11_NARAKASURA_INTRO_7_BIG: 'You will hear them through the walls on your way up. Everyone does.',
+  GATE11_NARAKASURA_INTRO_7_BODY: 'I stopped hearing them somewhere in the second century of holding the count.',
+  GATE11_NARAKASURA_INTRO_8_BIG: 'The end came on wings, with my own mother\u2019s face riding beside it.',
+  GATE11_NARAKASURA_INTRO_8_BODY: 'She had every right. I had spent her name on every wall I raised.',
+  GATE11_NARAKASURA_INTRO_9_BIG: 'They did not burn Pragjyotishapura when it was over.',
+  GATE11_NARAKASURA_INTRO_9_BODY: 'They opened it. Every door at once. That is what I remember, not the blow.',
+  GATE11_NARAKASURA_INTRO_10_BIG: 'My son kept the throne. They handed it to him over my body.',
+  GATE11_NARAKASURA_INTRO_10_BODY: 'A kingdom taken and given back in the same hour. I still do not understand it.',
+  GATE11_NARAKASURA_INTRO_11_BIG: 'Your Wheel has stopped, and the doors here have stayed shut with it.',
+  GATE11_NARAKASURA_INTRO_11_BODY: 'Sixteen thousand held in a fortress that no longer has a reason to hold them.',
+  GATE11_NARAKASURA_INTRO_12_BIG: 'Come up through the cells, hunter. Look at the count on your way.',
+  GATE11_NARAKASURA_INTRO_12_BODY: 'Then take the spear off me, and find out what this place sounds like open.',
+
+  GATE11_NARAKASURA_PHASE_BIG: 'The walls are already cracking. You\u2019ve just come to watch them fall.',
+  GATE11_NARAKASURA_PHASE_BODY: 'Every door in this fortress is stone, and the stone is finally letting go.',
+
+  GATE11_NARAKASURA_DEFEAT_1_BIG: 'Listen. The walls have stopped holding their breath.',
+  GATE11_NARAKASURA_DEFEAT_1_BODY: 'That sound is every cell door in Pragjyotishapura giving up at once.',
+  GATE11_NARAKASURA_DEFEAT_2_BIG: 'I held sixteen thousand people because I could, and I called it keeping.',
+  GATE11_NARAKASURA_DEFEAT_2_BODY: 'No god had to explain the word back to me. I always knew what it was.',
+  GATE11_NARAKASURA_DEFEAT_3_BIG: 'Take the earrings. They were never mine and the gold always knew it.',
+  GATE11_NARAKASURA_DEFEAT_3_BODY: 'Aditi will want them back on her own head. See that they get there.',
+  GATE11_NARAKASURA_DEFEAT_4_BIG: 'Do not put a new lock on this place when I am gone.',
+  GATE11_NARAKASURA_DEFEAT_4_BODY: 'It has been a fist for long enough. Let it be an open hand instead.',
+  GATE11_NARAKASURA_DEFEAT_5_BIG: 'They will walk out of here on their own feet, going wherever they choose.',
+  GATE11_NARAKASURA_DEFEAT_5_BODY: 'Not to anyone. Not owed to anyone. That part is theirs and no one else\u2019s.',
+  GATE11_NARAKASURA_DEFEAT_6_BIG: 'Every year I counted them, and not once did I ask a single name.',
+  GATE11_NARAKASURA_DEFEAT_6_BODY: 'Sixteen thousand. I knew the number perfectly and nothing else at all.',
+  GATE11_NARAKASURA_DEFEAT_7_BIG: 'The doors are open, hunter. Go and let the rest of them out.',
+  GATE11_NARAKASURA_DEFEAT_7_BODY: 'Then let your Wheel turn, and put me wherever a man like me is put.',
+
   // -- the opening: 4 screens, once per save, before gate 1 (issue #34) -----
   INTRO_WHEEL_TITLE: 'THE SYSTEM',
   INTRO_WHEEL_BIG: 'THE WHEEL HAS STOPPED',

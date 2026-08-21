@@ -3809,3 +3809,76 @@ entirely still produces a playable game.
 download tolerates, or if a texture ever ends up carrying a telegraph, the
 right answer is to tighten condition 3 and prune — not to re-impose the whole
 rule, which would now orphan work rather than prevent it.
+
+## Gate 11 becomes Narakasura's Pragjyotishapura, and the campaign's first gate built on external assets
+
+Act 3's third gate, and the first genuinely new descriptor file under the
+fifteen-gate redesign — `gate1.js`–`gate10.js` were rewrites in place;
+`gate11.js` is new, per `docs/SPEC-CAMPAIGN.md`.
+
+**What the spec fixed, and was followed rather than reinterpreted.** The act
+table calls the level "escalating — barred corridors and ramparts into his
+audience hall", names one combination encounter (`Kawach` → fortress guard
+**+** `Raakchyas` → rakshasa garrison), and locks two lines of dialogue. Both
+archetypes already debuted solo in Acts 1 and 2, which is exactly why the act
+put its first combination here rather than at Kamsa's or Putana's gate — no
+`solo debut` protection is needed, and the suite confirms it.
+
+**Three sections, not three colour washes.** The direction gate 10 set:
+
+- **The cell corridor** (x -6 → 46, flat). The hunter walks past the thing the
+  gate is about before fighting anything. Four cell blocks along the back wall
+  at descending scale, so the run reads as continuing past the frame.
+- **The rampart stair** (x 46 → 108, rising to 12 in four risers, two gaps).
+  The suite measures the tightest jump at **46% of the running jump** — light
+  and forgiving, which is what "escalating" was read to mean here. A brazier
+  stands past each landing lip, the same job gate 10's roof lamps do.
+- **The audience hall** (x 108 → 176, flat). Bare on purpose: a long spear and
+  a ground fissure both need sightlines, and a hunter who ignores the earring
+  flare must not be able to blame the geometry.
+
+**The cells are empty, and that is the design.** Nothing in this game renders a
+person in a cage. His roster entry asks the telling to end on the liberation
+and to omit the epilogue in which the freed captives are married off — a real
+part of the source, routinely mishandled in adaptation as a punchline. The
+cells are held space; the release lands in the cleared beats, which end on the
+doors opening and the captives leaving owed to nobody.
+
+**No new subsystem.** The ground-slam is a telegraphed fissure resolved through
+`ctx.shockwaveFromBoss` — Shakuni's die and Putana's breath already spend that
+same ground-telegraph-then-resolve zone. A lingering damage-over-time patch
+would have been a new combat subsystem and was refused, exactly as Putana's
+build refused it.
+
+### The first gate to use external assets, and what it actually bought
+
+Two SVG multiply maps (`stone.basalt`, `iron.plate`) on the fortress
+architecture. The honest accounting: they are worth it at *landmark* scale and
+nowhere else. A cell block is a seven-unit wall standing still while the hunter
+walks past it, and flat cel colour at that size reads as a brown box; columnar
+fracture in the map is what makes it stone. On a character rig — which is
+small, moving, and already carrying its silhouette in its geometry — the same
+map would be noise. Nothing gameplay-legible lives in either file, and with
+`assets/` emptied the gate renders in flat cel colour and the suite still
+passes, which was verified rather than assumed.
+
+### Two things this build got wrong, recorded so the next one does not
+
+**`currentAttackDamage()` returns `{ damage, knock }` or `null`, never a bare
+number.** The first wiring returned `this.cfg.thrust.damage`. `Game.attackInfo`
+reads `.damage` off whatever it is handed, a number has no such property, and
+`hp -= undefined` is silent — the player's HP went `NaN` on the Warden's first
+thrust. **The 223-row suite stayed green through it**, because nothing in
+`?sim` drives a hunter into gate 11's Warden; it took a screenshot with
+`NaN/120` in the corner to find. That is the strongest argument yet for the
+visual-inspection step being a real gate and not a courtesy. There is also no
+`currentAttackKnock()` in this codebase — the knock rides in the same pair, and
+inventing a second method quietly did nothing.
+
+**A distinguishing silhouette has to be checked at gameplay distance.** The
+horns are the one feature all five of his reference images agreed on and are
+his silhouette element per the roster. The first build kept them near the
+centre line at three short segments; in the scene graph they were present and
+correct, and on screen at fighting range they vanished into the skull. Four
+longer segments, splayed along Z against `actor.js`'s TILT, fixed it. Querying
+the rig proved the horns existed and proved nothing about whether they read.
