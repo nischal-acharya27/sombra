@@ -8,8 +8,8 @@
 
 import * as THREE from 'three';
 import { Actor, boxHit } from './actor.js';
-import { buildRaakchyas, buildCharger, buildKawach, buildBhootBatti, buildTantrik, buildShakuni, buildBakasura, buildTaraka, buildShurpanakha, buildLankaSoldier, buildKumbhakarna, buildMathuraWrestler, buildKamsa } from '../render/models.js';
-import { RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, LANKA_SOLDIER, KUMBHAKARNA, MATHURA_WRESTLER, KAMSA, PHYS, JUGGLE } from './config.js';
+import { buildRaakchyas, buildCharger, buildKawach, buildBhootBatti, buildTantrik, buildShakuni, buildBakasura, buildTaraka, buildShurpanakha, buildLankaSoldier, buildKumbhakarna, buildMathuraWrestler, buildKamsa, buildPutana } from '../render/models.js';
+import { RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, LANKA_SOLDIER, KUMBHAKARNA, MATHURA_WRESTLER, KAMSA, PUTANA, PHYS, JUGGLE } from './config.js';
 import { P } from '../render/palette.js';
 import { clamp, damp, lerp, rand } from '../engine/mathx.js';
 
@@ -2790,6 +2790,285 @@ export class Kamsa extends Enemy {
       e.material.opacity = lerp(e.material.opacity, 0.3 + glow * 0.5, k);
     }
     n.maceGlow.material.opacity = lerp(n.maceGlow.material.opacity, 0.2 + glow * 0.6, k);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Putana
+// ---------------------------------------------------------------------------
+
+/**
+ * Gate 10's Warden. Extends `Enemy` directly, the same chase → telegraph →
+ * attack → recover skeleton `Kamsa` already reskins — not `Raakchyas`: her
+ * entry is explicit that she "closes distance as false hospitality rather
+ * than aggression", not a speed-identity chaser. Two moves picked by range,
+ * and a two-rig phase-transition reveal, the roster's fourth after Taraka,
+ * Shurpanakha and Kumbhakarna — implemented Warden-locally exactly like
+ * `Shurpanakha`'s own reveal, not routed through the bespoke `Boss` state
+ * machine (tier 3 was never in play for her).
+ */
+export class Putana extends Enemy {
+  static stats = PUTANA;
+
+  constructor(level, ctx, x, y, cfg = PUTANA, skin = null) {
+    super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
+    this.root = buildPutana(skin);
+    this.forms = this.root.userData.forms;
+    this.form = 'disguised';
+    this.n = this.forms.disguised.nodes;
+    this.finishSetup();
+    this.phase = 0;
+    this.cooldown = rand(cfg.cooldown[0], cfg.cooldown[1]);
+    this.chargeHitSet = new Set();
+    this.leavesCorpse = true;
+    /** Fires once, at the HP threshold — see `takeHit` below. */
+    this.phaseFired = false;
+  }
+
+  /** Always, for a hostile Putana. Mirrors `Kamsa._canCommit`. */
+  _canCommit() {
+    return true;
+  }
+
+  /**
+   * The reveal. An HP threshold firing a paged, held story beat
+   * (`Game.firePhaseBeat`), the same machinery Taraka's curse-reveal built
+   * and Shurpanakha's own reveal already consumes — she is its fourth
+   * consumer. Her entry asks this beat to land, unlike Kamsa's, which
+   * declines one outright: the source hands her a genuine redemptive angle,
+   * and the reveal is where it has a mechanical home.
+   */
+  takeHit(hit) {
+    const landed = super.takeHit(hit);
+    if (landed && !this.dead && !this.phaseFired && this.hp <= this.maxHp * this.cfg.phaseAt) {
+      this.phaseFired = true;
+      this.ctx.firePhaseBeat?.(() => this._reveal());
+    }
+    return landed;
+  }
+
+  /** Swaps the visible rig and the node table `_animate`/`syncRig` read. */
+  _reveal() {
+    this.form = 'revealed';
+    this.forms.disguised.root.visible = false;
+    this.forms.revealed.root.visible = true;
+    this.n = this.forms.revealed.nodes;
+    this.ctx.audio?.play('illusionBreak');
+    this.syncRig();
+  }
+
+  update(dt, player) {
+    this.t += dt;
+    this.hitFlash -= dt;
+    this._flash(dt);
+
+    if (this.state === 'dying') return this._dieAnim(dt);
+    if (this.spawnT > 0) this._spawnAnim(dt);
+
+    const E = this.cfg.embrace;
+    const B = this.cfg.breath;
+    const dx = player.x - this.x;
+    const dist = Math.abs(dx);
+    const canSee = dist < this.cfg.chaseRange && Math.abs(player.y - this.y) < 6;
+    const windupMul = this.phaseFired ? this.cfg.phaseWindupMul : 1;
+
+    if (this.stagger > 0) {
+      this.stagger -= dt;
+      if (this.stagger <= 0 && this.state === 'hurt') this.state = 'idle';
+    }
+
+    switch (this.state) {
+      case 'idle':
+      case 'chase': {
+        this.cooldown -= dt;
+        if (!canSee) {
+          this.state = 'idle';
+          this.vx = damp(this.vx, 0, 0.001, dt);
+          break;
+        }
+        this.state = 'chase';
+        this.faceToward(player.x);
+
+        // The embrace takes the close band; the breath takes the wider one,
+        // the same range-picked pair Kamsa's smash/lash already uses so
+        // holding station just outside the embrace is never a free read.
+        if (this._canCommit() && this.cooldown <= 0 && this.grounded) {
+          if (dist < E.range) {
+            this.state = 'embraceTelegraph';
+            this.phase = E.windup * windupMul;
+            this.vx = 0;
+            this.chargeHitSet.clear();
+            this.ctx.audio?.play('growl');
+            break;
+          } else if (dist < B.range) {
+            this.state = 'breathTelegraph';
+            this.phase = B.windup * windupMul;
+            this.vx = 0;
+            this.chargeHitSet.clear();
+            this.ctx.audio?.play('growl');
+            break;
+          }
+        }
+
+        const want = dist > this.cfg.stopAt ? this.facing * this.cfg.speed : 0;
+        const ahead = this.x + Math.sign(want || this.facing) * 1.0;
+        if (want !== 0 && !this.level.hasFloorAhead(ahead, this.y)) this.vx = 0;
+        else this.vx = damp(this.vx, want, 0.0008, dt);
+        break;
+      }
+
+      case 'embraceTelegraph': {
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0001, dt);
+        if (this.phase > E.windup * windupMul * 0.35) this.faceToward(player.x);
+        if (this.phase <= 0) {
+          this.state = 'embrace';
+          this.phase = E.active;
+          this.chargeHitSet.clear();
+          this.ctx.audio?.play('pounce');
+          this.ctx.shake?.(E.shake);
+        }
+        break;
+      }
+
+      case 'breathTelegraph': {
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0001, dt);
+        if (this.phase > B.windup * windupMul * 0.35) this.faceToward(player.x);
+        if (this.phase <= 0) {
+          this.state = 'breath';
+          this.phase = B.active;
+          this.ctx.audio?.play('wispShot');
+          this.ctx.shake?.(B.shake);
+          // The exhale, spat a fixed distance ahead rather than aimed at
+          // wherever the player is standing — a cloud, not a homing bolt.
+          // `shockwaveFromBoss` is Shakuni's own ground-telegraph-then-
+          // resolve zone, reused here rather than a new hazard-patch
+          // subsystem; see `docs/DECISIONS.md`.
+          const cx = this.x + this.facing * B.reach;
+          const cy = this.level.groundAt(cx) + 0.4;
+          this.ctx.vfx.groundBurst(cx, cy, B.radius * 0.6);
+          this.ctx.shockwaveFromBoss(cx, cy, { radius: B.radius, damage: B.damage, knock: 0 });
+        }
+        break;
+      }
+
+      case 'embrace': {
+        this.phase -= dt;
+        if (this.phase <= 0) {
+          this.state = 'recover';
+          this.phase = E.recover;
+        }
+        break;
+      }
+
+      case 'breath': {
+        this.phase -= dt;
+        if (this.phase <= 0) {
+          this.state = 'recover';
+          this.phase = B.recover;
+        }
+        break;
+      }
+
+      case 'recover': {
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0005, dt);
+        if (this.phase <= 0) {
+          this.state = 'chase';
+          this.cooldown = rand(this.cfg.cooldown[0], this.cfg.cooldown[1]);
+        }
+        break;
+      }
+
+      case 'hurt':
+        this.vx = damp(this.vx, 0, 0.06, dt);
+        break;
+    }
+
+    if (this.juggleT > 0) this.juggleT = this.grounded ? 0 : this.juggleT - dt;
+    this.applyGravity(dt, PHYS.gravity * (this.juggleT > 0 ? JUGGLE.gravityMul : 1));
+    this.moveAndCollide(dt);
+    this._animate(dt);
+    this.syncRig();
+  }
+
+  /** Forward-biased, the same reason Kamsa's smash/lash boxes both are. */
+  attackBox() {
+    if (this.dead) return null;
+    const A = this.state === 'embrace' ? this.cfg.embrace : null;
+    if (!A) return null;
+    return this.facing >= 0
+      ? { x0: this.x - A.reachBack, x1: this.x + A.reach, y0: this.y, y1: this.y + this.hh * 2 }
+      : { x0: this.x - A.reach, x1: this.x + A.reachBack, y0: this.y, y1: this.y + this.hh * 2 };
+  }
+
+  currentAttackDamage() {
+    if (this.state === 'embrace') return { damage: this.cfg.embrace.damage, knock: this.cfg.embrace.knock };
+    return null;
+  }
+
+  _animate(dt) {
+    const n = this.n;
+    const k = 1 - Math.pow(0.0002, dt);
+    const E = this.cfg.embrace;
+    const B = this.cfg.breath;
+    let bodyZ = 0;
+    let bodyY = 0;
+    let armZ = 0;
+    let glow = 0;
+    let mouthGlow = this.form === 'revealed' ? 0.9 : 0.15;
+
+    if (this.state === 'embraceTelegraph') {
+      // Arms spreading in an inviting gesture — the false hospitality her
+      // entry names, before a committed grab.
+      const u = 1 - this.phase / (E.windup * (this.phaseFired ? this.cfg.phaseWindupMul : 1));
+      bodyZ = -0.06 - u * 0.08;
+      bodyY = -0.04 - u * 0.04;
+      armZ = -0.4 - u * 0.8;
+      glow = 0.3 + u * 0.7;
+    } else if (this.state === 'embrace') {
+      const u = clamp(1 - this.phase / E.active, 0, 1);
+      bodyZ = lerp(-0.2, 0.08, u);
+      armZ = lerp(0.6, -0.2, u);
+      glow = 1;
+    } else if (this.state === 'breathTelegraph') {
+      const u = 1 - this.phase / (B.windup * (this.phaseFired ? this.cfg.phaseWindupMul : 1));
+      bodyZ = 0.08 + u * 0.1;
+      bodyY = -0.03 - u * 0.03;
+      glow = 0.3 + u * 0.7;
+      mouthGlow = lerp(mouthGlow, this.form === 'revealed' ? 1 : 0.6, u);
+    } else if (this.state === 'breath') {
+      bodyZ = 0.16;
+      mouthGlow = this.form === 'revealed' ? 1 : 0.7;
+    } else if (this.state === 'recover') {
+      const total = Math.max(E.recover, B.recover);
+      const u = clamp(this.phase / total, 0, 1);
+      bodyZ = -0.06 * u;
+      bodyY = -0.04 * u;
+    } else if (this.state === 'hurt') {
+      bodyZ = 0.2;
+    } else if (Math.abs(this.vx) > 0.3) {
+      bodyY = Math.abs(Math.sin(this.t * 5)) * 0.03;
+    } else {
+      bodyY = Math.sin(this.t * 1.4) * 0.025;
+    }
+
+    n.torso.rotation.z = lerp(n.torso.rotation.z, bodyZ, k);
+    n.body.position.y = lerp(n.body.position.y, n.baseY + bodyY, k);
+    n.shoulderR.rotation.z = lerp(n.shoulderR.rotation.z, armZ, k);
+    n.shoulderL.rotation.z = lerp(n.shoulderL.rotation.z, -armZ * 0.3, k);
+
+    n.mouth.material.transparent = true;
+    n.mouth.material.opacity = lerp(n.mouth.material.opacity, mouthGlow, k);
+
+    for (const key of ['L', 'R']) {
+      const e = n['eye' + key];
+      e.material.transparent = true;
+      e.material.opacity = lerp(e.material.opacity, (this.form === 'revealed' ? 0.4 : 0.3) + glow * 0.5, k);
+      const g = n['handGlow' + key];
+      g.material.opacity = lerp(g.material.opacity, 0.2 + glow * 0.8, k);
+    }
   }
 }
 

@@ -3457,3 +3457,88 @@ fix. The fight was driven headlessly through spawn, chase and a mid-fight
 frame: a screenshot at the arena confirmed the gorget bars, the iron
 circlet-crown, the shackle-cuffs, the chain drape and the mace all read as
 designed, caught the disconnected-mace bug above, and confirmed the fix.
+
+## Gate 10 becomes Putana's Gokul, Asleep, retiring Bhavachakra/Maun-Ankur — and a level-design experiment gets scoped down against her own spec
+
+Authored 2026-08-21. Gate 10 under the ten-gate campaign was the Wheel's own
+chamber, Maun-Ankur (a fourth Guardian-class boss) as its Warden. Under the
+fifteen-gate redesign (`docs/SPEC-CAMPAIGN.md`) gate 10 is Putana, Act 3's
+second gate, and the old content is retired the same way gates 3, 8 and 9's
+own rebuilds retired theirs: the gate file and its `GATE10_*` string block
+are replaced outright, and the orphaned `MAUN_ANKUR` config export and
+`MaunAnkur` boss class are left in place rather than deleted, the same
+precedent `GORU_MUKH`/`CHIRANJIVI`/`BAKAYA` already set.
+
+**This session was asked to also run a level-design experiment on this
+specific gate** — 2–3 elevation changes, a stair section, a forgiving
+platforming section, an enemy encounter with vertical positioning, more
+deliberate environmental composition, a distinct mid-level area and a
+distinct boss approach — while her own table calls for "flat, minimal,
+deliberately intimate" and zero regular encounters, a campaign first. Put to
+the user directly as a real conflict rather than resolved unilaterally; the
+answer was to keep the spec's own constraints (zero regular encounters, the
+Warden met alone, no padding mob) and apply the traversal ideas lightly
+inside them. Two further scope cuts followed once the geometry was actually
+built:
+
+**No verticality inside her own arena.** Every Warden arena in the campaign
+flattens completely for the fight — Ravana's own gate 8 note is explicit
+("a boulder in here is not cover, it is a thing to be pinned against"),
+because a committed move needs open, readable ground. Putana's own table
+asks for the same "flat" read on top of that. A floating ledge inside her
+nursery arena, which would have satisfied the brief's "vertical-positioning
+encounter" ask literally, was dropped for this reason — the flat-arena rule
+outranks the level-design brief here, the same way the zero-regular-
+encounters rule already did. The elevation instead lives entirely in the
+approach (a courtyard, a two-riser stair to the loft, three roof beams over
+small gaps, then a drop through the hatch into the nursery), never in the
+fight itself.
+
+**A 1.5-unit "gentle stair" rise does not clear `tools/gatecheck.js`'s own
+headroom floor, so the household's stair uses the same 3-unit rise gate 6's
+canopy and gate 8's battlement already climb.** First pass authored the
+veranda and the loft as two short 1.5-unit risers, meant to read softer than
+the campaign's usual 3-unit climbs for a quieter gate. `reachability` failed
+outright ("no route from x 2 to exitX 168") rather than merely tightening a
+jump-reserve number: `headroomClear` derives its floor from `PLAYER.hh` and
+`thickness: 1.0` — `(top - thickness) - low.top >= PLAYER.hh * 2 + 0.05`,
+which algebraically needs a rise of at least 2.75 units at that thickness.
+Below it, the upper ledge's solid body reaches down far enough to bury the
+one below it, and the lower platform reads to the collision resolver as a
+wall rather than a mezzanine — the same failure mode gate 9's own descending
+stands hit and fixed by thinning `thickness`, except here the fix is a
+bigger rise rather than a thinner ledge, since `thickness: 1.0` was already
+the validated floor. Both risers moved to 3 units; the "quiet gate" read
+comes from the small roof gaps (2.2–2.6, well under the campaign's
+`?vtest`-validated 3.8-unit "real gap") and the domestic dressing instead.
+
+**Her mid-range move resolves as a single ground-telegraph-then-resolve
+zone, Shakuni's own `die` mechanism reused, rather than the "lingering
+hazard patch" her research entry describes.** A true damage-over-time zone
+that persists after the telegraph resolves does not exist anywhere in this
+codebase — every ranged threat is either a `Bolt` or an instant-resolve
+`ctx.shockwaveFromBoss` call. Per `docs/agents/gate-build.md`'s own rule
+("if an existing mechanic cannot support one of these ideas cleanly, do not
+invent a new subsystem — use the closest existing mechanic"), `Putana.breath`
+spits a telegraphed cloud a fixed distance ahead of her (not tracking the
+player, unlike Shakuni's die) and resolves it once via `shockwaveFromBoss`
+at `breath.reach`/`breath.radius`. The "lingering" half of the source
+research is not implemented; a future session wanting a real DoT zone is
+adding a new subsystem, not reskinning this one.
+
+**Verification.** Baseline FAIL set matches gate 9's own captured set exactly
+(`ranged`, `ranged +chaya`, the charger `recovery-window` and
+`leaves-remnant` rows, and the frozen `signed-rank` gate's own measured
+false-negative rate on 2 of 5 seeds — `20260802` only, in this run). All
+seven gate-10 Tier-1 rows are green (`jump reserve` 46% at the tightest
+crossing, `spawn points`, `reachability` at 7 of 7 platforms, `encounter
+locks`, `enemy types`, `solo debut` for `putana`, `story beats` at 22
+beats), and both new telegraph rows clear the 0.42 s floor with margin
+(0.578 s embrace, 0.637 s breath, both post-reveal). The five recorded seeds
+sweep to the same FAIL set, and every gate-10-specific row is green on all
+five. The gate was driven headlessly through the courtyard, the loft, the
+roof platforms (a screenshot from the roof confirmed the platform's own edge
+renders, not just a colour change, answering whether the verticality reads
+at all) and the encounter: her disguise form's crimson-and-mustard drape and
+gold jewelry, and her true form's bloated silhouette and bile-khaki skin
+after a forced `_reveal()`, both confirmed by screenshot.

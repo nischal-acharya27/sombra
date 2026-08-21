@@ -378,5 +378,25 @@ export const P = {
   mathuraWrestlerCloth: 0xc4b088,
   mathuraWrestlerEye: 0xffb347,
 
+  // Act 3 — gate 10's Putana. Per docs/research/villain-roster.md: a
+  // disguise-form beautiful woman over a bloated, poison-swollen true form.
+  // `putanaRobe`/`putanaRobeGold` are the folk painting's bold
+  // crimson-and-mustard stripe, deliberately not the generic gold-on-maroon
+  // court look already spent by Duryodhana and Ravana; her jewelry reuses
+  // `bladeSteel` rather than inventing a redundant silver. `putanaSkin` is
+  // distinct from `hunterSkin`, `mathuraSkin` and `lankaSkin`. True form:
+  // `putanaTrueSkin`/`putanaTrueSkinDark` is a sickly bile-khaki, kept off
+  // Taraka's moss-green-to-black and Shurpanakha's ash-grey so the roster's
+  // demon skins stay distinguishable at a glance. `putanaToxin` lights the
+  // breath cloud and the true form's mouth/eye glow; the attack telegraph
+  // itself stays on the shared damage-signal `amber` per her entry's own
+  // instruction not to break that convention.
+  putanaRobe: 0xb8283f,
+  putanaRobeGold: 0xd9a63c,
+  putanaSkin: 0xd1976a,
+  putanaTrueSkin: 0x8f8a5c,
+  putanaTrueSkinDark: 0x453f2c,
+  putanaToxin: 0xacd94a,
+
   outline: 0x0a0813,
 };

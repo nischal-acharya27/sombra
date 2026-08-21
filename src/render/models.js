@@ -3558,3 +3558,217 @@ export function buildMathuraWrestler(skin = null) {
   root.userData.nodes = n;
   return root;
 }
+
+// ---------------------------------------------------------------------------
+// Putana — gate 10's Warden
+// ---------------------------------------------------------------------------
+
+/**
+ * Both of Putana's rigs. Unlike Shurpanakha's disguise/reveal, which share
+ * one silhouette at two scales (`s`), her entry gives the two forms
+ * genuinely different proportions — human-scale disguise, "bloated/swollen"
+ * true form — so each is built to its own absolute dimensions rather than
+ * one shared skeleton scaled. The physics box stays fixed at construction
+ * either way (`PUTANA.hw`/`hh`, read by `Enemy`'s constructor once): only
+ * the visible rig and `this.n` move at the reveal, the same "kit and hitbox
+ * never move" rule Shurpanakha's handoff already set.
+ *
+ * No feeding tableau anywhere in this rig, in either form — the source's
+ * "milk" is abstracted into breath and touch from this geometry decision
+ * onward, per her entry's respectful-treatment note.
+ */
+function buildPutanaForm(true_, c) {
+  const root = new THREE.Group();
+  const n = {};
+
+  const body = new THREE.Group();
+  body.position.y = true_ ? 0.86 : 0.7;
+  root.add(body);
+  n.body = body;
+  n.baseY = body.position.y;
+
+  const skin = true_ ? c.trueSkin : c.skin;
+  const dark = true_ ? c.trueSkinDark : c.robeGold;
+
+  // The true form reads bloated rather than tall — a rounder, heavier torso
+  // on a shorter rise, so the size increase carries "poison filling her
+  // body" instead of a fourth tall giant.
+  const torso = true_
+    ? part(0.5, 0.62, 0.46, skin, { pivot: 'bottom', outline: 0.036 })
+    : part(0.32, 0.62, 0.28, skin, { pivot: 'bottom', outline: 0.03 });
+  body.add(torso);
+  n.torso = torso;
+
+  if (!true_) {
+    // The bold crimson-and-mustard striped drape, the folk-painting anchor.
+    const drape = part(0.35, 0.34, 0.31, c.robe, { pivot: 'top', outline: 0.024 });
+    drape.position.y = 0.54;
+    torso.add(drape);
+    const stripe = part(0.36, 0.09, 0.32, c.robeGold, { outline: 0.018 });
+    stripe.position.y = 0.4;
+    torso.add(stripe);
+    // Silver jewelry at the throat — `bladeSteel` reused rather than a
+    // redundant new accent.
+    const necklace = part(0.3, 0.05, 0.3, P.bladeSteel, { outline: 0.014 });
+    necklace.position.y = 0.58;
+    torso.add(necklace);
+  } else {
+    // Dull vein-cracks, the poison showing through rather than a wound —
+    // the true form's own damage-signal telegraph accent, `putanaToxin`.
+    for (let i = 0; i < 3; i++) {
+      const vein = part(0.025, 0.26 - i * 0.05, 0.025, c.toxin, { pivot: 'top', outline: 0 });
+      vein.position.set(0.22, 0.5 - i * 0.09, (i - 1) * 0.1);
+      torso.add(vein);
+    }
+  }
+
+  const head = new THREE.Group();
+  head.position.y = true_ ? 0.58 : 0.6;
+  torso.add(head);
+  n.head = head;
+
+  const skull = true_
+    ? part(0.26, 0.26, 0.26, skin, { pivot: 'bottom', outline: 0.026 })
+    : part(0.2, 0.21, 0.2, skin, { pivot: 'bottom', outline: 0.022 });
+  head.add(skull);
+
+  if (!true_) {
+    // Loose dark hair under a simple gold circlet — the disguise reads as
+    // an ordinary, welcoming woman.
+    const hair = part(0.24, 0.22, 0.24, c.robeGold, { pivot: 'top', outline: 0.02 });
+    hair.position.set(-0.04, 0.2, 0);
+    skull.add(hair);
+  } else {
+    // A ragged, matted mane where the disguise's hair was — the same "kept
+    // the disguise's own material, made feral" move Taraka's pelts and
+    // Shurpanakha's hair both already use across their own reveals.
+    const mane = part(0.32, 0.3, 0.32, c.trueSkinDark, { pivot: 'top', outline: 0.024 });
+    mane.position.set(-0.08, 0.24, 0);
+    skull.add(mane);
+  }
+
+  // The mouth glow — `putanaToxin` on the true form, dim in the disguise:
+  // one accent slot doing double duty, present but unlit before the reveal.
+  const mouth = decal(true_ ? 0.12 : 0.06, true_ ? 0.06 : 0.03, c.toxin, { opacity: true_ ? 0.9 : 0.15 });
+  mouth.position.set(0.12, 0.03, 0);
+  mouth.rotation.y = Math.PI / 2;
+  skull.add(mouth);
+  n.mouth = mouth;
+
+  for (const side of [-1, 1]) {
+    const eye = decal(true_ ? 0.07 : 0.05, true_ ? 0.05 : 0.03, true_ ? c.toxin : c.eye, { opacity: true_ ? 1 : 0.7 });
+    eye.position.set(0.11, true_ ? 0.13 : 0.11, side * 0.07);
+    eye.rotation.y = Math.PI / 2;
+    skull.add(eye);
+    n[side < 0 ? 'eyeL' : 'eyeR'] = eye;
+  }
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const shoulder = new THREE.Group();
+    shoulder.position.set(0.04, true_ ? 0.48 : 0.5, side * (true_ ? 0.28 : 0.2));
+    torso.add(shoulder);
+    n['shoulder' + key] = shoulder;
+
+    const upper = part(true_ ? 0.15 : 0.12, true_ ? 0.32 : 0.3, true_ ? 0.15 : 0.12, skin, { pivot: 'top', outline: 0.02 });
+    shoulder.add(upper);
+
+    const elbow = new THREE.Group();
+    elbow.position.y = true_ ? -0.32 : -0.3;
+    shoulder.add(elbow);
+    n['elbow' + key] = elbow;
+
+    const fore = part(true_ ? 0.14 : 0.11, true_ ? 0.3 : 0.28, true_ ? 0.14 : 0.11, skin, { pivot: 'top', outline: 0.018 });
+    elbow.add(fore);
+
+    const hand = part(true_ ? 0.15 : 0.11, true_ ? 0.16 : 0.13, true_ ? 0.15 : 0.11, skin, { pivot: 'top', outline: 0.016 });
+    hand.position.y = true_ ? -0.3 : -0.28;
+    elbow.add(hand);
+    n['hand' + key] = hand;
+
+    if (true_) {
+      // Full rakshasi claws — sized up from the disguise's hint.
+      for (let i = -1; i <= 1; i++) {
+        const claw = part(0.03, 0.22, 0.03, P.bone, { pivot: 'top', outline: 0.007 });
+        claw.position.set(0.1, -0.38, i * 0.055);
+        elbow.add(claw);
+      }
+    } else {
+      // A subtly clawed nail on each hand — the tell hidden in plain
+      // sight, per her entry's own reference reading.
+      for (let i = -1; i <= 1; i++) {
+        const nail = part(0.018, 0.09, 0.018, P.bone, { pivot: 'top', outline: 0.005 });
+        nail.position.set(0.07, -0.28, i * 0.035);
+        elbow.add(nail);
+      }
+    }
+
+    // The embrace's telegraph flare — the shared damage-signal amber, on
+    // the same node in both forms so the reveal never moves the tell.
+    const glow = decal(0.15, 0.15, P.amber, { opacity: 0.35 });
+    glow.position.set(0.08, true_ ? -0.3 : -0.28, 0);
+    glow.rotation.y = Math.PI / 2;
+    elbow.add(glow);
+    n['handGlow' + key] = glow;
+  }
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const hip = new THREE.Group();
+    hip.position.set(0, 0, side * (true_ ? 0.18 : 0.12));
+    body.add(hip);
+    n['hip' + key] = hip;
+
+    const thigh = part(true_ ? 0.19 : 0.15, true_ ? 0.38 : 0.36, true_ ? 0.19 : 0.15, dark, { pivot: 'top', outline: 0.022 });
+    hip.add(thigh);
+
+    const knee = new THREE.Group();
+    knee.position.y = true_ ? -0.38 : -0.36;
+    hip.add(knee);
+    n['knee' + key] = knee;
+
+    const shin = part(true_ ? 0.16 : 0.13, true_ ? 0.34 : 0.32, true_ ? 0.16 : 0.13, dark, { pivot: 'top', outline: 0.02 });
+    knee.add(shin);
+
+    const foot = part(true_ ? 0.18 : 0.15, 0.08, true_ ? 0.22 : 0.18, dark, { pivot: 'top', outline: 0.016 });
+    foot.position.set(0.04, true_ ? -0.34 : -0.32, 0);
+    knee.add(foot);
+  }
+
+  root.userData.nodes = n;
+  return root;
+}
+
+/**
+ * Both rigs, pre-built at spawn and swapped on a `visible` flag, never built
+ * mid-run — the same rule `buildTaraka`/`buildShurpanakha` follow and for
+ * the same reason (three.js draws four `Math.random()` values per object
+ * for its UUID; the suite seeds `Math.random` globally).
+ *
+ * `Putana`'s constructor in `enemies.js` reads `root.userData.forms` and
+ * swaps both the `visible` flag and its own `this.n` at the reveal.
+ */
+export function buildPutana(skin = null) {
+  const c = skin || {
+    robe: P.putanaRobe,
+    robeGold: P.putanaRobeGold,
+    skin: P.putanaSkin,
+    trueSkin: P.putanaTrueSkin,
+    trueSkinDark: P.putanaTrueSkinDark,
+    toxin: P.putanaToxin,
+    eye: P.amber,
+  };
+  const root = new THREE.Group();
+
+  const disguised = buildPutanaForm(false, c);
+  const revealed = buildPutanaForm(true, c);
+  revealed.visible = false;
+  root.add(disguised, revealed);
+
+  root.userData.forms = {
+    disguised: { root: disguised, nodes: disguised.userData.nodes },
+    revealed: { root: revealed, nodes: revealed.userData.nodes },
+  };
+  root.userData.nodes = disguised.userData.nodes;
+  return root;
+}

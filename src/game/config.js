@@ -1227,6 +1227,71 @@ export const KAMSA = {
   enrageWindupMul: 0.8,
 };
 
+/**
+ * Gate 10 — Putana. Extends `Enemy` directly, the same chase → telegraph →
+ * attack → recover skeleton Kawach/Bakasura/Kumbhakarna/Kamsa already
+ * reskin. `hw`/`hh` are the true form's — the physics box the disguise's
+ * smaller rig sits inside unchanged, per `buildPutanaForm`'s own note.
+ *
+ * A phase-transition Warden, like Shurpanakha and Taraka: `phaseAt`/
+ * `phaseWindupMul` replace the ordinary `enrageAt` triple, and both moves
+ * tighten together at the reveal rather than one escalating on its own.
+ */
+export const PUTANA = {
+  hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
+  hw: 0.62,
+  hh: 1.15,
+  speed: 2.6,
+  chaseRange: 24,
+  stopAt: 2.6,
+  /**
+   * The close move: the poisoned embrace — arms spreading in an inviting
+   * gesture before a committed grab, satisfying the no-passive-contact rule
+   * the same way every other Warden's melee move does. Reskinned rather
+   * than replaced at the reveal: identical hitbox and timing, a claw-grab
+   * instead of an embrace.
+   */
+  embrace: {
+    range: 3.2,
+    windup: 0.68,
+    active: 0.22,
+    recover: 1.0,
+    damage: 20,
+    knock: 12,
+    reach: 2.6,
+    reachBack: 0.35,
+    shake: 0.2,
+  },
+  /**
+   * The mid-range move: a telegraphed exhale that resolves into a toxin
+   * cloud a fixed distance ahead of her, rather than a direct-hit
+   * projectile — punishing a hunter who stands and trades. Reuses
+   * `ctx.shockwaveFromBoss`, the same ground-telegraph-then-resolve
+   * mechanism Shakuni's die already spends; her entry's "lingering hazard
+   * patch" is simplified to that single-resolve zone rather than a new
+   * damage-over-time subsystem — see `docs/DECISIONS.md`.
+   */
+  breath: {
+    range: 6.0,
+    windup: 0.75,
+    active: 0.3,
+    recover: 1.1,
+    damage: 16,
+    reach: 3.4,
+    radius: 1.6,
+    shake: 0.12,
+  },
+  cooldown: [1.1, 1.9],
+  exp: 66,
+  contactDamage: 0,
+  phaseAt: 0.5,
+  // 0.68 × 0.85 = 0.578s (embrace) and 0.75 × 0.85 = 0.6375s (breath) against
+  // `tools/gatecheck.js`'s 0.42s telegraph floor — both hold comfortable
+  // margin, the same "escalation is the windup, not the kit" call every
+  // phase-transition/enrage on the roster already makes.
+  phaseWindupMul: 0.85,
+};
+
 export const GUARDIAN = {
   hp: 5, // phone-playtest HP; see DECISIONS.md — stays until Android port
   hw: 1.5,

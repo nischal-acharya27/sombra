@@ -25,7 +25,7 @@
 // descriptor is authored correctly, that one asks whether `Level` built what
 // the descriptor said.
 
-import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, LANKA_SOLDIER, KUMBHAKARNA, MATHURA_WRESTLER, KAMSA, RAVANA, DURYODHANA, GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR } from '../src/game/config.js';
+import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, LANKA_SOLDIER, KUMBHAKARNA, MATHURA_WRESTLER, KAMSA, PUTANA, RAVANA, DURYODHANA, GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR } from '../src/game/config.js';
 import { ARCHETYPES } from '../src/game/game.js';
 import { GATES } from '../src/game/gates/index.js';
 
@@ -557,6 +557,12 @@ const TELLS = [
   // cornered, not his opening one.
   { archetype: 'kamsa', tell: 'smash, enraged', windup: KAMSA.smash.windup * KAMSA.enrageWindupMul },
   { archetype: 'kamsa', tell: 'lash, enraged', windup: KAMSA.lash.windup * KAMSA.enrageWindupMul },
+  // Putana's two wind-ups both tighten at her reveal (`PUTANA.phaseWindupMul`),
+  // same reasoning as Taraka's, Shurpanakha's and Kumbhakarna's own rows —
+  // the number that has to clear the floor is the one she fights with for
+  // the rest of the encounter, not her disguised one.
+  { archetype: 'putana', tell: 'embrace, revealed', windup: PUTANA.embrace.windup * PUTANA.phaseWindupMul },
+  { archetype: 'putana', tell: 'breath, revealed', windup: PUTANA.breath.windup * PUTANA.phaseWindupMul },
   // Ravana's four weapons are four entries in the same `attacks` block every
   // boss below him carries, so the row is generated the same way and against
   // the same enraged multiplier — the number the hunter actually answers is
