@@ -398,5 +398,34 @@ export const P = {
   putanaTrueSkinDark: 0x453f2c,
   putanaToxin: 0xacd94a,
 
+  // Act 3 — gate 10's Gokul household, the materials its authored landmarks
+  // are built from (`src/render/landmarks.js`). Village vernacular rather than
+  // a villain's kit: dry thatch, packed mud-brick, undressed timber, undyed
+  // cotton and one living green. Kept deliberately mid-toned — a sleeping
+  // village at night is lit from the ground up by oil lamps, so the household
+  // has to hold its silhouette against gate 10's deep indigo realm while still
+  // reading as warm where a lamp reaches it. Every one of these is rimmed with
+  // `amber` rather than the default `skyFill`, which is what puts the lamp
+  // light *on* the buildings instead of only beside them.
+  //
+  // No new flame colour: the lamps burn the shared `amber` above, which gate
+  // 10's realm already carries as its own `crystal` accent. Nothing here is a
+  // telegraph — landmarks are scenery and never a fight — so the household
+  // borrowing the damage-signal hue costs the hunter no readability.
+  gokulThatch: 0x7a6238,
+  gokulThatchDark: 0x453620,
+  gokulMud: 0x8a6e50,
+  gokulMudDark: 0x4c3a2a,
+  // Undressed village timber — posts, beams, the well frame, the cradle's
+  // hanger. Warmer and a shade lighter than `lankaSpearHaft`'s war-worn haft,
+  // which is the nearest existing value; a second name at an identical hex is
+  // the redundancy the roster warns against, so this one earns its difference.
+  gokulTimber: 0x53402a,
+  gokulCloth: 0xbdb298,
+  // The tulsi at the courtyard shrine — the one living, unweathered thing in
+  // a household the stopped Wheel has left asleep, and the only saturated
+  // green in the gate.
+  gokulTulsi: 0x4e6b34,
+
   outline: 0x0a0813,
 };
