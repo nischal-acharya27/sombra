@@ -857,12 +857,14 @@ export function buildTantrik(skin = null) {
  * .finishSetup`/`_spawnAnim` drive `root.scale` for the rise-from-shadow
  * entrance (0.01 → 1) and would overwrite anything set on it.
  *
- * 1.25 puts the crown a little under 2 world units up, against the hunter's
- * ~1.7. The old rig's 1.35 was compensating for a body group whose origin sat
- * too low; with the proportions below it is not needed, and a smaller number
- * keeps his hands where the staff and the dice want them.
+ * 1.42 puts the crown about 2.1 world units up, against the hunter's ~1.7 and
+ * against his own collision box, which is 2.3 tall (`hh 1.15`). The first pass
+ * used 1.25 and stood a rig noticeably *shorter* than the box it occupied —
+ * which, combined with a skirt as wide as the box, is what made him read as a
+ * bell rather than as the column the reference art draws. Height was the
+ * cheaper half of that fix; see the skirt profile for the other half.
  */
-const SHAKUNI_SCALE = 1.25;
+const SHAKUNI_SCALE = 1.42;
 
 /**
  * Which way a face of `buildDie` points, and what it is worth.
@@ -1041,24 +1043,34 @@ export function buildShakuni() {
   // -- the robe, floor up ----------------------------------------------------
   //
   // A surface of revolution, not a hem box. Court dress is *layers*, and a
-  // layer reads as a step in the silhouette: the profile below flares to its
-  // widest at the floor and steps inward twice on the way up, so the outline
-  // has three hems in it rather than one skirt-shaped block. It is also the
-  // reason he has no legs — he paces a ring, he never runs, and cloth to the
-  // floor is what an old courtier wears.
+  // layer reads as a step in the silhouette: the profile steps inward twice on
+  // the way up, so the outline has three hems in it rather than one
+  // skirt-shaped block. It is also the reason he has no legs — he paces a
+  // ring, he never runs, and cloth to the floor is what an old courtier wears.
+  //
+  // **A column, not a bell**, and this is the second pass. The first flared
+  // from the waist and put its widest point at 0.35 — as wide as the collision
+  // box, on a rig shorter than that box — so his aspect ratio came out near
+  // 2.1:1 against roughly 3:1 in the reference art. Read side by side he was
+  // squat, which is the one word the brief could least afford to lose.
+  //
+  // The fix is in the *shape* of the profile as much as in its numbers: the
+  // coat now hangs nearly straight from the waist to below the knee and opens
+  // only in the last fifth of its height, which is how the reference draws it
+  // and is what makes the flare read as a hem rather than as a skirt.
   const skirt = shaped(
     lathe(
       [
         [0.0, 0.0],
-        [0.35, 0.012],
-        [0.35, 0.05],
-        [0.30, 0.065], // outer hem
-        [0.315, 0.245],
-        [0.262, 0.262], // second layer's hem
-        [0.272, 0.47],
-        [0.222, 0.485], // third layer's hem
-        [0.196, 0.60],
-        [0.168, 0.70],
+        [0.268, 0.010],
+        [0.268, 0.042],
+        [0.232, 0.058], // the hem, and the only real flare on him
+        [0.214, 0.170],
+        [0.196, 0.186], // second layer's hem
+        [0.192, 0.470],
+        [0.172, 0.492], // third layer's hem
+        [0.166, 0.700],
+        [0.152, 0.860],
       ],
       12
     ),
@@ -1071,14 +1083,14 @@ export function buildShakuni() {
   // The gold hem running round the floor edge — the reference draws it as the
   // robe's brightest element, and at combat distance it is what separates the
   // silhouette from the floor it stands on.
-  const hemRing = shaped(tor(0.325, 0.022, 5, 18), P.shakuniGoldDim, { outline: 0.012 });
+  const hemRing = shaped(tor(0.250, 0.020, 5, 18), P.shakuniGoldDim, { outline: 0.012 });
   hemRing.rotation.x = Math.PI / 2;
-  hemRing.position.y = 0.055;
+  hemRing.position.y = 0.048;
   rig.add(hemRing);
   n.goldMeshes.push(hemRing.userData.mesh);
 
   const body = new THREE.Group();
-  body.position.y = 0.66;
+  body.position.y = 0.82;
   rig.add(body);
   n.body = body;
 
@@ -1095,7 +1107,7 @@ export function buildShakuni() {
   // Tapered and narrow: 0.135 at the shoulder against the skirt's 0.35 at the
   // floor. That ratio is the whole "slender aristocrat" read, and it is a
   // proportion a stack of boxes states far less clearly than a cone frustum.
-  const robe = shaped(cyl(0.135, 0.178, 0.44, 9), P.shakuniRobe, {
+  const robe = shaped(cyl(0.118, 0.152, 0.50, 9), P.shakuniRobe, {
     pivot: 'bottom',
     outline: 0.024,
     opts: { map: 'shakuni.robe', steps: 3 },
@@ -1107,17 +1119,17 @@ export function buildShakuni() {
   // hip. Two panels, front and back, so it reads from either facing — he turns
   // by yawing 180°, and a one-sided sash would vanish half the time.
   for (const sign of [1, -1]) {
-    const sash = part(0.05, 0.60, 0.115, P.shakuniWine, { outline: 0.014 });
-    sash.position.set(sign * 0.115, 0.22, 0);
+    const sash = part(0.045, 0.68, 0.10, P.shakuniWine, { outline: 0.014 });
+    sash.position.set(sign * 0.098, 0.25, 0);
     sash.rotation.x = sign * 0.42;
     stoop.add(sash);
     n.wineMeshes.push(sash.userData.mesh);
   }
 
   // A gold cord where the sash crosses the waist.
-  const cord = shaped(tor(0.175, 0.017, 5, 16), P.shakuniGold, { outline: 0.011 });
+  const cord = shaped(tor(0.150, 0.016, 5, 16), P.shakuniGold, { outline: 0.011 });
   cord.rotation.x = Math.PI / 2;
-  cord.position.y = 0.07;
+  cord.position.y = 0.08;
   robe.add(cord);
   n.goldMeshes.push(cord.userData.mesh);
 
@@ -1126,8 +1138,8 @@ export function buildShakuni() {
   // Two collars at different radii, which is how court jewellery actually
   // hangs and what stops it reading as one thick necklace, plus a pendant gem.
   for (const [r, y, tube, col] of [
-    [0.125, 0.40, 0.016, P.shakuniGold],
-    [0.152, 0.355, 0.013, P.shakuniBronze],
+    [0.108, 0.455, 0.015, P.shakuniGold],
+    [0.132, 0.410, 0.012, P.shakuniBronze],
   ]) {
     const collar = shaped(tor(r, tube, 5, 16), col, { outline: 0.010 });
     collar.rotation.x = Math.PI / 2;
@@ -1137,14 +1149,14 @@ export function buildShakuni() {
   }
 
   const pendant = shaped(octa(0.045), P.shakuniWine, { outline: 0.012 });
-  pendant.position.set(0.135, 0.33, 0);
+  pendant.position.set(0.118, 0.375, 0);
   robe.add(pendant);
   n.pendant = pendant;
   n.emberMeshes.push(pendant.userData.mesh);
 
   // -- head ------------------------------------------------------------------
   const head = new THREE.Group();
-  head.position.y = 0.50;
+  head.position.y = 0.56;
   robe.add(head);
   n.head = head;
 
@@ -1282,7 +1294,7 @@ export function buildShakuni() {
   for (const side of [-1, 1]) {
     const key = side < 0 ? 'L' : 'R';
     const shoulder = new THREE.Group();
-    shoulder.position.set(0, 0.395, side * 0.145);
+    shoulder.position.set(0, 0.452, side * 0.126);
     robe.add(shoulder);
     n['shoulder' + key] = shoulder;
 
@@ -1337,7 +1349,10 @@ export function buildShakuni() {
   // is actually carried at rest, so the pose reads as a man holding something
   // rather than as a man being held up by it.
   const staff = new THREE.Group();
-  staff.position.set(-0.02, -0.02, -0.06);
+  // Pushed further out laterally than the first pass, because the torso got
+  // narrower with the column: at z -0.06 the shaft crossed the robe's own front
+  // instead of standing beside it.
+  staff.position.set(-0.02, -0.02, -0.115);
   staff.rotation.z = 0.26;
   n.handL.add(staff);
   n.staff = staff;
@@ -1379,7 +1394,7 @@ export function buildShakuni() {
   // Decorative, and it matters that they are: the die that can hurt you is
   // always one thrown into the world by `vfx.dieToss`, never one of these.
   const orbit = new THREE.Group();
-  orbit.position.set(0.05, 1.02, 0);
+  orbit.position.set(0.05, 1.22, 0);
   rig.add(orbit);
   n.orbit = orbit;
 
