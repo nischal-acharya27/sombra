@@ -11,6 +11,7 @@ import { Actor, boxHit } from './actor.js';
 import { buildRaakchyas, buildCharger, buildKawach, buildBhootBatti, buildTantrik, buildShakuni, buildBakasura, buildTaraka, buildShurpanakha, buildLankaSoldier, buildKumbhakarna, buildMathuraWrestler, buildKamsa, buildPutana, buildNarakasura } from '../render/models.js';
 import { RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, LANKA_SOLDIER, KUMBHAKARNA, MATHURA_WRESTLER, KAMSA, PUTANA, NARAKASURA, PHYS, JUGGLE } from './config.js';
 import { P } from '../render/palette.js';
+import { assets } from '../render/assets.js';
 import { clamp, damp, lerp, rand } from '../engine/mathx.js';
 
 /**
@@ -1219,21 +1220,38 @@ export class Tantrik extends Enemy {
 // ---------------------------------------------------------------------------
 
 /**
- * A courtier, not a warrior — see `docs/research/villain-roster.md`'s
- * handoff (`dfed2a1`). Grounded keep-distance, walked rather than flown
- * (`BhootBatti`'s ring-hold arithmetic, adapted to `moveAndCollide` instead
- * of free flight — see `_pace` below), and a ranged/summoned-hazard kit: a
- * die cast at the player's own position, shown during a windup, resolving
- * into a zone the hunter has to have already left.
+ * A courtier, not a warrior — see `docs/research/villain-roster.md`'s handoff
+ * (`dfed2a1`), and the 2026-08-22 combat redesign in `docs/DECISIONS.md`
+ * § "Shakuni is rebuilt as a courtier". Grounded keep-distance, walked rather
+ * than flown, and a kit of four summoned hazards, every one of which is the
+ * same statement in a different shape: *the result is decided before you are
+ * allowed to see it, and reading it in time is the whole game.*
  *
- * The die's *visual* landing point is drawn directly in world space by
- * `vfx.shockRing`, not carried by a prop parented under this rig — see the
- * note on `buildShakuni` for why a child of a yaw-tilted root cannot mark a
- * distant world point honestly. `this.dieX/dieY` are Shakuni's own source of
- * truth for where the zone is; `ctx.shockwaveFromBoss` (despite its name, a
- * plain ctx-level point-radius hit against the player/chaya — see its
- * definition in `game.js`) reads those same numbers at resolve.
+ * - **Loaded Die** — a die is thrown at where the hunter stands, lands showing
+ *   a face, and the face is the radius. Reading the number is worth something
+ *   because a 1 and a 6 are different circles.
+ * - **Court of Blades** — ten cards at once across a narrow fan. The die's
+ *   opposite: it punishes the range the die's keep-away read leaves open.
+ * - **Rigged Throw** — a zone that is lying. Gold, then crimson somewhere
+ *   else. See `SHAKUNI.rigged` for the two numbers that keep it fair.
+ * - **House Always Wins** — phase 2 only. Three zones around *him*, fixed
+ *   spacing, guaranteed gaps, resolving in sequence.
+ *
+ * Every one of the three ground moves resolves through `ctx.shockwaveFromBoss`
+ * — despite the name, a plain ctx-level point-radius hit against the
+ * player/chaya, defined in `game.js`. There is no fourth kind of damage here
+ * and no new combat subsystem: what the redesign added is dice, telegraphs and
+ * a reason to look at the floor.
+ *
+ * Nothing this class draws in the world is parented to its own rig. A prop
+ * under a yaw-tilted root drifts off the point it is meant to mark as the
+ * offset grows (see `buildShakuni`), so `vfx.dieToss` and `vfx.dangerZone` are
+ * both world-space, and `this.zones` is Shakuni's own source of truth for
+ * where the danger is.
  */
+/** The staff's own lean at rest, matching `buildShakuni`. See `_animate`. */
+const STAFF_REST = 0.26;
+
 export class Shakuni extends Enemy {
   static stats = SHAKUNI;
 
@@ -1246,10 +1264,32 @@ export class Shakuni extends Enemy {
     this.cooldown = rand(cfg.interval * 0.4, cfg.interval);
     this.phase = 0;
     this.enraged = false;
-    this.pulseCd = 0;
-    this.dieX = x;
-    this.dieY = y;
-    this.dieRadius = cfg.die.radiusRange[0];
+    this.houseCd = 0;
+    this.zoneIdx = 0;
+    this.emberT = 0;
+    // Rigged Throw's two secrets, decided at cast and read at the reveal.
+    this.riggedSide = 1;
+    this.riggedOffset = cfg.rigged.offsetRange[0];
+
+    /**
+     * Live danger zones, and the only truth about where damage will land.
+     *
+     * Three slots, allocated once here and mutated in place for the rest of the
+     * run — never pushed to and never replaced. A gate's worth of frames is a
+     * lot of frames to be allocating in, and the objects three.js builds behind
+     * an array literal would each draw four values off the seeded stream.
+     *
+     * `n` is how many of the three are live. Everything below reads `zones[0]`
+     * for the single-zone moves, so a die and a hall-wide attack share one path
+     * into the resolve.
+     */
+    this.zones = [
+      { x, y, r: cfg.die.radiusRange[0] },
+      { x, y, r: cfg.house.radius },
+      { x, y, r: cfg.house.radius },
+    ];
+    this.zoneCount = 1;
+
     this.leavesCorpse = true;
   }
 
@@ -1259,15 +1299,56 @@ export class Shakuni extends Enemy {
     return landed;
   }
 
+  /**
+   * The house stops pretending.
+   *
+   * A material and VFX change on the same rig, in the shape Kumbhakarna's
+   * waking already established (`_retint`) — no second model, per gate 1's
+   * original "no rig swap" call, which this keeps. What it reverses is that
+   * call's *other* half: the crossing used to be invisible.
+   *
+   * Three things move, and each is one register going up an octave: the lit
+   * elements (eyes, crest, pendant, every loaded pip) go ember → blaze, the
+   * dice go bone → soaked, and the wine cloth goes wine → crimson. The gold
+   * deliberately does not move. Then `House Always Wins` unlocks, seeded
+   * short so the transition leads straight into it.
+   */
   _enrage() {
     this.enraged = true;
+    this._retint(this.n.emberMeshes, P.shakuniBlaze);
+    this._retint(this.n.wineMeshes, 0x8e1220);
+    this._retint(this.n.dice.map((d) => d.userData.nodes.body), P.shakuniDieLit);
+    this.houseCd = 1.2;
     this.ctx.onEnrage?.();
     this.ctx.audio?.play('enrage');
+    this.ctx.shake?.(0.35);
+    this.ctx.vfx.shadowBurst(this.x, this.y + 1.2, 24, P.shakuniBlaze);
   }
 
-  /** Never a melee threat — every hit he deals lands through `shockwaveFromBoss` at resolve. */
+  /**
+   * Re-colour meshes for the rest of the run, `_flash`'s bookkeeping included.
+   *
+   * `Enemy.finishSetup` clones every material and caches its starting colour as
+   * the `base` that `_flash` restores to after a hit, so setting
+   * `material.color` alone would last exactly until the next sword swing. Same
+   * method, same reasoning, as `Kumbhakarna._retint`.
+   */
+  _retint(meshes, color) {
+    for (const mesh of meshes) {
+      if (!mesh?.material?.color) continue;
+      mesh.material.color.setHex(color);
+      const entry = this.mats?.find((m) => m.mat === mesh.material);
+      entry?.base.setHex(color);
+    }
+  }
+
+  /** Never a melee threat — every hit he deals lands through a zone. */
   attackBox() {
     return null;
+  }
+
+  _windup(base) {
+    return base * (this.enraged ? this.cfg.enrageWindupMul : 1);
   }
 
   _pace(dt, player, canSee) {
@@ -1287,6 +1368,29 @@ export class Shakuni extends Enemy {
     this.vx = damp(this.vx, want, 0.001, dt);
   }
 
+  /** Where a zone's ring sits: the floor under `x`, a hair above it. */
+  _groundAt(x) {
+    return this.level.groundAt(x) + 0.05;
+  }
+
+  /** Draw the live zones for `life` seconds. Redrawn, never accumulated. */
+  _showZones(life, { color = P.crimson, fill = 'shakuni.zone', decoy = false } = {}) {
+    for (let i = 0; i < this.zoneCount; i++) {
+      const z = this.zones[i];
+      this.ctx.vfx.dangerZone(z.x, z.y, z.r, life, { color, fill, decoy });
+    }
+  }
+
+  /** Resolve zone `i`: the damage, and the flash that says it was this circle. */
+  _resolveZone(i, damage, knock) {
+    const z = this.zones[i];
+    this.ctx.shockwaveFromBoss(z.x, z.y, { radius: z.r, damage, knock });
+    this.ctx.vfx.zoneCommit(z.x, z.y, z.r, P.crimson);
+    this.ctx.vfx.groundBurst(z.x, z.y, z.r * 0.6);
+    this.ctx.shake?.(0.16);
+    this.ctx.audio?.play('slam');
+  }
+
   update(dt, player) {
     this.t += dt;
     this.hitFlash -= dt;
@@ -1295,10 +1399,14 @@ export class Shakuni extends Enemy {
     if (this.state === 'dying') return this._dieAnim(dt);
     if (this.spawnT > 0) this._spawnAnim(dt);
 
-    const D = this.cfg.die;
+    const C = this.cfg;
+    const D = C.die;
+    const R = C.rigged;
+    const H = C.house;
     const dx = player.x - this.x;
     const dist = Math.abs(dx);
-    const canSee = dist < this.cfg.chaseRange && Math.abs(player.y - this.y) < 6;
+    const canSee = dist < C.chaseRange && Math.abs(player.y - this.y) < 6;
+    if (this.enraged) this.houseCd -= dt;
 
     if (this.stagger > 0) {
       this.stagger -= dt;
@@ -1306,26 +1414,43 @@ export class Shakuni extends Enemy {
     }
 
     switch (this.state) {
-      case 'chase':
+      case 'chase': {
         this._pace(dt, player, canSee);
         this.cooldown -= dt;
-        if (canSee && this.cooldown <= 0) {
-          // Held past keep-distance, the die's own ground zone is a puzzle
-          // with no stakes — moving out of a radius he telegraphed a full
-          // second ago is free. The fan of cards is what makes range itself
-          // the threat, so it is the move he favours once the hunter is
-          // actually holding it; up close either read is live.
-          const preferCards = dist > this.cfg.keepDistance + 1.5;
-          if (preferCards || Math.random() < 0.5) {
-            this.state = 'cardCast';
-            this.phase = this.cfg.cards.cast;
-          } else {
-            this.state = 'cast';
-            this.phase = D.cast;
-          }
-          this.ctx.audio?.play('growl');
+        if (!canSee || this.cooldown > 0) break;
+
+        // The hall-wide attack pre-empts the ordinary kit whenever it is off
+        // cooldown, so phase 2 has a rhythm the hunter can count rather than a
+        // move that might or might not turn up.
+        if (this.enraged && this.houseCd <= 0) {
+          this.state = 'houseCast';
+          this.phase = H.cast;
+          this.ctx.audio?.play('enrage');
+          break;
         }
+
+        // Held past keep-distance, a ground zone is a puzzle with no stakes —
+        // leaving a circle he telegraphed a second ago is free. The fan of
+        // cards is what makes range itself the threat, so it is the move he
+        // favours once the hunter is actually holding it. Up close, all three
+        // reads are live and which one it is has to be read off the floor.
+        const preferCards = dist > C.keepDistance + 1.5;
+        const roll = Math.random();
+        if (preferCards || roll > 0.72) {
+          this.state = 'cardCast';
+          this.phase = C.cards.cast;
+        } else if (roll < 0.38) {
+          this.state = 'cast';
+          this.phase = D.cast;
+        } else {
+          this.state = 'riggedCast';
+          this.phase = R.cast;
+        }
+        this.ctx.audio?.play('growl');
         break;
+      }
+
+      // -- Loaded Die --------------------------------------------------------
 
       case 'cast':
         this.vx = damp(this.vx, 0, 0.0005, dt);
@@ -1335,39 +1460,56 @@ export class Shakuni extends Enemy {
           // Read at the moment the die leaves his hand, not a frame later —
           // the target is where the hunter chose to stand, not a predicted
           // lead the way `Guardian._slamLand` aims its own leap.
-          this.dieX = player.x;
-          this.dieY = this.level.groundAt(this.dieX) + 0.05;
           const face = 1 + Math.floor(rand(0, 6));
-          this.dieRadius = lerp(D.radiusRange[0], D.radiusRange[1], (face - 1) / 5);
-          this.state = 'windup';
-          this.phase = D.windup * (this.enraged ? this.cfg.enrageWindupMul : 1);
-          this.pulseCd = 0;
+          this.zoneCount = 1;
+          this.zones[0].x = player.x;
+          this.zones[0].y = this._groundAt(player.x);
+          // The face *is* the radius, and that is the read the move exists to
+          // teach: a 1 is a circle you can stand beside and a 6 is not.
+          this.zones[0].r = lerp(D.radiusRange[0], D.radiusRange[1], (face - 1) / 5);
+          this.ctx.vfx.dieToss(this.x + this.facing * 0.5, this.y + 1.25, this.zones[0].x, this.zones[0].y, {
+            face,
+            flight: D.flight,
+            // Outlives the resolve on purpose: the die that decided the zone
+            // stays lying where it fell for a beat afterwards, so the hunter
+            // can see what it rolled *after* being hit by it and not only
+            // before. Cause and effect, in that order, both visible.
+            linger: this._windup(D.windup) + 0.9,
+            // Measured, not chosen: at 1 (0.42 world units) the die was eight
+            // pixels on the floor at combat distance and the rolled face — the
+            // whole read this move is built on — could not be resolved at all.
+            size: 1.5,
+          });
+          this.state = 'dieFlight';
+          this.phase = D.flight;
           this.ctx.audio?.play('wispShot');
+        }
+        break;
+
+      case 'dieFlight':
+        // The die is in the air and there is no zone yet — deliberately. The
+        // die *is* the telegraph for this beat; drawing the circle before it
+        // lands would make the throw itself decorative.
+        this.vx = damp(this.vx, 0, 0.0005, dt);
+        this.phase -= dt;
+        if (this.phase <= 0) {
+          this.state = 'windup';
+          this.phase = this._windup(D.windup);
+          this._showZones(this.phase);
         }
         break;
 
       case 'windup':
         this.vx = damp(this.vx, 0, 0.0005, dt);
         this.phase -= dt;
-        this.pulseCd -= dt;
-        if (this.pulseCd <= 0) {
-          this.ctx.vfx.shockRing(this.dieX, this.dieY, this.dieRadius, P.crimson);
-          this.pulseCd = 0.18;
-        }
         if (this.phase <= 0) {
+          this._resolveZone(0, D.damage, D.knock);
           this.state = 'recover';
           this.phase = 0.4;
-          this.ctx.shockwaveFromBoss(this.dieX, this.dieY, {
-            radius: this.dieRadius,
-            damage: D.damage,
-            knock: D.knock,
-          });
-          this.ctx.vfx.groundBurst(this.dieX, this.dieY, this.dieRadius * 0.6);
-          this.ctx.vfx.shockRing(this.dieX, this.dieY, this.dieRadius, P.crimson);
-          this.ctx.shake?.(0.16);
-          this.ctx.audio?.play('slam');
         }
         break;
+
+      // -- Court of Blades ---------------------------------------------------
 
       case 'cardCast':
         this.vx = damp(this.vx, 0, 0.0005, dt);
@@ -1376,7 +1518,169 @@ export class Shakuni extends Enemy {
         if (this.phase <= 0) {
           this._throwCards(player);
           this.state = 'recover';
-          this.phase = this.cfg.cards.recover;
+          this.phase = C.cards.recover;
+        }
+        break;
+
+      // -- Rigged Throw ------------------------------------------------------
+
+      case 'riggedCast':
+        this.vx = damp(this.vx, 0, 0.0005, dt);
+        this.faceToward(player.x);
+        this.phase -= dt;
+        if (this.phase <= 0) {
+          // Three dice, at the hunter's feet, and all three are lying.
+          this.zoneCount = 1;
+          this.zones[0].x = player.x;
+          this.zones[0].y = this._groundAt(player.x);
+          this.zones[0].r = R.radius;
+          // Decided now, shown later: which way the truth sits, and how far.
+          this.riggedSide = Math.random() < 0.5 ? -1 : 1;
+          this.riggedOffset = rand(R.offsetRange[0], R.offsetRange[1]);
+          // Never onto his own feet. A crimson circle centred on the Warden
+          // reads as an aura around him rather than as a place on the floor,
+          // which is the one thing this zone must never be mistaken for. The
+          // flip only fires when the hunter has put the feint between
+          // themselves and him, so it costs the move nothing it was using.
+          const trueX = this.zones[0].x + this.riggedSide * this.riggedOffset;
+          if (Math.abs(trueX - this.x) < R.radius + this.cfg.hw) this.riggedSide *= -1;
+          for (let i = 0; i < 3; i++) {
+            this.ctx.vfx.dieToss(
+              this.x + this.facing * 0.5,
+              this.y + 1.25,
+              this.zones[0].x + (i - 1) * 0.85,
+              this.zones[0].y,
+              { face: 1 + Math.floor(rand(0, 6)), flight: R.flight, linger: R.decoy + R.reveal, size: 0.95 }
+            );
+          }
+          this.state = 'riggedFlight';
+          this.phase = R.flight;
+          this.ctx.audio?.play('wispShot');
+        }
+        break;
+
+      case 'riggedFlight':
+        this.vx = damp(this.vx, 0, 0.0005, dt);
+        this.phase -= dt;
+        if (this.phase <= 0) {
+          this.state = 'riggedDecoy';
+          this.phase = R.decoy;
+          // Gold, and breathing rather than building — see `vfx.dangerZone`'s
+          // `decoy`. It has to be tellable from the real thing on sight, or the
+          // move is not a feint, it is a coin flip.
+          this._showZones(R.decoy, { color: P.shakuniGold, fill: 'shakuni.zone.decoy', decoy: true });
+        }
+        break;
+
+      case 'riggedDecoy':
+        this.vx = damp(this.vx, 0, 0.0005, dt);
+        this.phase -= dt;
+        if (this.phase <= 0) {
+          // The reveal: the zone moves, in full view, and then holds still for
+          // `reveal` seconds. `reveal` is the entire reaction budget this move
+          // asks for and it is the number `tools/gatecheck.js` measures.
+          const from = this.zones[0].x;
+          this.zones[0].x = from + this.riggedSide * this.riggedOffset;
+          this.zones[0].y = this._groundAt(this.zones[0].x);
+          this.state = 'riggedTrue';
+          this.phase = this._windup(R.reveal);
+          this._showZones(this.phase);
+          // One die follows the lie to where the truth was always going to be,
+          // so the move reads as sleight of hand rather than as a bug.
+          this.ctx.vfx.dieToss(from, this.zones[0].y, this.zones[0].x, this.zones[0].y, {
+            face: 1,
+            flight: 0.22,
+            linger: this.phase + 0.4,
+            size: 0.95,
+          });
+          this.ctx.vfx.shockRing(from, this.zones[0].y, R.radius * 0.5, P.shakuniGold);
+          this.ctx.audio?.play('growl');
+        }
+        break;
+
+      case 'riggedTrue':
+        this.vx = damp(this.vx, 0, 0.0005, dt);
+        this.phase -= dt;
+        if (this.phase <= 0) {
+          this._resolveZone(0, R.damage, R.knock);
+          this.state = 'recover';
+          this.phase = R.recover;
+        }
+        break;
+
+      // -- House Always Wins -------------------------------------------------
+
+      case 'houseCast':
+        this.vx = damp(this.vx, 0, 0.0005, dt);
+        this.faceToward(player.x);
+        this.phase -= dt;
+        if (this.phase <= 0) {
+          // Three zones, centred on *him*, at fixed spacing. Not on the hunter,
+          // and that is the design: the table is set by the house, in the same
+          // shape every time, so the answer is to look at the floor rather than
+          // to out-run a prediction. The gaps are 2.4 units wide and exist by
+          // construction — see `SHAKUNI.house`.
+          this.zoneCount = 3;
+          // Offset half a spacing toward the hunter, so the trio spans the
+          // floor *between* them rather than straddling Shakuni. Two reasons,
+          // and the second is the real one: a zone centred on him dropped a
+          // die on his own head, and the house does not sit at the table it
+          // sets. He stands in the first gap, every time.
+          const centre = this.x + this.facing * H.spacing * 0.5;
+          for (let i = 0; i < 3; i++) {
+            const zx = centre + (i - 1) * H.spacing;
+            this.zones[i].x = zx;
+            this.zones[i].y = this._groundAt(zx);
+            this.zones[i].r = H.radius;
+            this.ctx.vfx.dieToss(this.x, this.y + 1.6, zx, this.zones[i].y, {
+              face: 6,
+              flight: H.flight,
+              linger: H.windup + H.stagger * 3,
+              size: H.dieSize,
+              tint: P.shakuniDieLit,
+            });
+          }
+          this.state = 'houseFlight';
+          this.phase = H.flight;
+          this.ctx.shake?.(0.25);
+        }
+        break;
+
+      case 'houseFlight':
+        this.vx = damp(this.vx, 0, 0.0005, dt);
+        this.phase -= dt;
+        if (this.phase <= 0) {
+          this.state = 'houseWindup';
+          this.phase = H.windup;
+          this._showZones(H.windup + H.stagger * 2, { fill: 'shakuni.zone.arena' });
+        }
+        break;
+
+      case 'houseWindup':
+        this.vx = damp(this.vx, 0, 0.0005, dt);
+        this.phase -= dt;
+        if (this.phase <= 0) {
+          this.state = 'houseResolve';
+          this.zoneIdx = 0;
+          this.phase = 0;
+        }
+        break;
+
+      case 'houseResolve':
+        // Left to right, `stagger` apart. The gaps do not move while this runs,
+        // so a hunter standing in one is safe for the whole sequence — the
+        // stagger is drama, not a second thing to solve.
+        this.phase -= dt;
+        if (this.phase <= 0) {
+          this._resolveZone(this.zoneIdx, H.damage, H.knock);
+          this.zoneIdx++;
+          this.phase = H.stagger;
+          if (this.zoneIdx >= 3) {
+            this.zoneCount = 1;
+            this.state = 'recover';
+            this.phase = H.recover;
+            this.houseCd = H.cooldown;
+          }
         }
         break;
 
@@ -1385,7 +1689,7 @@ export class Shakuni extends Enemy {
         this.phase -= dt;
         if (this.phase <= 0) {
           this.state = 'chase';
-          this.cooldown = this.cfg.interval * (this.enraged ? this.cfg.enrageIntervalMul : 1);
+          this.cooldown = C.interval * (this.enraged ? C.enrageIntervalMul : 1);
         }
         break;
 
@@ -1405,14 +1709,16 @@ export class Shakuni extends Enemy {
    * player — a wall at close range (the fan's own spread barely separates
    * adjacent cards) that opens into gaps only at real distance, so standing
    * off past `keepDistance` is no longer the free read the die alone left.
+   *
    * `spawnEnemyBolt` is the same seam the Guardian's own `volley` fires
-   * through in `boss.js`; each card is a full `Bolt` with its own hitbox, so
-   * a hunter caught in the fan can take more than one, on purpose.
+   * through in `boss.js`; each card is a full `Bolt` with its own hitbox, so a
+   * hunter caught in the fan can take more than one, on purpose. `kind: 'card'`
+   * changes how it is drawn and nothing else — see `Bolt`.
    */
   _throwCards(player) {
     const C = this.cfg.cards;
     const originX = this.x + Math.sign(player.x - this.x || this.facing || 1) * 0.35;
-    const originY = this.y + 0.95;
+    const originY = this.y + 1.15;
     const base = Math.atan2(player.y + 0.9 - originY, player.x - originX);
     const half = C.spread / 2;
     for (let i = 0; i < C.count; i++) {
@@ -1422,10 +1728,15 @@ export class Shakuni extends Enemy {
         speed: C.speed,
         damage: C.damage,
         life: C.life,
-        color: P.crimson,
+        // Gold, not crimson: the card's own crimson lives in its emblem, and
+        // the crimson register belongs to the ground zones. A fan of ten
+        // crimson projectiles would say "the floor is about to open" ten times
+        // and be wrong ten times.
+        color: P.shakuniGold,
+        kind: 'card',
       });
     }
-    this.ctx.vfx.shockRing(originX, originY, 0.6, P.crimson);
+    this.ctx.vfx.shockRing(originX, originY, 0.6, P.shakuniGold);
     this.ctx.audio?.play('wispShot');
   }
 
@@ -1433,17 +1744,35 @@ export class Shakuni extends Enemy {
     const n = this.n;
     const k = 1 - Math.pow(0.0002, dt);
     let bodyZ = 0;
-    let armZ = 0;
+    let armZ = 0; // the right arm: the throwing arm
+    let staffZ = 0; // the left: the staff arm
 
-    if (this.state === 'cast' || this.state === 'windup' || this.state === 'cardCast') {
-      const D = this.cfg.die;
+    const casting =
+      this.state === 'cast' || this.state === 'riggedCast' || this.state === 'houseCast';
+    const holding =
+      this.state === 'windup' || this.state === 'riggedTrue' || this.state === 'houseWindup' ||
+      this.state === 'dieFlight' || this.state === 'riggedFlight' || this.state === 'houseFlight';
+
+    if (casting || this.state === 'cardCast') {
       const total =
-        this.state === 'cast' ? D.cast
-        : this.state === 'cardCast' ? this.cfg.cards.cast
-        : D.windup * (this.enraged ? this.cfg.enrageWindupMul : 1);
+        this.state === 'cast' ? this.cfg.die.cast
+        : this.state === 'riggedCast' ? this.cfg.rigged.cast
+        : this.state === 'houseCast' ? this.cfg.house.cast
+        : this.cfg.cards.cast;
       const u = clamp(1 - this.phase / total, 0, 1);
-      bodyZ = -0.05 - u * 0.08;
-      armZ = -0.3 - u * 0.5;
+      // Winds up rather than reaching: he draws back over the whole cast and
+      // the release is the frame the state changes, which is what makes the
+      // throw legible from outside its own range.
+      bodyZ = -0.06 - u * 0.10;
+      armZ = -0.35 - u * 0.85;
+      // The staff comes up too on the hall-wide attack — both hands, once.
+      if (this.state === 'houseCast') staffZ = -u * 0.85;
+    } else if (holding) {
+      // Held out over the zone he has drawn. Still, which is the difference
+      // between "committed" and "still deciding".
+      bodyZ = -0.14;
+      armZ = -1.05;
+      if (this.state === 'houseWindup' || this.state === 'houseFlight') staffZ = -0.85;
     } else if (this.state === 'hurt') {
       bodyZ = 0.16;
     } else if (Math.abs(this.vx) > 0.3) {
@@ -1452,6 +1781,52 @@ export class Shakuni extends Enemy {
 
     n.robe.rotation.z = lerp(n.robe.rotation.z, bodyZ, k);
     n.shoulderR.rotation.z = lerp(n.shoulderR.rotation.z, armZ, k);
+    n.shoulderL.rotation.z = lerp(n.shoulderL.rotation.z, staffZ, k);
+    // The staff stays upright no matter what the arm under it does. Without
+    // this it swung with the shoulder and lay flat across his own face at full
+    // extension — the raise is meant to *lift* the thing, not swing it — and a
+    // counter-rotation is the only version of that which cannot intersect the
+    // head for any value the animator happens to reach.
+    n.staff.rotation.z = STAFF_REST - n.shoulderL.rotation.z;
+
+    // The three dice turn on their ring and tumble in place, faster when he is
+    // about to spend one. Never a *tell* — they speed up during recovery too,
+    // and they never stop — so the ground stays the only thing that says a
+    // zone is coming.
+    const spin = 0.55 + (casting || holding ? 1.5 : 0) + (this.enraged ? 0.7 : 0);
+    n.orbit.rotation.z += dt * spin;
+    for (let i = 0; i < n.dice.length; i++) {
+      const die = n.dice[i];
+      die.rotation.y += dt * (0.9 + i * 0.22) * spin;
+      die.rotation.x += dt * (0.6 + i * 0.15) * spin;
+    }
+    // Counter-turn the holders so the dice orbit without being dragged round
+    // face-first, which reads as a carousel rather than as three objects
+    // circling him.
+    for (const holder of n.orbitHolders) holder.rotation.z = -n.orbit.rotation.z;
+
+    // The beard drags behind the stoop by a fraction, which is most of what
+    // sells an old man leaning into a throw.
+    n.beard.rotation.z = lerp(n.beard.rotation.z, bodyZ * 0.55, k * 0.6);
+
+    // Phase 2 burns. Rate-limited rather than per-frame, and every draw it
+    // takes is deterministic under the suite's fixed step like the rest of him.
+    if (!this.enraged) return;
+    this.emberT -= dt;
+    if (this.emberT > 0) return;
+    this.emberT = 0.11;
+    this.ctx.vfx.emit({
+      x: this.x + rand(-0.45, 0.45),
+      y: this.y + rand(0.3, 2.0),
+      z: rand(-0.35, 0.35),
+      vx: rand(-0.5, 0.5),
+      vy: rand(0.7, 2.0),
+      size: rand(0.05, 0.12),
+      color: Math.random() < 0.4 ? P.shakuniGold : P.shakuniBlaze,
+      life: rand(0.4, 0.9),
+      grav: -1.2,
+      drag: 1.4,
+    });
   }
 }
 
@@ -3078,11 +3453,29 @@ export class Putana extends Enemy {
 
 const boltGeo = new THREE.CapsuleGeometry(0.14, 0.5, 4, 8);
 
+/**
+ * The Court of Blades card — Shakuni's fan, and the one projectile in the game
+ * that is not a bolt of light.
+ *
+ * A plane rather than a box, and double-sided, because a card *is* a plane:
+ * spinning about its own face normal it flashes edge-on and vanishes for a
+ * frame, which no capsule can do and which is most of what reads as "thrown
+ * card" rather than "rectangle in flight".
+ *
+ * Built at module load, so it costs nothing from the seeded stream. Its
+ * proportions are the reference art's 250×400.
+ */
+const cardGeo = new THREE.PlaneGeometry(0.30, 0.48);
+
 export class Bolt {
   /**
    * @param {'player'|'enemy'} team
+   * @param {'bolt'|'card'} kind - the shape it flies as. Purely visual: the
+   *   hitbox is `radius` either way, and `update`/`consumeHit` do not branch on
+   *   it. Deliberately so — a projectile that hits differently depending on how
+   *   it is drawn is a bug waiting to be reported as unfairness.
    */
-  constructor(ctx, x, y, dx, dy, { team, speed, damage, life, pierce = 0, color, radius = 0.42 }) {
+  constructor(ctx, x, y, dx, dy, { team, speed, damage, life, pierce = 0, color, radius = 0.42, kind = 'bolt' }) {
     this.ctx = ctx;
     this.x = x;
     this.y = y;
@@ -3097,20 +3490,58 @@ export class Bolt {
     this.hitSet = new Set();
     this.removeMe = false;
 
+    this.kind = kind;
+    this.spin = 0;
+
+    // Exactly one Group, two Meshes and two Materials in both shapes, and that
+    // symmetry is load-bearing rather than tidy: three.js draws four
+    // `Math.random()` values per object for its UUID and the suite seeds that
+    // stream globally, so a card that allocated one object more than a bolt
+    // would re-roll every enemy's jitter behind it and send a fixed seed down
+    // a different run. The card differs in geometry and material settings,
+    // never in object count.
     this.root = new THREE.Group();
+    const card = kind === 'card';
+    const geo = card ? cardGeo : boltGeo;
+
     const core = new THREE.Mesh(
-      boltGeo,
-      new THREE.MeshBasicMaterial({ color, fog: false, toneMapped: false })
+      geo,
+      card
+        ? new THREE.MeshBasicMaterial({
+            // Ivory-lit rather than the projectile's own crimson: the card's
+            // face is art and the crimson lives in its emblem, so tinting the
+            // whole quad red would throw the reference art away.
+            color: 0xf3ead6,
+            map: assets().get('shakuni.card'),
+            side: THREE.DoubleSide,
+            transparent: true,
+            fog: false,
+            toneMapped: false,
+          })
+        : new THREE.MeshBasicMaterial({ color, fog: false, toneMapped: false })
     );
-    core.rotation.z = -Math.PI / 2;
+    if (!card) core.rotation.z = -Math.PI / 2;
     this.root.add(core);
+    this.core = core;
+
     const halo = new THREE.Mesh(
-      boltGeo,
-      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.3, fog: false, depthWrite: false, toneMapped: false })
+      geo,
+      new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: card ? 0.42 : 0.3,
+        side: card ? THREE.DoubleSide : THREE.FrontSide,
+        fog: false,
+        depthWrite: false,
+        blending: card ? THREE.AdditiveBlending : THREE.NormalBlending,
+        toneMapped: false,
+      })
     );
-    halo.rotation.z = -Math.PI / 2;
-    halo.scale.setScalar(2.1);
+    if (!card) halo.rotation.z = -Math.PI / 2;
+    halo.scale.setScalar(card ? 1.5 : 2.1);
     this.root.add(halo);
+    this.halo = halo;
+
     this.root.rotation.z = Math.atan2(dy, dx);
     this.color = color;
   }
@@ -3125,6 +3556,18 @@ export class Bolt {
     this.x += this.dx * this.speed * dt;
     this.y += this.dy * this.speed * dt;
     this.root.position.set(this.x, this.y, 0);
+
+    if (this.kind === 'card') {
+      // Spun about its own face normal, and wobbled about the travel axis so
+      // it periodically turns edge-on. Driven off elapsed time, never off
+      // `Math.random` — a projectile that drew from the seeded stream every
+      // frame it was alive would make the number of cards in the air change
+      // the behaviour of every enemy behind them.
+      this.spin += dt * 11;
+      this.core.rotation.z = this.spin;
+      this.core.rotation.x = Math.sin(this.spin * 0.6) * 0.9;
+      this.halo.rotation.z = this.spin;
+    }
 
     if (Math.random() < 0.75) {
       this.ctx.vfx.emit({
@@ -3144,6 +3587,11 @@ export class Bolt {
   _expire() {
     this.removeMe = true;
     this.ctx.vfx.hitSpark(this.x, this.y, Math.sign(this.dx) || 1, 0.35, this.color);
+    // A card tears rather than bursting: the spark above stays exactly as it
+    // was — its particle count is drawn from the seeded stream and must not
+    // move — and the difference is a flat gold flash, which costs no draws at
+    // all because a pooled flash takes none.
+    if (this.kind === 'card') this.ctx.vfx.cardImpact(this.x, this.y);
   }
 
   consumeHit() {

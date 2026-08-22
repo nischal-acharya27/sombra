@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Dark Charcoal Robe Base -->
+    <rect id="bg" width="512" height="512" fill="#181619"/>
+    
+    <!-- Muted Gold Filigree Pattern -->
+    <pattern id="gandharanLace" width="64" height="64" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 64 32 L 32 64 L 0 32 Z" fill="none" stroke="#a38243" stroke-width="1.5" opacity="0.4"/>
+      <circle cx="32" cy="32" r="6" fill="none" stroke="#a38243" stroke-width="1"/>
+      <circle cx="32" cy="32" r="2" fill="#8b0000"/>
+    </pattern>
+  </defs>
+
+  <use href="#bg"/>
+  <rect width="512" height="512" fill="url(#gandharanLace)"/>
+
+  <!-- Asymmetric Sash & Trim Accents (Wine Red & Gold) -->
+  <g stroke="#c5a059" stroke-width="3">
+    <!-- Vertical Royal Borders -->
+    <line x1="64" y1="0" x2="64" y2="512" stroke="#6b0d1a" stroke-width="24"/>
+    <line x1="64" y1="0" x2="64" y2="512" stroke="#c5a059" stroke-width="2" stroke-dasharray="8,4"/>
+    
+    <line x1="448" y1="0" x2="448" y2="512" stroke="#6b0d1a" stroke-width="24"/>
+    <line x1="448" y1="0" x2="448" y2="512" stroke="#c5a059" stroke-width="2" stroke-dasharray="8,4"/>
+  </g>
+
+  <!-- Intricate Hem Embellishment (Bottom Edge) -->
+  <g fill="#c5a059" opacity="0.85">
+    <path d="M 0 460 Q 32 440 64 460 T 128 460 T 192 460 T 256 460 T 320 460 T 384 460 T 448 460 T 512 460 L 512 512 L 0 512 Z" fill="#4a0810"/>
+    <path d="M 0 470 Q 32 450 64 470 T 128 470 T 192 470 T 256 470 T 320 470 T 384 470 T 448 470 T 512 470" fill="none" stroke="#c5a059" stroke-width="3"/>
+  </g>
+</svg>

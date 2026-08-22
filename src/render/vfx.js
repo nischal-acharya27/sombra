@@ -6,6 +6,8 @@
 
 import * as THREE from 'three';
 import { P } from './palette.js';
+import { assets } from './assets.js';
+import { buildDie, DIE_FACE_UP } from './models.js';
 import { rand, clamp, lerp } from '../engine/mathx.js';
 
 const MAX_PARTICLES = 900;
@@ -180,6 +182,89 @@ export class VFX {
       return m;
     });
 
+    // --- ground telegraph zones ---
+    //
+    // A zone is two pooled pieces drawn at the *same* radius: a dim fill and a
+    // bright ring on its edge. That pairing is the whole point, and it is what
+    // `shockRing` could never be — a ring that grows to `radius × 2.4` over
+    // half a second shows the true radius on exactly one frame and lies on
+    // every other one. Shakuni's kit asks the hunter to leave a circle before
+    // it resolves, so the circle has to hold still at the size it will be.
+    //
+    // The ring is procedural and carries the meaning; the fill is a texture
+    // when the art is there and the built-in soft disc when it is not, and it
+    // is deliberately the dimmer of the two either way (`docs/DECISIONS.md`
+    // § "The no-asset-files rule is lifted", condition 3).
+    this.zoneRings = this._pool(8, () => {
+      const m = new THREE.Mesh(
+        // Thin relative to its radius — a fat ring reads as an area, and the
+        // area is the fill's job.
+        new THREE.RingGeometry(0.94, 1.0, 48),
+        new THREE.MeshBasicMaterial({
+          color: P.crimson,
+          transparent: true,
+          opacity: 0,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+          fog: false,
+          toneMapped: false,
+        })
+      );
+      m.rotation.x = -Math.PI / 2;
+      return m;
+    });
+
+    this.zoneFills = this._pool(8, () => {
+      const m = new THREE.Mesh(
+        new THREE.PlaneGeometry(2, 2), // unit-diameter 2, so scale === radius
+        new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+          blending: THREE.AdditiveBlending,
+          fog: false,
+          toneMapped: false,
+        })
+      );
+      m.rotation.x = -Math.PI / 2;
+      return m;
+    });
+
+    // --- thrown dice ---
+    //
+    // World-space, and that is the entire reason they live here rather than on
+    // Shakuni's rig: a prop parented under a yaw-tilted root drifts off the
+    // point it is meant to mark as the offset grows, so the die that marks
+    // where a zone will land cannot be one he is holding.
+    //
+    // Four is two more than any single attack throws at once (`House Always
+    // Wins` throws three), so a die is never stolen out from under a live
+    // telegraph. Each is a full 21-pip die: the face it lands on has to be
+    // *readable*, which is why it is a rotation and not a texture.
+    this.dice = [];
+    for (let i = 0; i < 4; i++) {
+      const obj = buildDie(0.42, { pips: 'full' });
+      // Its own materials, cloned here, because `mat()` and the pip cache in
+      // `models.js` share by colour — which is right everywhere else and wrong
+      // for a pool whose members are tinted independently. Shared, a single
+      // phase-2 throw would have turned all four dice dark red permanently,
+      // including the ordinary Loaded Die throws afterwards. Enemies get this
+      // for free from `Enemy.finishSetup`; a VFX pool has to ask.
+      const n = obj.userData.nodes;
+      n.body.material = n.body.material.clone();
+      for (const pip of n.ember) pip.material = pip.material.clone();
+      obj.visible = false;
+      scene.add(obj);
+      this.dice.push({
+        obj, t: 0, flight: 0, linger: 0, x0: 0, y0: 0, x1: 0, y1: 0,
+        face: 1, size: 1, live: false, spin: [8, 7, 6],
+      });
+    }
+    this.diceNext = 0;
+
     // --- damage numbers ---
     this.labels = this._pool(20, () => {
       const s = new THREE.Sprite(
@@ -210,11 +295,16 @@ export class VFX {
       this.p.life[i] = 0;
       this.p.alpha[i] = 0;
     }
-    for (const pool of [this.arcs, this.wedges, this.rings, this.smears, this.flashes, this.labels]) {
+    for (const pool of [this.arcs, this.wedges, this.rings, this.smears, this.flashes, this.zoneRings, this.zoneFills, this.labels]) {
       for (const obj of pool.items) {
         obj.visible = false;
         obj.userData.life = 0;
       }
+    }
+    // A die in flight when the gate cuts has nowhere to land.
+    for (const d of this.dice) {
+      d.live = false;
+      d.obj.visible = false;
     }
   }
 
@@ -440,6 +530,146 @@ export class VFX {
     this.shadowBurst(x, y + 0.2, 20);
   }
 
+  /**
+   * A ground telegraph that holds still at its true radius for `life` seconds.
+   *
+   * This is the primitive Shakuni's whole kit reads off, and every number the
+   * hunter needs is in the two arguments: the circle drawn is the circle that
+   * will resolve. Nothing about it grows, so there is no frame on which it
+   * understates the danger.
+   *
+   * `fill` is an **asset name** and resolves to the built-in soft disc when
+   * that art is absent — the ring, which is the part that says how far, is
+   * procedural in both cases.
+   *
+   * `decoy` marks a zone that is lying: it pulses out of phase and takes the
+   * gold register rather than crimson. See `Shakuni`'s Rigged Throw — a feint
+   * the hunter cannot tell from the real thing is not a feint, it is a coin
+   * flip, so the two are drawn in different colours from the first frame.
+   */
+  dangerZone(x, y, radius, life, { color = P.crimson, fill = 'shakuni.zone', decoy = false } = {}) {
+    const r = this._take(this.zoneRings);
+    r.position.set(x, y + 0.05, 0);
+    r.scale.setScalar(radius);
+    r.material.color.setHex(color);
+    r.material.opacity = 0.85;
+    Object.assign(r.userData, { kind: 'zoneRing', life, maxLife: life, decoy, alpha: 0.85 });
+
+    const f = this._take(this.zoneFills);
+    f.position.set(x, y + 0.03, 0);
+    f.scale.setScalar(radius);
+    f.material.map = assets().get(fill) ?? this.flashTex;
+    f.material.needsUpdate = true;
+    f.material.color.setHex(color);
+    // Measured against the hall's own lit bronze floor, not chosen: at 0.3 the
+    // additive fill was invisible on gate 1's ground and the zone was a bare
+    // outline. It still sits well under the ring's 0.85 — the edge has to stay
+    // the brighter of the two, because the edge is the part that says how far.
+    f.material.opacity = 0.45;
+    Object.assign(f.userData, { kind: 'zoneFill', life, maxLife: life, decoy, alpha: 0.45 });
+  }
+
+  /**
+   * The moment a zone stops being a warning. One hard flash at the same radius
+   * the zone held, so the resolve is visibly the *same* circle rather than a
+   * new effect that happens to be nearby.
+   */
+  zoneCommit(x, y, radius, color = P.crimson) {
+    const r = this._take(this.zoneRings);
+    r.position.set(x, y + 0.06, 0);
+    r.scale.setScalar(radius);
+    r.material.color.setHex(color);
+    r.material.opacity = 1;
+    Object.assign(r.userData, { kind: 'zoneRing', life: 0.28, maxLife: 0.28, decoy: false, alpha: 1 });
+  }
+
+  /**
+   * Throw a die from `(x0, y0)` to `(x1, y1)`, landing on `face`.
+   *
+   * The die tumbles through the arc and then *settles* — the landing rotation
+   * is `DIE_FACE_UP[face]`, so the face pointing at the sky when it stops is
+   * the face that was rolled. That is the readable half of "Loaded Die": the
+   * number is on the object, in the world, for `linger` seconds before the
+   * zone it sized resolves.
+   */
+  dieToss(x0, y0, x1, y1, { face = 1, flight = 0.32, linger = 1.0, size = 1, tint = null } = {}) {
+    const d = this.dice[this.diceNext];
+    this.diceNext = (this.diceNext + 1) % this.dice.length;
+    // `y1` is the *ground*; a die rests on it rather than sinking into it, so
+    // the resting centre is half a die up. Callers talk about the floor.
+    Object.assign(d, { t: 0, flight, linger, x0, y0, x1, y1: y1 + 0.21 * size, size, face, live: true });
+    d.obj.visible = true;
+    d.obj.scale.setScalar(size);
+    d.obj.position.set(x0, y0, 0);
+    // Always set, never conditionally: a pooled die carries the last throw's
+    // colours until something says otherwise, so "no tint" has to mean "put it
+    // back", not "leave it".
+    const body = tint ?? P.shakuniDie;
+    const pipColor = body === P.shakuniDie ? P.shakuniEmber : P.shakuniBlaze;
+    d.obj.userData.nodes.body.material.color.setHex(body);
+    for (const pip of d.obj.userData.nodes.ember) pip.material.color.setHex(pipColor);
+    // A spin axis per throw, so two dice in the same volley do not tumble in
+    // lockstep. Deterministic in the seeded stream like everything else here.
+    d.spin = [rand(6, 11), rand(5, 9), rand(4, 8)];
+  }
+
+  _updateDice(dt) {
+    for (const d of this.dice) {
+      if (!d.live) continue;
+      d.t += dt;
+      if (d.t < d.flight) {
+        const u = d.t / d.flight;
+        // A real arc, not a lerp: the die is *thrown*, and the apex is what
+        // gives the hunter the beat of warning before it lands.
+        const arc = Math.sin(u * Math.PI) * (0.9 + Math.abs(d.x1 - d.x0) * 0.06);
+        d.obj.position.set(lerp(d.x0, d.x1, u), lerp(d.y0, d.y1, u) + arc, 0);
+        d.obj.rotation.x += d.spin[0] * dt;
+        d.obj.rotation.y += d.spin[1] * dt;
+        d.obj.rotation.z += d.spin[2] * dt;
+        continue;
+      }
+      if (d.t - d.flight < dt) {
+        // The frame it lands: snap to the rolled face and mark the ground.
+        const rot = DIE_FACE_UP[d.face] || [0, 0, 0];
+        d.obj.rotation.set(rot[0], rot[1], rot[2]);
+        // A small yaw so it does not sit perfectly square to the camera —
+        // applied after the face rotation, about the world up, so the face
+        // that is up stays up.
+        d.obj.rotateOnWorldAxis(UP, 0.22);
+        this.dust(d.x1, d.y1 - 0.21 * d.size, 8);
+      }
+      const settled = d.t - d.flight;
+      // Two quick bounces, then still. Squash on the vertical only.
+      const b = settled < 0.22 ? Math.abs(Math.sin(settled * 26)) * (1 - settled / 0.22) * 0.18 : 0;
+      d.obj.position.set(d.x1, d.y1 + b, 0);
+      if (settled > d.linger) {
+        d.obj.visible = false;
+        d.live = false;
+      }
+    }
+  }
+
+  /**
+   * A Court of Blades card coming apart. Allocation-free *and* draw-free: two
+   * pooled flashes, no particles, so it can be added to a projectile's expiry
+   * without moving the seeded stream one value. See `Bolt._expire`.
+   */
+  cardImpact(x, y) {
+    for (const [scale, opacity, life, color] of [
+      [1.4, 0.5, 0.16, P.shakuniGold],
+      [0.7, 0.7, 0.10, P.crimson],
+    ]) {
+      const f = this._take(this.flashes);
+      f.position.set(x, y, 0.45);
+      f.scale.setScalar(scale);
+      f.material.color.setHex(color);
+      f.material.opacity = opacity;
+      f.userData.life = life;
+      f.userData.maxLife = life;
+      f.userData.kind = 'flash';
+    }
+  }
+
   shockRing(x, y, radius, color = P.crimson) {
     const r = this._take(this.rings);
     r.position.set(x, y + 0.08, 0);
@@ -568,6 +798,7 @@ export class VFX {
   update(dt) {
     this.t += dt;
     this._runPending(dt);
+    this._updateDice(dt);
     const p = this.p;
     for (let i = 0; i < MAX_PARTICLES; i++) {
       if (p.life[i] <= 0) {
@@ -596,7 +827,7 @@ export class VFX {
     g.attributes.aSize.needsUpdate = true;
     g.attributes.aAlpha.needsUpdate = true;
 
-    for (const pool of [this.arcs, this.wedges, this.rings, this.smears, this.flashes, this.labels]) {
+    for (const pool of [this.arcs, this.wedges, this.rings, this.smears, this.flashes, this.zoneRings, this.zoneFills, this.labels]) {
       for (const o of pool.items) {
         if (!o.visible) continue;
         o.userData.life -= dt;
@@ -618,6 +849,19 @@ export class VFX {
             const s = lerp(o.scale.x, o.userData.grow, 1 - Math.pow(0.004, dt));
             o.scale.set(s, s, s);
             o.material.opacity = u * u * 0.9;
+            break;
+          }
+          case 'zoneRing':
+          case 'zoneFill': {
+            // Holds its radius; only the opacity moves. It brightens as the
+            // window closes, which is the one thing about a telegraph that
+            // should get more urgent — the size never does.
+            const urgency = o.userData.decoy
+              // A feint breathes; it never builds. The difference is legible
+              // before the reveal, which is what keeps it fair.
+              ? 0.55 + Math.sin(this.t * 9) * 0.25
+              : 0.45 + Math.pow(1 - u, 1.6) * 0.9;
+            o.material.opacity = clamp(o.userData.alpha * urgency, 0, 1) * clamp(u * 8, 0, 1);
             break;
           }
           case 'smear':
@@ -644,6 +888,8 @@ export class VFX {
 }
 
 const TMP_COLOR = new THREE.Color();
+/** World up, for settling a die's yaw without disturbing the face it rolled. */
+const UP = new THREE.Vector3(0, 1, 0);
 
 /** A soft white disc that fades to nothing at the edge. Built once. */
 function radialTexture(size = 128) {

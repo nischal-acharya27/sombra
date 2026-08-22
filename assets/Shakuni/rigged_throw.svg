@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <!-- False/Decoy Amber Radial Glow -->
+    <radialGradient id="decoyGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#c5a059" stop-opacity="0.5"/>
+      <stop offset="60%" stop-color="#8b5a00" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Outer Decoy Boundary -->
+  <circle cx="200" cy="200" r="180" fill="url(#decoyGlow)"/>
+  <circle cx="200" cy="200" r="175" fill="none" stroke="#c5a059" stroke-width="2" stroke-dasharray="6,8"/>
+
+  <!-- Shifting Dice Ghost Wireframes -->
+  <g stroke="#c5a059" stroke-width="1.5" fill="none" opacity="0.7">
+    <!-- Matrix of Questioned/Probabilistic Locations -->
+    <polygon points="200,80 240,100 240,140 200,160 160,140 160,100"/>
+    <line x1="200" y1="80" x2="200" y2="160"/>
+    <line x1="240" y1="100" x2="160" y2="140"/>
+    <line x1="160" y1="100" x2="240" y2="140"/>
+
+    <polygon points="120,220 150,235 150,265 120,280 90,265 90,235"/>
+    <polygon points="280,220 310,235 310,265 280,280 250,265 250,235"/>
+  </g>
+
+  <!-- False Prediction Crosshair -->
+  <circle cx="200" cy="200" r="25" fill="none" stroke="#c5a059" stroke-width="2"/>
+  <line x1="200" y1="160" x2="200" y2="240" stroke="#c5a059" stroke-width="1.5"/>
+  <line x1="160" y1="200" x2="240" y2="200" stroke="#c5a059" stroke-width="1.5"/>
+</svg>

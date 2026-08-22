@@ -3882,3 +3882,194 @@ centre line at three short segments; in the scene graph they were present and
 correct, and on screen at fighting range they vanished into the skull. Four
 longer segments, splayed along Z against `actor.js`'s TILT, fixed it. Querying
 the rig proved the horns existed and proved nothing about whether they read.
+
+## Shakuni is rebuilt as a courtier: the campaign's first character-art redesign, and the first fight built around a lie
+
+Gate 1's Warden was authored in one pass from `docs/research/villain-roster.md`'s
+handoff and had never been looked at again. On 2026-08-22 he was redesigned
+against supplied reference art (`assets/Shakuni/`) — rig, palette, kit and
+phase structure together — with explicit authority to override the earlier
+decisions. This is the record of which ones were overridden and why, because
+several of them were *right* and were reversed anyway.
+
+### What was wrong with the old Shakuni, precisely
+
+Not the design. The old rig satisfied every line of its handoff: aged cloth,
+bone, dull gold, no supernatural register, slight through proportion, plain
+dark eyes, the die as flavour and the ground as the telegraph. Every one of
+those was a defensible reading, and the result was a Warden that could not be
+picked out of gate 1's own furniture.
+
+The measurable version: gate 1 is a bronze court hall — `manavPlate 0x5c4526`
+floor, `0x8f8060` pillars, a `0xc79a4e` horizon. The Warden standing in it wore
+`0x8a7a5a` cloth, `0x9c8a4a` gold and `0x9a9488` hair. Nothing on him was more
+than about half a stop from something he was standing next to. There was no
+version of that rig, at any level of detail, that was going to read.
+
+So the palette moved first, and it is the change everything else follows from:
+**dark charcoal against a warm bronze hall**. Wine, muted court gold and bronze
+sit on top of it, all four values taken off the reference art rather than
+invented (see `P.shakuni*` in `palette.js`).
+
+### The three overridden decisions, and the one that was kept
+
+**"Slight through proportion, not stature" → he is a head taller than the
+hunter.** Kept in substance, reversed in execution. Slight is now carried by
+taper — a 0.135 torso under a 0.35 skirt, and limbs thin enough to see the
+robe's weight on them — which says "old man in heavy court dress" without also
+saying "small". The old rig had a 1.35 wrapper scale bolted on top of the same
+proportions for exactly this reason and it did not work, because a bigger
+version of a slight silhouette is still a slight silhouette.
+
+**"Plain, dark eyes — deliberately not a glowing tell" → an ember gaze in
+phase 1, crimson in phase 2.** This is the reversal that needed the most care,
+because the original reasoning is sound: his menace should read off the die and
+not off his face. It is honoured by a distinction the old note did not have —
+the eye never brightens *per attack*. It is a constant, characterising, and it
+changes exactly once in the fight, at the phase crossing. Nothing about it ever
+tells you an attack is coming; the floor still does that, alone.
+
+**"No rig swap, no reveal — escalation is the telegraphs tightening"
+(`SPEC-CAMPAIGN.md` line 78) → half of it reversed.** The tightening is intact
+and still does all the mechanical work (`enrageWindupMul`,
+`enrageIntervalMul`). What is reversed is the implicit claim that the crossing
+should therefore be *invisible*: two numbers the hunter can feel and cannot
+see. It is now a material and VFX change on the same model — lit elements go
+ember → blaze, dice go bone → soaked, wine cloth goes to crimson, and the gold
+deliberately does not move — plus the unlock of a fourth move. No second rig,
+which was the real content of the original rule and is kept.
+
+**"The held die is flavour, not the telegraph" — kept, and load-bearing.** A
+prop parented under a yaw-tilted root drifts off any world point it is meant to
+mark. He now carries four dice and none of them marks anything: the die that
+sizes a zone is thrown into the world by `vfx.dieToss`, and the zone is drawn
+by `vfx.dangerZone`, both in world space.
+
+### The one telegraph change that is a bug fix, not a redesign
+
+`shockRing` grows from 0.4 to `radius × 2.4` over half a second. Used as the
+die's telegraph, it showed the true radius on exactly one frame and understated
+it on every frame before that. A hunter reading it early and standing just
+outside what they saw was inside what resolved.
+
+`vfx.dangerZone` replaces it for every zone in this kit: a dim fill and a
+bright ring, both **held still at the true radius** for the whole window, with
+only the opacity moving. Nothing about a telegraph should grow. `shockRing`
+keeps its other callers, where it is an impact and not a warning.
+
+### Rigged Throw, and what makes a feint fair
+
+The new move shows a gold zone at the hunter's feet, then collapses it and
+opens the real one in crimson somewhere else. Two numbers keep that honest and
+both are asserted rather than intended:
+
+- **`reveal` is the entire reaction budget.** `tools/gatecheck.js` measures the
+  true zone's own window (0.72s, 0.49s enraged) against the 0.42s floor, and
+  the decoy phase counts for nothing. Counting a lie as warning would be the
+  whole way this move could become unfair, so the row is written so it does not
+  move when `decoy` does.
+- **`offsetRange` is bounded below by `2 × radius`**, so the true zone can
+  never contain the feint's centre. Standing on the feint is punished; standing
+  anywhere the feint was not is never punished *for that*.
+
+Colour does the rest: gold breathes and never builds, crimson builds and never
+moves. The two are tellable apart from the first frame, which is the difference
+between a feint and a coin flip.
+
+The true zone also refuses to open on Shakuni's own feet — a crimson circle
+centred on the Warden reads as an aura around him rather than as a place on the
+floor, and that is the one thing a zone must never be mistaken for.
+
+### House Always Wins, and why it needed no new subsystem
+
+Three zones at fixed `spacing` around him, resolving left to right. It looks
+like a new mechanic and is three calls to `ctx.shockwaveFromBoss`, the same
+point-radius resolve his single die has always used.
+
+Two design commitments in it are worth keeping:
+
+**The zones are laid out around Shakuni, not around the hunter.** Every other
+zone in the game is a prediction about where you are standing. This one is not
+— the table is set by the house, in the same shape every time — and the answer
+is to look at the floor rather than to out-run a prediction.
+
+**The gaps exist by construction.** `spacing - 2 × radius` = 2.4 units of
+guaranteed safe floor between neighbours, held visible for the whole 1.05s
+window, for a hunter 0.68 wide who runs at 9.6/s. The stagger between resolves
+is drama; it is not a second thing to solve, because the gaps do not move while
+it runs. The trio is also offset half a spacing toward the hunter so no zone
+contains Shakuni himself: the house does not sit at the table it sets.
+
+### The seeded stream, and the one rule that shaped the code
+
+Three.js draws four `Math.random()` values per object for its UUID and the
+suite seeds that stream globally, so **object count is part of the interface**.
+Two places in this change are written the way they are only because of it:
+
+- `Bolt` allocates exactly one Group, two Meshes and two Materials whether it
+  is a bolt or a Court of Blades card. The card differs in geometry and in
+  material settings, never in count. Its spin is driven off elapsed time and
+  its trail keeps the existing `Math.random() < 0.75` emit untouched, so ten
+  cards in the air cannot re-roll the behaviour of anything behind them.
+- The card's impact flare (`vfx.cardImpact`) is two pooled flashes and no
+  particles, because a pooled take draws nothing. The existing `hitSpark` on
+  expiry is left exactly as it was rather than tuned for cards.
+
+Everything else new — the die pool, the two zone pools — is allocated in the
+`VFX` constructor, which runs before the suite seeds anything.
+
+### The assets, and what was deliberately not loaded
+
+Five of the nine supplied files are in the manifest: the robe filigree, the
+card face, and three ground-zone fills. All decoration over geometry that
+already carries the meaning — with `assets/` empty every telegraph is
+unchanged, because the radius is drawn by a procedural ring in every case and
+the fill is always the dimmer of the two.
+
+`loaded_die_face_map.svg` is **not** loaded, and that is the interesting one.
+It is a beautiful reference and it is exactly the thing the rules forbid: a
+rolled face is a readability cue, and readability cues do not live in files. It
+informed the pip layout instead — including the crimson centre pip on the odd
+faces, which is what "loaded" looks like on the object — and `buildDie` builds
+all twenty-one pips as geometry with opposite faces summing to seven, so
+"show face N" is a rotation (`DIE_FACE_UP`) that works with no art at all.
+
+### What the photographs found that the suite could not
+
+The suite went 223 → 225 PASS / 0 FAIL on all five recorded seeds (the two new
+rows are Rigged Throw's and House Always Wins' telegraphs) and was green
+through every one of the following:
+
+- **The staff lay across his own face.** Three positions were needed. The left
+  hand is the side `actor.js`'s TILT brings toward the camera, so a shaft
+  standing straight out of the grip crosses the head at any facing, and leaning
+  it forward crosses the whole body. It is leaned *back* at rest — and during
+  the two-handed raise the staff counter-rotates against its own shoulder, so
+  it stays upright no matter what angle the animator reaches. A pose-dependent
+  fix would have been a fix for the poses that were photographed.
+- **The lower half of the beard was inside the torso.** A real intersection,
+  invisible in the scene graph, and the reason a beard that reaches the waist
+  looked like it stopped at the collar. Then, moved forward and up, it covered
+  the nose and the eyes — a different failure, equally invisible in a query.
+- **The dice read as ice cubes.** The default 0.55 sky rim is most of the
+  shading on a near-black object with a large flat top facing the sky. A
+  quarter of it fixed the up-face; nothing else on the rig needed it.
+- **The thrown die was too small to read.** At 0.42 world units it was about
+  eight pixels on the floor at combat distance, and the rolled face is the
+  whole read the move is built on. 1.5× and the number is legible.
+- **A skin-toned forearm read as a bare arm** on a robed courtier, and was the
+  only pale mass competing with the beard.
+
+The rule that keeps producing these, stated once more: querying a rig proves
+geometry exists and proves nothing about whether it reads.
+
+### Harness note, because it cost a wrong reading
+
+In this headless Chrome the page's own rAF loop is *mostly* dormant and fires
+occasionally, with whatever wall-clock time has elapsed between CDP calls. That
+ran the effect clock about three times faster than the simulation clock and
+made a die vanish mid-telegraph in a screenshot while being correct in the
+game. Stub `requestAnimationFrame` after boot; then the manual frame-step is
+the only thing that advances anything. This amends the "rAF does not tick"
+note — it is not that it never ticks, it is that it ticks unpredictably, which
+is worse.

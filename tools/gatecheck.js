@@ -523,6 +523,20 @@ const TELLS = [
   // reasoning as the four bosses below — the row that has to be answered is
   // the enraged one, not the base 1.0s.
   { archetype: 'shakuni', tell: 'die, enraged', windup: SHAKUNI.die.windup * SHAKUNI.enrageWindupMul },
+  // Rigged Throw's reaction budget is `reveal` **alone**, and this row is where
+  // that claim is held. The decoy phase before it shows the hunter a zone that
+  // is not the zone, so counting it as warning would be counting a lie as
+  // information — the honest number is the time between the true zone opening
+  // and the true zone resolving, and it clears the floor enraged with 69ms
+  // to spare. If a future tuning pass wants the feint to last longer, it may:
+  // this row does not move when `decoy` does, which is the point of it.
+  { archetype: 'shakuni', tell: 'rigged throw, enraged', windup: SHAKUNI.rigged.reveal * SHAKUNI.enrageWindupMul },
+  // House Always Wins exists only after the enrage crossing, so unlike every
+  // other row here there is no un-enraged version to prefer and no multiplier
+  // in play: `windup` is the number the hunter answers, every time it is
+  // thrown. It is also the longest tell in the game, deliberately — three
+  // zones is more floor to read than one, so it is given more time to read it.
+  { archetype: 'shakuni', tell: 'house always wins', windup: SHAKUNI.house.windup },
   // Bakasura's two windups both shorten on enrage, same reasoning as Shakuni
   // above — the row that has to clear the floor is the enraged one.
   { archetype: 'bakasura', tell: 'grab, enraged', windup: BAKASURA.grab.windup * BAKASURA.enrageWindupMul },

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+  <defs>
+    <radialGradient id="phase2Aura" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff0000" stop-opacity="0.7"/>
+      <stop offset="50%" stop-color="#8b0000" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#120e14" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Massive Arena Glow -->
+  <circle cx="300" cy="300" r="280" fill="url(#phase2Aura)"/>
+  
+  <!-- Tri-Dice Alignment Wheel (representing his 3 signature dice) -->
+  <g stroke="#ff2200" stroke-width="2" fill="none">
+    <!-- Outer Crimson Ring -->
+    <circle cx="300" cy="300" r="270" stroke-width="4"/>
+    <circle cx="300" cy="300" r="250" stroke="#c5a059" stroke-width="2" stroke-dasharray="16,8"/>
+
+    <!-- Triangular Arena Division -->
+    <polygon points="300,30 533,435 67,435" stroke-width="3"/>
+    <polygon points="300,570 67,165 533,165" stroke-width="3"/>
+
+    <!-- Three Major Impact Nodes (Positioned at 120° angles) -->
+    <!-- Node 1 (Top) -->
+    <circle cx="300" cy="120" r="45" fill="#1c1815" stroke="#dc143c" stroke-width="3"/>
+    <rect x="285" y="105" width="30" height="30" fill="#ff0033" rx="4"/>
+    
+    <!-- Node 2 (Bottom Right) -->
+    <circle cx="456" cy="390" r="45" fill="#1c1815" stroke="#dc143c" stroke-width="3"/>
+    <rect x="441" y="375" width="30" height="30" fill="#ff0033" rx="4"/>
+
+    <!-- Node 3 (Bottom Left) -->
+    <circle cx="144" cy="390" r="45" fill="#1c1815" stroke="#dc143c" stroke-width="3"/>
+    <rect x="129" y="375" width="30" height="30" fill="#ff0033" rx="4"/>
+  </g>
+
+  <!-- Central Death Eye Seal -->
+  <circle cx="300" cy="300" r="35" fill="#000" stroke="#c5a059" stroke-width="3"/>
+  <path d="M 270 300 Q 300 260 330 300 Q 300 340 270 300 Z" fill="#8b0000" stroke="#ff2200" stroke-width="2"/>
+  <circle cx="300" cy="300" r="8" fill="#ff2200"/>
+</svg>

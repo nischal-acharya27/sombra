@@ -37,3 +37,24 @@ iron grate: the colour is the material's, the grain is the file's.
 Keep detail clear of the tile border; `repeat` is set per manifest entry, and a
 second tiling density of the same art is a second entry rather than a runtime
 clone (a clone costs eight `Math.random()` draws).
+
+## Per-character folders
+
+`Shakuni/` is the first of these: art supplied for one character rather than one
+surface, and it is *reference plus textures*, not all textures. Five of its nine
+files are in the manifest (the robe filigree, the card face, three ground-zone
+fills). The other four are reference the rig and the VFX were built **from**:
+
+- `shakuni_character_sprite_and_portrait.svg`, `shakuni_phase2.svg` — the
+  character design. There is no billboard anywhere in this game to hang a
+  sprite on; these were read and built as geometry.
+- `ceremonial_staff.svg` — likewise, built as a shaft, three collars, a torus
+  loop and a suspended die.
+- `loaded_die_face_map.svg` — deliberately **not** loaded, and the clearest
+  worked example of rule 2 above. A die's rolled face is the readability cue
+  the whole Loaded Die attack is built on, so it is twenty-one pips of geometry
+  and a rotation table (`DIE_FACE_UP`), not a texture. The file still did its
+  job: it is where the crimson centre pip on the odd faces came from.
+
+If you add another character folder, split it the same way, and put the reason a
+file is *not* in the manifest next to the manifest entries that are.

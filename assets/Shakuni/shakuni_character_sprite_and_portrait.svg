@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 700" width="500" height="700">
+  <defs>
+    <!-- Dark Sinister Aura Radial Gradient -->
+    <radialGradient id="shakuniAura" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#8b0000" stop-opacity="0.5"/>
+      <stop offset="70%" stop-color="#120e14" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Robe Gold Trim Pattern -->
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e6ca65"/>
+      <stop offset="50%" stop-color="#c5a059"/>
+      <stop offset="100%" stop-color="#8a6d29"/>
+    </linearGradient>
+
+    <!-- Crimson Gem Glow -->
+    <radialGradient id="gemGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff3333"/>
+      <stop offset="100%" stop-color="#8b0000"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background Aura -->
+  <circle cx="250" cy="350" r="300" fill="url(#shakuniAura)"/>
+
+  <!-- ==================== CEREMONIAL STAFF (LEFT HAND / BACKGROUND) ==================== -->
+  <g id="staff">
+    <!-- Shaft -->
+    <rect x="110" y="150" width="12" height="500" rx="6" fill="#1c130d" stroke="url(#goldGradient)" stroke-width="2"/>
+    <!-- Staff Head Finial (Crown Loop) -->
+    <path d="M 80 160 C 80 80, 152 80, 152 160 C 152 210, 116 240, 116 270" fill="none" stroke="url(#goldGradient)" stroke-width="6"/>
+    <!-- Floating Crown Die inside Staff -->
+    <rect x="101" y="130" width="30" height="30" rx="5" fill="#2d0a0a" stroke="#dc143c" stroke-width="2" transform="rotate(15 116 145)"/>
+    <circle cx="116" cy="145" r="4" fill="#ff2200"/>
+  </g>
+
+  <!-- ==================== MAIN BODY / LAYERED ROBES ==================== -->
+  <g id="body">
+    <!-- Lower Layers / Base Charcoal Skirt -->
+    <path d="M 160 380 L 100 660 L 400 660 L 340 380 Z" fill="#141216" stroke="#000" stroke-width="3"/>
+    
+    <!-- Outer Dark Charcoal/Wine Layered Coat -->
+    <path d="M 190 220 L 120 420 L 110 660 L 230 660 L 250 350 Z" fill="#1f1b24" stroke="#4a0810" stroke-width="2"/>
+    <path d="M 310 220 L 380 420 L 390 660 L 270 660 L 250 350 Z" fill="#1f1b24" stroke="#4a0810" stroke-width="2"/>
+
+    <!-- Asymmetric Wine-Red Royal Sash (Over Right Shoulder) -->
+    <path d="M 310 210 Q 250 300 120 520 L 100 580 L 140 600 Q 270 360 330 220 Z" fill="#6b0d1a" stroke="url(#goldGradient)" stroke-width="2"/>
+    
+    <!-- Ornate Gold Hem Borders -->
+    <path d="M 100 650 Q 250 670 400 650 L 400 660 Q 250 680 100 660 Z" fill="url(#goldGradient)"/>
+  </g>
+
+  <!-- ==================== HEAD, FACE & GANDHARAN CROWN ==================== -->
+  <g id="head">
+    <!-- Elderly Neck & Collar -->
+    <path d="M 225 210 L 275 210 L 285 240 L 215 240 Z" fill="#3a2e2b"/>
+
+    <!-- Face Base (Slender, Sinister, Sunken Cheeks) -->
+    <path d="M 220 160 Q 210 190 225 215 Q 250 235 275 215 Q 290 190 280 160 Z" fill="#5a453e"/>
+    
+    <!-- Long Silver/Grey Aristocratic Beard -->
+    <path d="M 220 195 Q 205 260 245 340 Q 250 350 255 340 Q 295 260 280 195 Q 260 230 240 230 Z" fill="#b5b3b0" stroke="#8a8885" stroke-width="1.5"/>
+
+    <!-- Eyes (Glowing Red/Gold Sinister Gaze) -->
+    <ellipse cx="238" cy="172" rx="5" ry="3" fill="#000"/>
+    <ellipse cx="262" cy="172" rx="5" ry="3" fill="#000"/>
+    <circle cx="238" cy="172" r="2.5" fill="url(#gemGlow)"/>
+    <circle cx="262" cy="172" r="2.5" fill="url(#gemGlow)"/>
+    
+    <!-- Elderly Wrinkles & Eyebrows -->
+    <path d="M 230 163 Q 238 158 245 163 M 255 163 Q 262 158 270 163" stroke="#33241e" stroke-width="2" fill="none"/>
+    <path d="M 232 155 Q 250 150 268 155" stroke="#8a8885" stroke-width="2" fill="none"/> <!-- Grey Eyebrows -->
+
+    <!-- Gandharan Aristocratic Headwear / Crown Turban -->
+    <!-- Base Turban Band -->
+    <path d="M 210 160 Q 250 145 290 160 L 295 145 Q 250 130 205 145 Z" fill="#4a0810" stroke="url(#goldGradient)" stroke-width="2"/>
+    <!-- Crown Structure -->
+    <path d="M 215 145 C 215 90, 285 90, 285 145 Z" fill="#1f1b24" stroke="url(#goldGradient)" stroke-width="3"/>
+    <!-- Central Crown Crest Gem -->
+    <polygon points="250,110 260,125 250,140 240,125" fill="url(#gemGlow)" stroke="url(#goldGradient)" stroke-width="1.5"/>
+  </g>
+
+  <!-- ==================== JEWELLERY & ACCENTS ==================== -->
+  <g id="jewellery">
+    <!-- Royal Necklaces -->
+    <path d="M 210 230 Q 250 270 290 230" fill="none" stroke="url(#goldGradient)" stroke-width="4" stroke-dasharray="6,4"/>
+    <circle cx="250" cy="265" r="8" fill="url(#gemGlow)" stroke="url(#goldGradient)" stroke-width="2"/>
+  </g>
+
+  <!-- ==================== THREE SIGNATURE FLOATING DICE ==================== -->
+  <g id="floating-dice">
+    <!-- Die 1 (Top Left) -->
+    <g transform="translate(130, 280) rotate(-20)">
+      <rect x="0" y="0" width="36" height="36" rx="6" fill="#1c1815" stroke="url(#goldGradient)" stroke-width="2"/>
+      <circle cx="18" cy="18" r="5" fill="#ff2200"/>
+    </g>
+
+    <!-- Die 2 (Right Mid) -->
+    <g transform="translate(340, 310) rotate(15)">
+      <rect x="0" y="0" width="40" height="40" rx="6" fill="#1c1815" stroke="#dc143c" stroke-width="2.5"/>
+      <circle cx="10" cy="10" r="4" fill="url(#goldGradient)"/>
+      <circle cx="30" cy="30" r="4" fill="url(#goldGradient)"/>
+      <circle cx="20" cy="20" r="5" fill="#ff2200"/>
+    </g>
+
+    <!-- Die 3 (Lower Center-Left) -->
+    <g transform="translate(170, 440) rotate(35)">
+      <rect x="0" y="0" width="32" height="32" rx="5" fill="#2d0a0a" stroke="url(#goldGradient)" stroke-width="2"/>
+      <circle cx="9" cy="9" r="3.5" fill="url(#goldGradient)"/>
+      <circle cx="23" cy="23" r="3.5" fill="url(#goldGradient)"/>
+      <circle cx="9" cy="23" r="3.5" fill="url(#goldGradient)"/>
+      <circle cx="23" cy="9" r="3.5" fill="url(#goldGradient)"/>
+    </g>
+  </g>
+</svg>

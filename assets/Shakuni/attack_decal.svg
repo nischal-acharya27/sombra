@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500">
+  <defs>
+    <!-- Radial Glow for Telegraph Zone -->
+    <radialGradient id="dangerGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff0033" stop-opacity="0.6"/>
+      <stop offset="70%" stop-color="#8b0000" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#120e14" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Danger Zone Radius -->
+  <circle cx="250" cy="250" r="230" fill="url(#dangerGlow)"/>
+  
+  <!-- Outer Concentric Rings -->
+  <circle cx="250" cy="250" r="225" fill="none" stroke="#dc143c" stroke-width="3" stroke-dasharray="12 6"/>
+  <circle cx="250" cy="250" r="210" fill="none" stroke="#c5a059" stroke-width="1.5"/>
+
+  <!-- Geometric Array / Astrological Wheel Ring -->
+  <g stroke="#c5a059" stroke-width="1" fill="none" opacity="0.8">
+    <polygon points="250,40 432,145 432,355 250,460 68,355 68,145"/>
+    <polygon points="250,460 432,145 68,145"/>
+    <polygon points="250,40 432,355 68,355"/>
+  </g>
+
+  <!-- Central Target Reticle -->
+  <circle cx="250" cy="250" r="40" fill="none" stroke="#ff2200" stroke-width="2"/>
+  <line x1="250" y1="190" x2="250" y2="310" stroke="#ff2200" stroke-width="2"/>
+  <line x1="190" y1="250" x2="310" y2="250" stroke="#ff2200" stroke-width="2"/>
+</svg>

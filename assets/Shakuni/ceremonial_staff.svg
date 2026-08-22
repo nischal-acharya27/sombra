@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 400" width="300" height="400">
+  <!-- Bronze & Gold Staff Head Finial -->
+  <g stroke="#c5a059" stroke-width="4" fill="none">
+    <!-- Outer Crescent/Crown Motif -->
+    <path d="M 50 200 C 50 80, 250 80, 250 200 C 250 280, 190 320, 150 380 C 110 320, 50 280, 50 200 Z" fill="#1c1815" stroke="#c5a059" stroke-width="6"/>
+    
+    <!-- Inner Filigree & Flame Peaks -->
+    <path d="M 80 180 Q 150 100 220 180" stroke="#8b0000" stroke-width="3"/>
+    <path d="M 150 60 L 150 110 M 110 80 L 130 120 M 190 80 L 170 120" stroke="#c5a059" stroke-width="3"/>
+  </g>
+
+  <!-- Suspended Floating Loaded Die -->
+  <g transform="translate(115, 165)">
+    <rect x="0" y="0" width="70" height="70" rx="10" fill="#2d0a0a" stroke="#dc143c" stroke-width="4"/>
+    <!-- Glow Pips -->
+    <circle cx="35" cy="35" r="10" fill="#ff2200"/>
+    <circle cx="18" cy="18" r="5" fill="#c5a059"/>
+    <circle cx="52" cy="52" r="5" fill="#c5a059"/>
+    <!-- Magic Chain Links -->
+    <line x1="35" y1="-55" x2="35" y2="0" stroke="#c5a059" stroke-width="3" stroke-dasharray="4,4"/>
+  </g>
+</svg>

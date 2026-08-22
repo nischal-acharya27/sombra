@@ -68,6 +68,99 @@ export function part(w, h, d, color, { pivot = 'center', outline = 0.022, materi
  * confetti. DoubleSide matters too: characters turn by yawing 180°, and a
  * one-sided decal would vanish the moment they faced the other way.
  */
+// ---------------------------------------------------------------------------
+// Non-box primitives
+//
+// `part()` above is the whole game's vocabulary and stays that way: a box is
+// the right answer for a limb, a torso, a plate, a plinth. It is the wrong
+// answer for a flared robe, a skull, a crown band or a staff shaft, and gate
+// 1's Warden needed all four (`docs/DECISIONS.md` § "Shakuni is rebuilt as a
+// courtier"). These are the same shape as `part()` — a group whose origin is
+// at the joint, a cel material from `mat()`, an inverted-hull outline — with
+// the geometry handed in rather than derived from three numbers.
+//
+// Everything is cached by shape key for the same reason `box()` is: a crowd of
+// anything must not cost a geometry each, and `faceted()` (which splits every
+// vertex) is expensive enough that doing it twice for the same cylinder would
+// be careless.
+
+const shapeCache = new Map();
+function cached(key, build) {
+  let g = shapeCache.get(key);
+  if (!g) {
+    g = build();
+    shapeCache.set(key, g);
+  }
+  return g;
+}
+
+/** A tapered cylinder, faceted. `seg` low: this is a cel-shaded game. */
+export function cyl(rTop, rBot, h, seg = 8) {
+  return cached(`cyl:${rTop},${rBot},${h},${seg}`, () =>
+    faceted(new THREE.CylinderGeometry(rTop, rBot, h, seg))
+  );
+}
+
+/** A low-poly sphere. Faceted, so it reads as carved rather than rendered. */
+export function sph(r, wSeg = 10, hSeg = 7) {
+  return cached(`sph:${r},${wSeg},${hSeg}`, () => faceted(new THREE.SphereGeometry(r, wSeg, hSeg)));
+}
+
+/** A ring of material — crown bands, staff collars, necklaces. */
+export function tor(r, tube, radial = 6, tubular = 16) {
+  return cached(`tor:${r},${tube},${radial},${tubular}`, () =>
+    faceted(new THREE.TorusGeometry(r, tube, radial, tubular))
+  );
+}
+
+export function cone(r, h, seg = 7) {
+  return cached(`cone:${r},${h},${seg}`, () => faceted(new THREE.ConeGeometry(r, h, seg)));
+}
+
+/** A gem. Eight faces is the cheapest shape that catches light like a jewel. */
+export function octa(r) {
+  return cached(`octa:${r}`, () => faceted(new THREE.OctahedronGeometry(r)));
+}
+
+/**
+ * A surface of revolution from a 2D profile — `[[radius, y], ...]`, bottom to
+ * top. This is what a layered robe is: a silhouette that flares, steps in at
+ * each layer's hem, and flares again. A stack of boxes cannot do it and a cone
+ * cannot either, because the *steps* are the layering.
+ */
+export function lathe(profile, seg = 10) {
+  return cached(`lathe:${JSON.stringify(profile)},${seg}`, () => {
+    const pts = profile.map(([r, y]) => new THREE.Vector2(r, y));
+    return faceted(new THREE.LatheGeometry(pts, seg));
+  });
+}
+
+/**
+ * `part()`'s shape, with the geometry handed in.
+ *
+ * `pivot` is resolved off the geometry's own bounding box rather than a passed
+ * height, so a lathe and a sphere both hang correctly from 'top' without the
+ * caller doing the arithmetic.
+ */
+export function shaped(geo, color, { pivot = 'center', outline = 0.02, outlineColor, material, opts } = {}) {
+  const g = new THREE.Group();
+  const m = new THREE.Mesh(geo, material || mat(color, opts));
+  m.castShadow = true;
+  m.receiveShadow = true;
+  if (!geo.boundingBox) geo.computeBoundingBox();
+  const bb = geo.boundingBox;
+  const dy = pivot === 'top' ? -bb.max.y : pivot === 'bottom' ? -bb.min.y : 0;
+  m.position.y = dy;
+  g.add(m);
+  if (outline > 0) {
+    const o = outlineFor(geo, outline, outlineColor);
+    o.position.y = dy;
+    g.add(o);
+  }
+  g.userData.mesh = m;
+  return g;
+}
+
 export function decal(w, h, color, { opacity = 1 } = {}) {
   const m = new THREE.Mesh(
     new THREE.PlaneGeometry(w, h),
@@ -734,164 +827,581 @@ export function buildTantrik(skin = null) {
 
 // ---------------------------------------------------------------------------
 // Shakuni — gate 1's Warden (Sabha Parva)
+//
+// Rebuilt 2026-08-22 against the reference art in `assets/Shakuni/`. The rig
+// this replaces was a correct reading of the roster handoff and a poor
+// character: a beige box torso, a box hem, a box skull and a box beard, at a
+// value so close to the hall's own bronze that the Warden of gate 1 read as
+// furniture. Every prior decision it recorded is deliberately overridden here
+// (see `docs/DECISIONS.md` § "Shakuni is rebuilt as a courtier"):
+//
+// - **"Slight through proportion, not stature"** → he now stands a head over
+//   the hunter. Slight is carried by the *taper* — a narrow torso and thin
+//   limbs under a wide robe — which says "old man in heavy court dress"
+//   without saying "small".
+// - **"Plain, dark eyes — deliberately not a glowing tell"** → he has an
+//   ember-lit gaze in phase 1 and a crimson one in phase 2. The reasoning
+//   behind the old call still stands and is honoured a different way: the eye
+//   never brightens *per attack*, so it is characterisation, not a telegraph.
+//   What tells you an attack is coming is still the die and the ground.
+// - **"The held die is flavour, not the telegraph"** → unchanged and load
+//   bearing. He now carries three dice and a staff-mounted fourth, and not one
+//   of them marks a world point: a prop under a yaw-tilted root drifts off the
+//   spot it is meant to mark as the offset grows. The die that matters is
+//   thrown into the world by `vfx.dieToss` and the zone is drawn by
+//   `vfx.dangerZone`, both in world space.
 // ---------------------------------------------------------------------------
 
 /**
- * Slight through proportion, not stature — an aged courtier at roughly
- * player scale, per `docs/research/villain-roster.md`'s handoff. A skirt-hem
- * rather than jointed legs, the same call `buildTantrik` makes for a figure
- * that paces a ring instead of running, and unarmored throughout: nothing on
- * the body reaches for the roster's violet/iron/crimson supernatural
- * registers.
+ * The wrapper scale. A scale here rather than on `root`, because `Enemy
+ * .finishSetup`/`_spawnAnim` drive `root.scale` for the rise-from-shadow
+ * entrance (0.01 → 1) and would overwrite anything set on it.
  *
- * The die itself never travels: it rides his own right hand (`n.dieProp`)
- * for the "cast" flourish, and the zone it resolves into is read off the
- * ground marker `Shakuni.update` drives through `vfx.shockRing`, not off a
- * second copy of the die repositioned to the target. A prop parented under a
- * rig that yaws toward the camera (`TILT` in `actor.js`) drifts off the
- * world point it is meant to mark as the offset grows — the ring is drawn
- * directly in world space by `Game`/`VFX` and has no such problem, so it is
- * where "read it before it commits" actually happens; the held die is
- * flavour, not the telegraph.
+ * 1.25 puts the crown a little under 2 world units up, against the hunter's
+ * ~1.7. The old rig's 1.35 was compensating for a body group whose origin sat
+ * too low; with the proportions below it is not needed, and a smaller number
+ * keeps his hands where the staff and the dice want them.
  */
-/** Read at player scale in-engine despite `hw`/`hh` already matching `PLAYER`'s
- * — a narrower torso and a lower body-group origin than `buildHunter`'s own
- * left him reading small next to the hunter he is supposed to loom over. A
- * wrapper scale rather than resizing every part: it grows the whole rig from
- * the feet (root's own origin) without touching `root.scale`, which `Enemy
- * .finishSetup`/`_spawnAnim` drive for the rise-from-shadow entrance
- * (0.01 -> 1) — scaling `root` here would just be overwritten back to 1 the
- * moment he spawns. */
-const SHAKUNI_SCALE = 1.35;
+const SHAKUNI_SCALE = 1.25;
 
+/**
+ * Which way a face of `buildDie` points, and what it is worth.
+ *
+ * Opposite faces sum to seven, as on a real die — 1/6 on ±Y, 2/5 on ±X, 3/4 on
+ * ±Z. That is not pedantry: it is what makes `DIE_FACE_UP` below a rotation
+ * rather than a lookup into six different models, and a die that reads wrong
+ * to anyone who has held one is a die nobody trusts to be telling the truth.
+ */
+const DIE_FACES = [
+  { value: 1, rot: [-Math.PI / 2, 0, 0] }, // +Y
+  { value: 6, rot: [Math.PI / 2, 0, 0] }, // -Y
+  { value: 2, rot: [0, Math.PI / 2, 0] }, // +X
+  { value: 5, rot: [0, -Math.PI / 2, 0] }, // -X
+  { value: 3, rot: [0, 0, 0] }, // +Z
+  { value: 4, rot: [0, Math.PI, 0] }, // -Z
+];
+
+/**
+ * Pip layout per face value, in units of the face's own pip pitch. A plane's
+ * local axes after the face rotation above are (u, v) = (x, y).
+ */
+const PIP_LAYOUT = {
+  1: [[0, 0]],
+  2: [[-1, 1], [1, -1]],
+  3: [[-1, 1], [0, 0], [1, -1]],
+  4: [[-1, 1], [1, 1], [-1, -1], [1, -1]],
+  5: [[-1, 1], [1, 1], [0, 0], [-1, -1], [1, -1]],
+  6: [[-1, 1], [1, 1], [-1, 0], [1, 0], [-1, -1], [1, -1]],
+};
+
+/**
+ * The Euler that brings face `n` to point up (+Y). Derived from `DIE_FACES`
+ * rather than written out, so the two cannot drift apart.
+ */
+export const DIE_FACE_UP = (() => {
+  const up = {};
+  // Inverse of each face's own orientation, composed so that face's normal
+  // lands on +Y. Worked per face because there are six and they are trivial.
+  up[1] = [0, 0, 0];
+  up[6] = [Math.PI, 0, 0];
+  up[2] = [0, 0, Math.PI / 2];
+  up[5] = [0, 0, -Math.PI / 2];
+  up[3] = [-Math.PI / 2, 0, 0];
+  up[4] = [Math.PI / 2, 0, 0];
+  return up;
+})();
+
+const pipGeoCache = new Map();
+function pipGeo(r) {
+  const key = r.toFixed(4);
+  let g = pipGeoCache.get(key);
+  if (!g) {
+    g = new THREE.CircleGeometry(r, 8);
+    pipGeoCache.set(key, g);
+  }
+  return g;
+}
+
+const basicCache = new Map();
+/** Shared unlit material for pips and glows. Cached like `mat()`, same reason. */
+function unlit(color) {
+  let m = basicCache.get(color);
+  if (!m) {
+    m = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, fog: false, toneMapped: false });
+    basicCache.set(color, m);
+  }
+  return m;
+}
+
+/**
+ * Shakuni's die, at any size — the signature the redesign is built around.
+ *
+ * Near-black bone with a **gold inverted-hull outline** rather than the game's
+ * usual ink one, which is the single cheapest thing that makes it read as his
+ * rather than as a crate: the reference art draws every die as a dark square
+ * with a gold stroke, and `outlineFor` takes a colour.
+ *
+ * `pips`:
+ * - `'full'` — all twenty-one, laid out per `PIP_LAYOUT`, so any face can be
+ *   turned up and *read*. This is what the thrown die needs and it is the
+ *   whole reason the face is a rotation instead of a texture: a rolled face is
+ *   a readability cue, and readability cues may not live in a file.
+ * - `'signature'` — one loaded pip on the two faces the camera can see at the
+ *   sizes he wears them. Twenty-one pips on a die 8cm across is eighty-odd
+ *   draw calls to render something nobody can resolve.
+ *
+ * The centre pip is `shakuniEmber`, not gold: on a real die the 1, 3 and 5 all
+ * carry a centre pip, and his is lit on every one of them. That is the loading,
+ * visible on the object, before he throws it.
+ */
+export function buildDie(size, { pips = 'full', body = P.shakuniDie } = {}) {
+  const g = new THREE.Group();
+  const half = size / 2;
+
+  const geo = box(size, size, size);
+  // A quarter of the usual rim. At the default 0.55 the cool sky rim washed the
+  // whole up-face of a landed die pale blue — on a near-black object with a
+  // large flat top facing the sky that term is most of the shading, and it made
+  // three dice on the floor read as three ice cubes.
+  const m = new THREE.Mesh(geo, mat(body, { steps: 3, rim: 0.14 }));
+  m.castShadow = true;
+  g.add(m);
+  g.add(outlineFor(geo, size * 0.055, P.shakuniGold));
+  g.userData.mesh = m;
+
+  const pipR = size * 0.085;
+  const pitch = size * 0.26;
+  const lift = half + size * 0.012; // clear of the surface: see `decal`'s note
+  const gold = [];
+  const ember = [];
+
+  for (const face of DIE_FACES) {
+    const layout = PIP_LAYOUT[face.value];
+    const holder = new THREE.Group();
+    holder.rotation.set(face.rot[0], face.rot[1], face.rot[2]);
+    holder.position.set(0, 0, 0);
+    g.add(holder);
+
+    for (const [u, v] of layout) {
+      const centre = u === 0 && v === 0;
+      if (pips === 'signature' && !(centre && (face.value === 1 || face.value === 6))) continue;
+      // The 6 has no centre pip, so `signature` puts its loaded mark where the
+      // 1's is on the opposite face — the two faces a tumbling die shows most.
+      const isEmber = centre || (pips === 'signature' && face.value === 6);
+      const dot = new THREE.Mesh(pipGeo(centre ? pipR * 1.35 : pipR), unlit(isEmber ? P.shakuniEmber : P.shakuniGold));
+      dot.position.set(u * pitch, v * pitch, lift);
+      holder.add(dot);
+      (isEmber ? ember : gold).push(dot);
+    }
+
+    if (pips === 'signature' && face.value === 6) {
+      const dot = new THREE.Mesh(pipGeo(pipR * 1.35), unlit(P.shakuniEmber));
+      dot.position.set(0, 0, lift);
+      holder.add(dot);
+      ember.push(dot);
+    }
+  }
+
+  g.userData.nodes = { body: m, gold, ember };
+  return g;
+}
+
+/**
+ * An aged, aristocratic Gandharan courtier — intelligent and composed, never
+ * powerful. Read the reference in `assets/Shakuni/` alongside this.
+ *
+ * The silhouette is the brief and it is built in this order: a wide layered
+ * skirt that never moves, a narrow stooped torso, a tall crowned head, a long
+ * silver beard cutting down the chest, a staff standing a head above the crown,
+ * and three dice orbiting at chest height. Every one of those is a shape a box
+ * could not make, which is why this rig is the first in the game to use
+ * `lathe`, `cyl`, `sph`, `tor`, `cone` and `octa` instead of `part` alone.
+ *
+ * Built facing +X with Z as the lateral axis, like everything else here.
+ */
 export function buildShakuni() {
   const root = new THREE.Group();
   const n = {};
+  /** Meshes phase 2 recolours. Collected as they are built, per Kumbhakarna. */
+  /** Gold and bronze trim. Untouched by the phase change — the court's own
+   *  metal does not care what he becomes, and holding it steady is what keeps
+   *  phase 2 a change of *temperature* rather than a change of character. */
+  n.goldMeshes = [];
+  /** Wine cloth: the sash, the crown band, the tail. These go up. */
+  n.wineMeshes = [];
+  /** Everything lit: eyes, crest, pendant, every loaded pip. */
+  n.emberMeshes = [];
+  n.dice = [];
 
   const rig = new THREE.Group();
   rig.scale.setScalar(SHAKUNI_SCALE);
   root.add(rig);
+  n.rig = rig;
+
+  // -- the robe, floor up ----------------------------------------------------
+  //
+  // A surface of revolution, not a hem box. Court dress is *layers*, and a
+  // layer reads as a step in the silhouette: the profile below flares to its
+  // widest at the floor and steps inward twice on the way up, so the outline
+  // has three hems in it rather than one skirt-shaped block. It is also the
+  // reason he has no legs — he paces a ring, he never runs, and cloth to the
+  // floor is what an old courtier wears.
+  const skirt = shaped(
+    lathe(
+      [
+        [0.0, 0.0],
+        [0.35, 0.012],
+        [0.35, 0.05],
+        [0.30, 0.065], // outer hem
+        [0.315, 0.245],
+        [0.262, 0.262], // second layer's hem
+        [0.272, 0.47],
+        [0.222, 0.485], // third layer's hem
+        [0.196, 0.60],
+        [0.168, 0.70],
+      ],
+      12
+    ),
+    P.shakuniRobe,
+    { outline: 0.026, opts: { map: 'shakuni.robe', steps: 3 } }
+  );
+  rig.add(skirt);
+  n.skirt = skirt;
+
+  // The gold hem running round the floor edge — the reference draws it as the
+  // robe's brightest element, and at combat distance it is what separates the
+  // silhouette from the floor it stands on.
+  const hemRing = shaped(tor(0.325, 0.022, 5, 18), P.shakuniGoldDim, { outline: 0.012 });
+  hemRing.rotation.x = Math.PI / 2;
+  hemRing.position.y = 0.055;
+  rig.add(hemRing);
+  n.goldMeshes.push(hemRing.userData.mesh);
 
   const body = new THREE.Group();
-  body.position.y = 0.60;
+  body.position.y = 0.66;
   rig.add(body);
   n.body = body;
 
-  // Narrower than a grunt's torso and permanently stooped a few degrees —
-  // "slight through proportion, not stature" per the handoff. The stoop
-  // lives on its own wrapper rather than on `n.robe` directly: `Shakuni
-  // .update`'s `_animate` lerps `n.robe.rotation.z` toward a windup/hurt
-  // target that defaults to 0 whenever he's merely idle or chasing, so a
-  // rotation set here on that same node would be animated back to upright
-  // within a few frames of play — an old man's posture doesn't reset
-  // between casts the way a fighting stance does.
+  // The permanent stoop, on its own wrapper. `_animate` lerps `n.robe`'s own
+  // rotation back to zero whenever he is merely idle, so a stoop set there
+  // would straighten out within a few frames of play — an old man's posture
+  // does not reset between casts the way a fighting stance does.
   const stoop = new THREE.Group();
-  stoop.rotation.z = -0.07;
+  stoop.rotation.z = -0.10;
   body.add(stoop);
 
-  const robe = part(0.26, 0.46, 0.26, P.shakuniRobe, { pivot: 'bottom', outline: 0.026 });
+  // -- torso -----------------------------------------------------------------
+  //
+  // Tapered and narrow: 0.135 at the shoulder against the skirt's 0.35 at the
+  // floor. That ratio is the whole "slender aristocrat" read, and it is a
+  // proportion a stack of boxes states far less clearly than a cone frustum.
+  const robe = shaped(cyl(0.135, 0.178, 0.44, 9), P.shakuniRobe, {
+    pivot: 'bottom',
+    outline: 0.024,
+    opts: { map: 'shakuni.robe', steps: 3 },
+  });
   stoop.add(robe);
   n.robe = robe;
 
-  // A skirt-hem, not jointed legs — he paces a ring, he does not run. Feet
-  // peek out past the hem's own hem so the silhouette reads as cloth *over*
-  // a standing body, not a torso that simply stops at the waist.
-  const hem = part(0.36, 0.24, 0.34, P.shakuniRobeDark, { pivot: 'top', outline: 0.024 });
-  hem.position.y = 0;
-  robe.add(hem);
-  n.hem = hem;
-
-  for (const side of [-1, 1]) {
-    const foot = part(0.12, 0.06, 0.13, P.shakuniRobeDark, { pivot: 'top', outline: 0.014 });
-    foot.position.set(0.05, -0.24, side * 0.08);
-    hem.add(foot);
+  // The asymmetric wine sash, over the right shoulder and down to the left
+  // hip. Two panels, front and back, so it reads from either facing — he turns
+  // by yawing 180°, and a one-sided sash would vanish half the time.
+  for (const sign of [1, -1]) {
+    const sash = part(0.05, 0.60, 0.115, P.shakuniWine, { outline: 0.014 });
+    sash.position.set(sign * 0.115, 0.22, 0);
+    sash.rotation.x = sign * 0.42;
+    stoop.add(sash);
+    n.wineMeshes.push(sash.userData.mesh);
   }
 
-  const sash = part(0.29, 0.07, 0.27, P.shakuniGold, { outline: 0.02 });
-  sash.position.y = 0.20;
-  robe.add(sash);
+  // A gold cord where the sash crosses the waist.
+  const cord = shaped(tor(0.175, 0.017, 5, 16), P.shakuniGold, { outline: 0.011 });
+  cord.rotation.x = Math.PI / 2;
+  cord.position.y = 0.07;
+  robe.add(cord);
+  n.goldMeshes.push(cord.userData.mesh);
 
+  // -- jewellery -------------------------------------------------------------
+  //
+  // Two collars at different radii, which is how court jewellery actually
+  // hangs and what stops it reading as one thick necklace, plus a pendant gem.
+  for (const [r, y, tube, col] of [
+    [0.125, 0.40, 0.016, P.shakuniGold],
+    [0.152, 0.355, 0.013, P.shakuniBronze],
+  ]) {
+    const collar = shaped(tor(r, tube, 5, 16), col, { outline: 0.010 });
+    collar.rotation.x = Math.PI / 2;
+    collar.position.y = y;
+    robe.add(collar);
+    n.goldMeshes.push(collar.userData.mesh);
+  }
+
+  const pendant = shaped(octa(0.045), P.shakuniWine, { outline: 0.012 });
+  pendant.position.set(0.135, 0.33, 0);
+  robe.add(pendant);
+  n.pendant = pendant;
+  n.emberMeshes.push(pendant.userData.mesh);
+
+  // -- head ------------------------------------------------------------------
   const head = new THREE.Group();
   head.position.y = 0.50;
   robe.add(head);
   n.head = head;
 
-  // Narrower than a grunt's skull, to match the torso's own taper.
-  const skull = part(0.18, 0.22, 0.19, P.bone, { pivot: 'bottom', outline: 0.02 });
+  // A neck, thin and visibly holding a heavy head up. Two boxes of skull would
+  // have hidden this joint; a narrow cylinder makes it a feature.
+  const neck = shaped(cyl(0.055, 0.065, 0.12, 7), P.shakuniSkin, { pivot: 'top', outline: 0.010 });
+  neck.position.y = 0.02;
+  head.add(neck);
+
+  // The skull, scaled long and narrow — sunken, not round.
+  const skull = shaped(sph(0.135, 10, 7), P.shakuniSkin, { outline: 0.018 });
+  // Long and narrow. At 0.155 the head was as wide as the shoulders and read
+  // as a mask on a stick; the taper is where "aged" lives on a face this size.
+  skull.scale.set(0.92, 1.18, 0.86);
+  skull.position.y = 0.14;
   head.add(skull);
   n.skull = skull;
 
-  // The beard: the single detail that reads "aged courtier" at a glance
-  // rather than "a smaller Kawach" — every other change here is proportion,
-  // this one is silhouette. Hangs from the jaw line, ahead of the +X face
-  // the model is built to and the camera's own three-quarter yaw favours.
-  const beard = part(0.14, 0.15, 0.15, P.shakuniBeard, { pivot: 'top', outline: 0.016 });
-  beard.position.set(0.035, 0.03, 0);
-  head.add(beard);
+  // A heavy brow, the one hard edge on the face. Everything else about him is
+  // soft and curved; this is what stops "elderly" reading as "kindly".
+  const brow = part(0.055, 0.035, 0.20, P.shakuniSkin, { outline: 0.010 });
+  brow.position.set(0.098, 0.185, 0);
+  brow.rotation.z = 0.16;
+  head.add(brow);
 
-  const wrap = part(0.21, 0.09, 0.21, P.shakuniGold, { pivot: 'bottom', outline: 0.018 });
-  wrap.position.y = 0.16;
-  head.add(wrap);
+  const nose = shaped(cone(0.032, 0.09, 5), P.shakuniSkin, { outline: 0.008 });
+  nose.rotation.z = -Math.PI / 2;
+  nose.position.set(0.122, 0.125, 0);
+  head.add(nose);
 
-  // Plain, dark eyes — deliberately not a glowing tell. His menace never
-  // reads off his own body; it reads off the die.
+  // The eyes. Sunk *under* the brow rather than sitting on the face, which is
+  // what makes them read as watching rather than staring. Ember in phase 1,
+  // crimson in phase 2 — never brighter for an attack: see this section's
+  // header for why that distinction is the whole justification for lighting
+  // them at all.
   for (const side of [-1, 1]) {
-    const eye = decal(0.04, 0.026, P.outline);
-    eye.position.set(0.10, 0.09, side * 0.05);
+    const eye = decal(0.030, 0.020, P.shakuniEmber);
+    eye.position.set(0.128, 0.158, side * 0.048);
     eye.rotation.y = Math.PI / 2;
     head.add(eye);
     n[side < 0 ? 'eyeL' : 'eyeR'] = eye;
+    n.emberMeshes.push(eye);
   }
 
+  // -- beard -----------------------------------------------------------------
+  //
+  // Forked and long, in near-white silver. This is the rig's single strongest
+  // silhouette element and its brightest value: against a charcoal robe it is
+  // the shape that says "old courtier" from across the hall, which is exactly
+  // the job the old rig gave to a 0.14-unit box and did not get done.
+  // Hung *forward* of the chest, not against it. At x 0.085 the lower half of
+  // every strand was inside the torso cylinder — a real intersection, invisible
+  // in a wireframe and obvious the moment it was photographed, and the reason
+  // the beard looked like it stopped at the collar when it reaches the waist.
+  // Hung from the jaw line (head-local y ≈ 0), not from the cheek. Started at
+  // 0.05 it covered the nose and the eyes — the face was gone behind its own
+  // beard, which is a different failure from the one before it and just as
+  // visible in a photograph.
+  const beardGroup = new THREE.Group();
+  beardGroup.position.set(0.13, -0.02, 0);
+  beardGroup.rotation.z = 0.20; // and it sweeps further out as it falls
+  head.add(beardGroup);
+  n.beard = beardGroup;
+
+  for (const [len, r, z, x] of [
+    [0.56, 0.055, 0, 0.024],
+    [0.44, 0.038, 0.052, 0.002],
+    [0.44, 0.038, -0.052, 0.002],
+  ]) {
+    const strand = shaped(cone(r, len, 6), P.shakuniBeard, { outline: 0.012 });
+    strand.rotation.z = Math.PI; // apex down
+    strand.position.set(x, -len / 2 + 0.02, z);
+    beardGroup.add(strand);
+  }
+
+  // The moustache, joining the beard to the nose so the face is one mass.
+  const tache = part(0.05, 0.03, 0.11, P.shakuniBeard, { outline: 0.008 });
+  tache.position.set(0.118, 0.075, 0);
+  head.add(tache);
+
+  // -- headwear --------------------------------------------------------------
+  //
+  // Gandharan: a wound band with a domed crown rising out of it and a crest
+  // gem at the front. Deliberately *not* a wizard's point, a demon's horns or
+  // a monk's shaven head — the three silhouettes the brief rules out — and
+  // deliberately not the flat gold wrap the old rig wore, which read as a
+  // headband on a box.
+  const band = shaped(tor(0.163, 0.038, 6, 18), P.shakuniWineDark, { outline: 0.014 });
+  band.rotation.x = Math.PI / 2;
+  band.position.y = 0.235;
+  head.add(band);
+  n.wineMeshes.push(band.userData.mesh);
+
+  const bandTrim = shaped(tor(0.168, 0.012, 5, 18), P.shakuniGold, { outline: 0.008 });
+  bandTrim.rotation.x = Math.PI / 2;
+  bandTrim.position.y = 0.262;
+  head.add(bandTrim);
+  n.goldMeshes.push(bandTrim.userData.mesh);
+
+  const crown = shaped(sph(0.148, 9, 5), P.shakuniRobeDark, { outline: 0.016 });
+  crown.scale.set(0.96, 1.05, 0.92);
+  crown.position.y = 0.26;
+  head.add(crown);
+
+  const crownTrim = shaped(tor(0.10, 0.014, 5, 16), P.shakuniGold, { outline: 0.008 });
+  crownTrim.rotation.x = Math.PI / 2;
+  crownTrim.position.y = 0.355;
+  head.add(crownTrim);
+  n.goldMeshes.push(crownTrim.userData.mesh);
+
+  // The crest gem — the crown's one lit element, and the piece that ties the
+  // headwear to the dice. Ember in phase 1, blaze in phase 2, like the eyes.
+  const crest = shaped(octa(0.055), P.shakuniWine, { outline: 0.012 });
+  crest.position.set(0.115, 0.32, 0);
+  crest.rotation.z = 0.3;
+  head.add(crest);
+  n.crest = crest;
+  n.emberMeshes.push(crest.userData.mesh);
+
+  // A short cloth tail off the back of the band, so the head has weight from
+  // behind as well as in front.
+  const tail = part(0.09, 0.24, 0.16, P.shakuniWineDark, { pivot: 'top', outline: 0.014 });
+  tail.position.set(-0.14, 0.24, 0);
+  tail.rotation.z = -0.25;
+  head.add(tail);
+  n.wineMeshes.push(tail.userData.mesh);
+
+  // -- arms ------------------------------------------------------------------
+  //
+  // Thin, and thin on purpose: the taper from a 0.055 upper arm to a 0.045
+  // hand is what an old man's forearm does, and it is the read the wide sleeve
+  // of the robe sets up. Cylinders rather than boxes here because the arms are
+  // the part of him that moves most and a box limb rotating in a cel outline
+  // shears visibly at the joint.
   for (const side of [-1, 1]) {
     const key = side < 0 ? 'L' : 'R';
     const shoulder = new THREE.Group();
-    shoulder.position.set(0, 0.40, side * 0.15);
+    shoulder.position.set(0, 0.395, side * 0.145);
     robe.add(shoulder);
     n['shoulder' + key] = shoulder;
 
-    const upper = part(0.08, 0.22, 0.08, P.shakuniRobeDark, { pivot: 'top', outline: 0.015 });
+    // A sleeve cap, wider than the arm inside it — court dress again.
+    const cap = shaped(sph(0.072, 8, 6), P.shakuniRobeDark, { outline: 0.013 });
+    cap.scale.set(1, 0.85, 1);
+    shoulder.add(cap);
+
+    const upper = shaped(cyl(0.046, 0.058, 0.22, 7), P.shakuniRobeDark, { pivot: 'top', outline: 0.012 });
+    upper.position.y = -0.02;
     shoulder.add(upper);
 
     const elbow = new THREE.Group();
-    elbow.position.y = -0.22;
+    elbow.position.y = -0.235;
     shoulder.add(elbow);
     n['elbow' + key] = elbow;
 
-    const fore = part(0.07, 0.20, 0.07, P.bone, { pivot: 'top', outline: 0.013 });
+    // Sleeved, not bare. A skin-toned forearm on a charcoal robe read as a
+    // naked arm at combat distance — the one place the reference art's own
+    // layering had been dropped, and the only pale mass on the body competing
+    // with the beard, which is the read the whole silhouette is built on.
+    const fore = shaped(cyl(0.039, 0.046, 0.20, 7), P.shakuniRobeDark, { pivot: 'top', outline: 0.011 });
     elbow.add(fore);
 
-    // A hand, closing the arm the way `buildHunter`'s own does — without it
-    // the forearm just ends in mid-air and reads as a stump rather than a
-    // limb, the single biggest reason the old rig read as boxes wearing a
-    // robe instead of a body.
-    const hand = part(0.08, 0.08, 0.09, P.bone, { pivot: 'top', outline: 0.012 });
-    hand.position.y = -0.20;
+    // A bangle at the wrist. Small, but it is the detail that makes a bare
+    // forearm read as ornamented rather than undressed.
+    const bangle = shaped(tor(0.045, 0.011, 5, 12), P.shakuniGold, { outline: 0.007 });
+    bangle.rotation.x = Math.PI / 2;
+    bangle.position.y = -0.185;
+    elbow.add(bangle);
+    n.goldMeshes.push(bangle.userData.mesh);
+
+    const hand = shaped(sph(0.05, 8, 6), P.shakuniSkin, { outline: 0.010 });
+    hand.scale.set(0.9, 1.0, 0.8);
+    hand.position.y = -0.215;
     elbow.add(hand);
     n['hand' + key] = hand;
-
-    // The die, carried in the right hand — parented to the hand itself now,
-    // not the elbow, so it visibly sits *in* his grip rather than floating
-    // off the forearm. `P.bone`: "the one tradition says was carved from his
-    // father's bones." A single crimson pip marks its up-face — the kit's
-    // one saturated danger accent, shared with the ground zone it reads
-    // rather than inventing a second hue.
-    if (key === 'R') {
-      const dieProp = part(0.17, 0.17, 0.17, P.bone, { outline: 0.018 });
-      dieProp.position.set(0.05, -0.05, 0);
-      hand.add(dieProp);
-      n.dieProp = dieProp;
-
-      const pip = decal(0.05, 0.05, P.crimson);
-      pip.position.set(0.05, 0.035, 0);
-      pip.rotation.x = -Math.PI / 2;
-      hand.add(pip);
-    }
   }
+
+  // -- the ceremonial staff --------------------------------------------------
+  //
+  // In the left hand, and genuinely parented to it: the hand is the node the
+  // animator drives, so the staff swings with the arm rather than floating
+  // beside it. Built to stand well past the crown, because its whole job in
+  // the silhouette is to give him a vertical he does not otherwise have — a
+  // stooped man in a wide robe is all horizontal without it.
+  // Leaned **back**, over the shoulder, and this is the third position tried.
+  // The hand hangs at the body's own x while the face and beard sit forward of
+  // it, so a shaft standing straight up out of the grip crosses the head from
+  // the camera's three-quarter angle, and leaning it forward crosses the whole
+  // body. Back is the only direction that clears both — and it is how a staff
+  // is actually carried at rest, so the pose reads as a man holding something
+  // rather than as a man being held up by it.
+  const staff = new THREE.Group();
+  staff.position.set(-0.02, -0.02, -0.06);
+  staff.rotation.z = 0.26;
+  n.handL.add(staff);
+  n.staff = staff;
+
+  const shaft = shaped(cyl(0.023, 0.028, 1.62, 7), P.shakuniBronze, { outline: 0.011 });
+  shaft.position.y = 0.42;
+  staff.add(shaft);
+
+  for (const y of [-0.24, 0.36, 0.86]) {
+    const collar = shaped(tor(0.034, 0.013, 5, 12), P.shakuniGold, { outline: 0.008 });
+    collar.rotation.x = Math.PI / 2;
+    collar.position.y = y;
+    staff.add(collar);
+    n.goldMeshes.push(collar.userData.mesh);
+  }
+
+  // The finial: an open crown loop with a die suspended inside it, straight
+  // off `ceremonial_staff.svg`. A torus lies in the XY plane by default, which
+  // is exactly the plane a side-on camera reads a loop in.
+  const loop = shaped(tor(0.125, 0.024, 6, 20), P.shakuniGold, { outline: 0.012 });
+  loop.position.y = 1.16;
+  staff.add(loop);
+  n.goldMeshes.push(loop.userData.mesh);
+
+  const finialDie = buildDie(0.115, { pips: 'signature' });
+  finialDie.position.y = 1.16;
+  staff.add(finialDie);
+  n.staffDie = finialDie;
+  n.dice.push(finialDie);
+  n.emberMeshes.push(...finialDie.userData.nodes.ember);
+
+  // -- the three dice --------------------------------------------------------
+  //
+  // The signature, and the reason the fight reads as gambling before he has
+  // thrown anything. They orbit at chest height in the rig's own XY plane,
+  // which is the plane the camera sees as a circle; `_animate` turns the
+  // group and tumbles each die inside it.
+  //
+  // Decorative, and it matters that they are: the die that can hurt you is
+  // always one thrown into the world by `vfx.dieToss`, never one of these.
+  const orbit = new THREE.Group();
+  orbit.position.set(0.05, 1.02, 0);
+  rig.add(orbit);
+  n.orbit = orbit;
+
+  for (let i = 0; i < 3; i++) {
+    const holder = new THREE.Group();
+    const a = (i / 3) * Math.PI * 2;
+    // Close enough to read as *his*. At 0.44 they sat far enough off the body
+    // to look like three unrelated objects that happened to be nearby.
+    holder.position.set(Math.cos(a) * 0.40, Math.sin(a) * 0.40, 0);
+    orbit.add(holder);
+
+    const die = buildDie(0.12, { pips: 'signature' });
+    holder.add(die);
+    n.dice.push(die);
+    n.emberMeshes.push(...die.userData.nodes.ember);
+  }
+  n.orbitHolders = orbit.children;
 
   root.userData.nodes = n;
   return root;
 }
+
 
 // ---------------------------------------------------------------------------
 // Bakasura — gate 2's Warden

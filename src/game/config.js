@@ -675,9 +675,14 @@ export const SHAKUNI = {
   speed: 3.2,
   chaseRange: 22,
   keepDistance: 8.5, // holds well back — a courtier, not a brawler
-  interval: 1.35, // cooldown between casts, either move
+  interval: 1.35, // cooldown between casts, any move
   die: {
-    cast: 0.28, // raise-and-throw flourish before the die is in flight
+    cast: 0.28, // raise-and-throw flourish before the die leaves his hand
+    // The die's own time in the air. Carved *out* of the old 0.85 windup, not
+    // added to it: the total warning from flourish to resolve is unchanged at
+    // 1.13s, and what changed is that the first third of it now has a visible
+    // object arcing toward the spot instead of a ring appearing from nowhere.
+    flight: 0.30,
     windup: 0.85, // die down, face showing — the readable window
     radiusRange: [1.6, 3.6], // face 1 -> 1.6, face 6 -> 3.6
     damage: 16,
@@ -692,13 +697,85 @@ export const SHAKUNI = {
     life: 2.4,
     recover: 0.45,
   },
+  /**
+   * Rigged Throw — the redesign's one new move, and the only one on the roster
+   * that shows the hunter something untrue.
+   *
+   * Three dice go out and mark a zone in **gold**. `decoy` seconds later that
+   * zone collapses and the real one snaps open in **crimson**, `offset` units
+   * to one side, and holds for `reveal` seconds before it resolves.
+   *
+   * The fairness of it lives entirely in two numbers. `reveal` is the whole
+   * telegraph — it is what `tools/gatecheck.js` measures, and it clears the
+   * 0.42s floor enraged (0.72 × 0.68 = 0.49s), because the decoy phase must
+   * count for nothing in the hunter's reaction budget. And `offset` is bounded
+   * below by `2 × radius` so the true zone never contains the decoy's centre:
+   * standing still on the feint is punished, standing anywhere the feint was
+   * not is never punished *for that*. A feint the hunter cannot leave in time
+   * is not a feint; it is a coin flip, and this game does not have those.
+   */
+  rigged: {
+    cast: 0.34,
+    flight: 0.26,
+    decoy: 0.55, // the lie, in gold
+    reveal: 0.72, // the truth, in crimson — the number that must clear the floor
+    radius: 2.6,
+    /** How far the true zone sits from the feint. Both ends > 2 × radius. */
+    offsetRange: [5.4, 7.2],
+    damage: 15,
+    knock: 8,
+    recover: 0.5,
+  },
+  /**
+   * House Always Wins — the phase-2 hall-wide attack, unlocked by the enrage
+   * crossing and fired on its own `cooldown` alongside the ordinary kit.
+   *
+   * Three oversized dice, three zones, laid out at fixed `spacing` **around
+   * Shakuni himself** rather than around the hunter. That is a deliberate
+   * difference from every other zone in the game and it is what makes the move
+   * a *hall-wide* attack instead of three tracking attacks: the table is set by
+   * the house, in the same shape every time, and reading it is a matter of
+   * looking at the floor rather than of out-running a prediction.
+   *
+   * `spacing - 2 × radius` = 2.4 units of guaranteed safe floor between
+   * neighbouring zones, in a game where the hunter is 0.68 wide and runs at
+   * 9.6/s. Those two gaps are the answer to the move, they exist by
+   * construction, and they are visible for the whole of `windup`.
+   *
+   * No new combat subsystem: each zone resolves through `ctx.shockwaveFromBoss`,
+   * the same point-radius call his single die has always used. The only thing
+   * that is new is that there are three of them and they land in sequence.
+   */
+  house: {
+    cast: 0.55,
+    flight: 0.42,
+    windup: 1.05, // all three zones hold, together, for this long
+    stagger: 0.42, // then they resolve left to right, this far apart
+    radius: 2.9,
+    spacing: 8.2,
+    damage: 14, // lower than the single die: there are three, and they overlap in time
+    knock: 10,
+    recover: 0.85,
+    cooldown: 7.5,
+    /** The dice are five times the size of an ordinary throw. That is the tell. */
+    dieSize: 2.2,
+  },
   exp: 260,
   contactDamage: 0,
-  // No rig-swap, no reveal — per the handoff, escalation is the die's own
-  // telegraphs tightening, not a palette or pose change. Implemented locally
-  // (see `Shakuni._enrage` in enemies.js), the same call Shurpanakha's
-  // handoff makes for a tier-2 Warden rather than waiting on the campaign's
-  // shared `phases`/`Boss`-only enrage machinery.
+  /**
+   * The phase crossing. Half HP, and — reversing gate 1's original "no
+   * phase-transition" call — it is now a visible event: the eyes and the dice
+   * go from ember to blaze, the robe accents take the wine register up to
+   * crimson, the staff finial ignites, and House Always Wins unlocks.
+   *
+   * `docs/SPEC-CAMPAIGN.md`'s line 78 said his escalation was "the die's own
+   * telegraphs tightening, not a rig or palette swap". The tightening is still
+   * here and still does the mechanical work (`enrageWindupMul`,
+   * `enrageIntervalMul`); what has changed is that it is now *legible* — the
+   * old crossing was two numbers the hunter could feel and could not see. No
+   * second rig was needed to fix that, which was the real content of the
+   * original rule: this is a material and VFX change on the same model.
+   */
   enrageAt: 0.5,
   enrageWindupMul: 0.68,
   enrageIntervalMul: 0.75,

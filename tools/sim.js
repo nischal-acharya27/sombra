@@ -2006,7 +2006,11 @@ function print(r) {
 
   lines.push(`TELEGRAPHS   (every tell, against the ${Math.round(REACTION * 1000)} ms the bots react in)`);
   for (const t of r.telegraphs) {
-    lines.push(`  ${t.check.padEnd(26)} ${t.detail.padEnd(56)} ${ok(t.ok)}`);
+    // 31, not 26: `narakasura · thrust, enraged` already overran the old width
+    // and pushed its own PASS out of the column, and Shakuni's `rigged throw,
+    // enraged` overruns it by five more. A telegraph table whose verdict column
+    // wanders is a table nobody scans, which is the one thing this table is for.
+    lines.push(`  ${t.check.padEnd(31)} ${t.detail.padEnd(56)} ${ok(t.ok)}`);
   }
   lines.push('');
   lines.push("  The floor is the raakchyas's pounce — the first tell gate 1 teaches, the one");

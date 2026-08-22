@@ -128,11 +128,13 @@ const ENCOUNTERS = [
  * line" — Shakuni is the worked example: thirteen paged 'intro' beats (who
  * he is, what was done to his family, why he has never stopped playing,
  * ending on his signature line and the mechanical tell) and eight paged
- * 'cleared' beats once he loses. `docs/SPEC-CAMPAIGN.md`'s line 78 giving
- * him "no authored phase-transition line" is unchanged — his escalation is
- * still the die's own telegraphs tightening, not a rig or palette swap —
- * but that only ever ruled out a mid-fight beat, not a real scene at the
- * two boundaries every Warden already opens.
+ * 'cleared' beats once he loses. His "no authored phase-transition line" is
+ * unchanged by the 2026-08-22 redesign: the enrage crossing is now a loud
+ * *visual* event (`docs/DECISIONS.md` § "Shakuni is rebuilt as a courtier")
+ * and still carries no speech, so the crossing pages nothing and the
+ * ordinary generic enrage warning is what appears. That flag only ever
+ * ruled out a mid-fight beat, not a real scene at the two boundaries every
+ * Warden already opens.
  */
 const introBeat = (big, body) => ({ at: 'intro', title: STRINGS.GATE1_WARDEN_TITLE, big, body });
 const clearedBeat = (big, body) => ({ at: 'cleared', title: STRINGS.GATE1_WARDEN_TITLE, big, body });

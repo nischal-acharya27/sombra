@@ -845,7 +845,10 @@ export class Game {
       damage: opts.damage ?? BHOOT_BATTI.shoot.damage,
       life: opts.life ?? BHOOT_BATTI.shoot.life,
       color: opts.color ?? P.crimson,
-      radius: 0.42,
+      radius: opts.radius ?? 0.42,
+      // Purely how it is drawn — see `Bolt`. The default keeps every existing
+      // caller (the Guardian's volley, the bhoot-batti's bolt) untouched.
+      kind: opts.kind ?? 'bolt',
     });
     this.bolts.push(b);
     this.entityRoot.add(b.root);

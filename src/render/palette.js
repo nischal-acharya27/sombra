@@ -123,18 +123,48 @@ export const P = {
   wheelCore: 0xc25cff,
   wheelBloom: 0xff9a5c,
 
-  // Act 1 (Mahabharata) — Shakuni. Per docs/research/villain-roster.md: aged
-  // cloth, bone, dull gold, none of the roster's violet/iron/crimson
-  // supernatural registers. `crimson` (above) carries the die's one danger
-  // accent, reused rather than a new saturated hue for the same reason.
-  shakuniRobe: 0x8a7a5a,
-  shakuniRobeDark: 0x564a36,
-  shakuniGold: 0x9c8a4a,
-  // The beard: the one detail that reads "aged courtier" rather than "a
-  // smaller grunt" at a glance, per the handoff's "slight through
-  // proportion, not stature". Ash-grey rather than another warm court tone,
-  // so it separates from `bone`'s skin and `shakuniRobe` in silhouette.
-  shakuniBeard: 0x9a9488,
+  // Act 1 (Mahabharata) — Shakuni, redesigned 2026-08-22 against the reference
+  // art in `assets/Shakuni/`. The values below are read off that art rather
+  // than invented: charcoal-violet cloth, wine sash, muted court gold, bronze.
+  //
+  // This **replaces** the old beige/brown register (`0x8a7a5a` robe, ash beard,
+  // dull `0x9c8a4a` gold). That register was a correct reading of the roster's
+  // "aged cloth, bone, dull gold" note and a wrong-looking courtier: at the
+  // combat camera's distance every one of those values sat inside half a stop
+  // of the hall's own bronze floor and pillars, so the Warden of gate 1 read as
+  // part of the set dressing. Dark charcoal against a warm bronze hall is the
+  // one contrast the old palette could not make.
+  //
+  // The danger register is unchanged and still reserved: `crimson` (above)
+  // marks a zone that will hurt you and nothing else. Phase 1 keeps every
+  // crimson off his body — the one saturated accent he carries is the single
+  // loaded pip on each die, which is what the die *is*. Phase 2 spends the
+  // register deliberately (see `shakuniEmber` below), which is the point.
+  shakuniRobe: 0x1f1b24,
+  shakuniRobeDark: 0x141216,
+  /** The asymmetric royal sash, and phase 2's robe accents. Wine, not blood. */
+  shakuniWine: 0x6b0d1a,
+  shakuniWineDark: 0x4a0810,
+  /** Court gold: ornament, trim, staff rings, the die's own pips. */
+  shakuniGold: 0xc5a059,
+  /** The dimmer half of the same gold — hems, deep filigree, worn edges. */
+  shakuniGoldDim: 0x8a6d29,
+  /** Bronze: the staff shaft and the heavier jewellery. Warmer than gold. */
+  shakuniBronze: 0xa38243,
+  /** Aged skin — sunken and warm-grey, distinctly not `bone`'s clean ivory. */
+  shakuniSkin: 0x7a5f54,
+  /** The long aristocratic beard. Near-white silver, the rig's brightest value
+   *  and its clearest silhouette read against a charcoal robe. */
+  shakuniBeard: 0xcdc9c2,
+  /** The dice: near-black bone, so gold pips carry every face. */
+  shakuniDie: 0x1c1815,
+  /** The dice in phase 2 — the same bone, soaked. */
+  shakuniDieLit: 0x2d0a0a,
+  /** The eye and the loaded pip in phase 1: a banked ember, not a glow. Amber
+   *  rather than crimson keeps the danger register clean until he spends it. */
+  shakuniEmber: 0xd08a2e,
+  /** Phase 2's eye, staff finial and dice glow. This is the transition. */
+  shakuniBlaze: 0xff2200,
 
   // Act 1 — Bakasura. Per docs/research/villain-roster.md: sickly, bruised,
   // gluttonous — sallow, bilious skin, distinct from Raakchyas's clean

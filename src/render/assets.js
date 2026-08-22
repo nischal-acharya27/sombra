@@ -54,6 +54,35 @@ export const MANIFEST = {
   'stone.basalt': { file: 'stone-basalt.svg', size: 256, repeat: [3, 3] },
   'stone.basalt.fine': { file: 'stone-basalt.svg', size: 256, repeat: [8, 8] },
   'iron.plate': { file: 'iron-plate.svg', size: 256, repeat: [2, 2] },
+
+  // Gate 1 — Shakuni. Art supplied for the 2026-08-22 redesign, in
+  // `assets/Shakuni/`. Every one of these is decoration over geometry that
+  // already carries the meaning, per condition 3 above:
+  //
+  // - `shakuni.robe` multiplies filigree over the robe's own charcoal. The
+  //   robe's silhouette is a lathe, not this file.
+  // - `shakuni.card` faces the Court of Blades projectiles. The card is a
+  //   `Bolt` with its own hitbox either way; this makes it a court card
+  //   rather than a lozenge.
+  // - `shakuni.zone`, `shakuni.zone.decoy` and `shakuni.zone.arena` fill the
+  //   three flavours of ground telegraph. **The radius is drawn by a
+  //   procedural ring at the true radius in every case** — these only fill
+  //   the disc inside it, and the fill is deliberately dimmer than the ring.
+  //   With `assets/` empty the fills fall back to the built-in radial disc
+  //   and the telegraph is unchanged, which is the test that matters.
+  //
+  // Not loaded, deliberately: `loaded_die_face_map.svg`. It is the reference
+  // the die's pip layout was built from (crimson centre pip on the odd faces),
+  // but a die's rolled face is a readability cue and readability cues do not
+  // live in files — the pips are geometry, and the face is a rotation.
+  // `shakuni_character_sprite_and_portrait.svg` and `shakuni_phase2.svg` are
+  // likewise reference for the rig, not runtime art: there is no billboard
+  // anywhere in this game to hang them on.
+  'shakuni.robe': { file: 'Shakuni/shakuni_robe_and_slash_texture.svg', size: 256, repeat: [1, 1] },
+  'shakuni.card': { file: 'Shakuni/court_of_blades.svg', size: 128 },
+  'shakuni.zone': { file: 'Shakuni/attack_decal.svg', size: 256 },
+  'shakuni.zone.decoy': { file: 'Shakuni/rigged_throw.svg', size: 256 },
+  'shakuni.zone.arena': { file: 'Shakuni/House_always_wins_phase2_arena_pattern.svg', size: 256 },
 };
 
 /** What `get()` hands back when there is no such art. Named, so it reads. */

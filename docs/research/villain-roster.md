@@ -675,6 +675,31 @@ stays entirely human throughout; escalation comes from the die's
 telegraphs tightening (more faces, shorter windows), not a rig or palette
 swap.
 
+> **Amended 2026-08-22 — the redesign.** The three paragraphs above were
+> built to and then partly reversed, against supplied reference art in
+> `assets/Shakuni/`. The full reasoning is in `docs/DECISIONS.md` §
+> "Shakuni is rebuilt as a courtier"; the short version, so this entry is
+> not read as current where it is not:
+>
+> - **Palette.** "Aged cloth, bone, dull gold" is retired. He is dark
+>   charcoal, wine, muted court gold and bronze. The old register was a
+>   correct reading of this paragraph and was invisible against gate 1's
+>   own bronze hall, which is a thing this entry could not have known and
+>   a screenshot settled in one frame.
+> - **Scale.** Still slight, no longer small: the taper carries it and he
+>   stands a head over the hunter.
+> - **"A single large die, not a set."** Reversed. He carries three,
+>   orbiting, plus a fourth on the staff. The telegraph stayed sharp
+>   because the dice on his body are decoration and *cannot* hurt anyone —
+>   the die that sizes a zone is the one thrown into the world.
+> - **Phase-transition flag.** Still "no rig swap", still no authored
+>   line, so the dialogue spec in `SPEC-CAMPAIGN.md` is unchanged. But the
+>   crossing is now *visible* — material and VFX on the same model, plus
+>   a fourth move — because the tightening alone was two numbers the
+>   hunter could feel and could not see.
+> - **Kit.** Two moves became four: the die, the card fan, a feint
+>   (Rigged Throw) and a phase-2 hall-wide attack (House Always Wins).
+
 **Tier call.** 2 — new rig in `models.js`; the enemy class extends `Enemy`
 directly, following `BhootBatti`'s keep-distance/windup skeleton, with the
 bolt-spawn replaced by the die-cast-and-resolve sequence. Tier 3 was never
