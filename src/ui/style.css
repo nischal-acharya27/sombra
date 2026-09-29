@@ -506,6 +506,20 @@ html, body {
 }
 .tag { font-size: 13px; letter-spacing: 0.26em; color: #9fb6c8; }
 
+/* A phone held landscape is ~410 CSS px tall, and the title screen can carry
+ * five buttons there — NEW GAME once a save moves past gate 1, PRIVACY
+ * OPTIONS in the Android shell where consent law needs it. At the desktop
+ * spacing that column is ~490 px and the logo and the last button fall off
+ * both edges, so short viewports tighten the column rather than drop a
+ * button: the logo scales with the height and the gaps close up. */
+@media (max-height: 520px) {
+  #title { gap: 8px; }
+  #title .cta.secondary { margin-top: 0; padding: 7px 24px; }
+  .title-art h1 { font-size: min(clamp(46px, 9vw, 108px), 15vh); }
+  .title-art .sub { margin-bottom: 4px; }
+  .title-art .rule { margin: 10px auto 8px; }
+}
+
 h2 { font-size: clamp(34px, 6vw, 62px); font-weight: 800; letter-spacing: 0.06em; }
 h2.fail { color: var(--crimson); text-shadow: 0 0 44px rgba(255, 77, 94, 0.6); }
 h2.win { color: #7ff2c9; text-shadow: 0 0 44px rgba(127, 242, 201, 0.55); }
@@ -538,6 +552,10 @@ h2.win { color: #7ff2c9; text-shadow: 0 0 44px rgba(127, 242, 201, 0.55); }
   box-shadow: none;
 }
 .cta.secondary:hover { opacity: 1; }
+/* The second wind on the death screen. Two lines: the verb, and what
+ * pressing it costs — the word "ad" is on the button, not behind it. */
+.cta.second-wind { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.cta.second-wind small { font-size: 10px; font-weight: 500; letter-spacing: 0.22em; opacity: 0.7; text-transform: uppercase; }
 
 .controls-hint {
   display: flex;

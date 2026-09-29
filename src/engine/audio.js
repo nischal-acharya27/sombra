@@ -18,6 +18,25 @@ export class Audio {
     this.music = null;
     this.intensity = 0;
     this.targetIntensity = 0;
+    /** Held silent by the host — see `hold()`. */
+    this.held = false;
+  }
+
+  /**
+   * Silence everything until `release()` — the app went to the background,
+   * or a full-screen ad is playing over it. `play()` otherwise resumes a
+   * suspended context on its own (that is how a browser's autoplay block is
+   * lifted), which would let the first sound effect after an ad opens undo
+   * the silence, so it checks this first.
+   */
+  hold() {
+    this.held = true;
+    if (this.ctx && this.ctx.state === 'running') this.ctx.suspend();
+  }
+
+  release() {
+    this.held = false;
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
   }
 
   /** Browsers require a user gesture before audio can start. */
@@ -159,7 +178,7 @@ export class Audio {
 
   play(name) {
     if (!this.enabled || !this.ctx) return;
-    if (this.ctx.state === 'suspended') this.ctx.resume();
+    if (this.ctx.state === 'suspended' && !this.held) this.ctx.resume();
     const r = () => 0.94 + Math.random() * 0.12; // per-shot detune, kills machine-gun repetition
 
     switch (name) {

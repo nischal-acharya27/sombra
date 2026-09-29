@@ -749,6 +749,16 @@ export const STRINGS = {
   // -- title screen -------------------------------------------------------
   /** `n` is 1-based; `name` is the resumed gate's own name. */
   TITLE_TAG: (n, name) => `GATE ${n} — ${name}`,
+  /** Only shown in the Android shell, and only where the consent SDK says the player must be able to revisit their choice (the EEA, the UK). */
+  PRIVACY_OPTIONS: 'PRIVACY OPTIONS',
+
+  // -- second wind (the rewarded ad on death — Android shell only) -----------
+  // The offer names the ad outright. A rewarded ad has to be opt-in and the
+  // player has to know what they are opting into before they press it, so
+  // the word "ad" is on the button rather than in small print behind it.
+  SECOND_WIND_CTA: 'SECOND WIND',
+  SECOND_WIND_NOTE: 'watch an ad · rise where you fell',
+  TOAST_SECOND_WIND: 'SECOND WIND',
 
   // -- gate 03 (new campaign): Kurukshetra + the lake, Duryodhana (Mahabharata,
   // Shalya Parva) — content prep only. Per docs/SPEC-CAMPAIGN.md, Duryodhana is

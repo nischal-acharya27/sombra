@@ -36,7 +36,10 @@ export class HUD {
       bossFill: $('boss-bar').querySelector('.boss-track i'),
       windows: $('windows'),
       toasts: $('toasts'),
+      secondWind: $('second-wind'),
     };
+    this.el.secondWind.querySelector('b').textContent = STRINGS.SECOND_WIND_CTA;
+    this.el.secondWind.querySelector('small').textContent = STRINGS.SECOND_WIND_NOTE;
     this._lastRank = -1;
     this._objectiveText = '';
   }
@@ -266,6 +269,15 @@ export class HUD {
   screen(id, on) {
     const el = $(id);
     if (el) el.classList.toggle('hidden', !on);
+  }
+
+  /**
+   * The death screen's SECOND WIND button. Built in the markup rather than
+   * here, like every other screen's buttons, and only ever shown or hidden —
+   * whether it may appear is `Game.secondWindOffered()`'s to decide.
+   */
+  secondWindOffer(on) {
+    this.el.secondWind.classList.toggle('hidden', !on);
   }
 
   /**

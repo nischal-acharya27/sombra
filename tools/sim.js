@@ -8,7 +8,8 @@
 // and winnability* can, and both are easy to break while tuning. Every bot
 // below has caught a real bug at least once.
 
-import { PLAYER, ATTACKS, CHAYA, CHARGER, GATE_ARCH } from '../src/game/config.js';
+import { PLAYER, ATTACKS, CHAYA, CHARGER, GATE_ARCH, SECOND_WIND, INTERSTITIAL } from '../src/game/config.js';
+import { NULL_AD_BRIDGE, AD_OUTCOME } from '../src/engine/adbridge.js';
 import { ChargerChaya } from '../src/game/shadow.js';
 import { buildShard } from '../src/render/models.js';
 import { checkGates, controls, crossing, telegraphs } from './gatecheck.js';
@@ -1616,6 +1617,177 @@ function storyBeats(game, input) {
   return rows;
 }
 
+/**
+ * Second wind and the gate-boundary interstitial — `docs/SPEC-ANDROID.md`.
+ *
+ * Every other probe in this file runs under the null ad bridge and never
+ * learns ads exist; this one swaps in a scripted bridge, asserts what a
+ * player would see (the offer, the rising, the pause at the arch), and puts
+ * the null bridge back. It kills the hunter, raises them, walks four arches
+ * and one last one, all on the shared `Game` — which is why it is last.
+ */
+function secondWind(game, input) {
+  const rows = [];
+  const say = (what, ok, detail = '') => rows.push({ what, ok, detail });
+  const original = { ads: game.ads, scope: SECOND_WIND.scope, clears: game.sessionGateClears };
+  const p = game.player;
+  const bot = new Bot(game, input);
+  const kill = () => {
+    p.invuln = 0;
+    game._damagePlayer(1e6, p.x + 1);
+  };
+  const deathShown = () => !document.getElementById('death').classList.contains('hidden');
+  // A scripted host: `ready` and `outcome` are what the next ask gets told.
+  const fake = (opts = {}) => ({
+    available: true,
+    shown: { rewarded: 0, interstitial: 0 },
+    ready: true,
+    outcome: AD_OUTCOME.REWARDED,
+    defer: false,
+    held: null,
+    rewardedReady() { return this.ready; },
+    showRewarded(done) { this.shown.rewarded++; done(this.outcome); },
+    interstitialReady() { return this.ready; },
+    showInterstitial(done) {
+      this.shown.interstitial++;
+      if (this.defer) this.held = done;
+      else done(AD_OUTCOME.CLOSED);
+    },
+    privacyOptionsRequired: () => false,
+    showPrivacyOptions: () => {},
+    pageReady: () => {},
+    ...opts,
+  });
+  const nodes = () => {
+    let n = 0;
+    game.scene.traverse(() => n++);
+    return n;
+  };
+
+  try {
+    // --- the offer, and who gets it ---
+    game.ads = NULL_AD_BRIDGE;
+    hardStart(game);
+    kill();
+    say('dead with no bridge: no offer', game.state === 'dead' && !game.secondWindOffered());
+    game.takeSecondWind();
+    say('and pressing it anyway does nothing', game.state === 'dead');
+
+    let ads = (game.ads = fake({ ready: false }));
+    hardStart(game);
+    kill();
+    say('bridge with no ad loaded: no offer', !game.secondWindOffered());
+
+    ads = game.ads = fake();
+    hardStart(game);
+    kill();
+    say('an ad loaded: offered', game.secondWindOffered());
+
+    ads.outcome = AD_OUTCOME.CLOSED;
+    game.takeSecondWind();
+    say('an ad closed early does not raise them', game.state === 'dead' && game.secondWindOffered(), `${ads.shown.rewarded} shown`);
+
+    ads.outcome = AD_OUTCOME.REWARDED;
+    game.hud.screen('death', true);
+    const before = nodes();
+    game.takeSecondWind();
+    const hp = Math.max(1, Math.round(p.maxHp * SECOND_WIND.hpFraction));
+    say('an ad watched: the hunter rises', game.state === 'playing' && !p.dead && p.state !== 'dead' && !deathShown(), `state ${game.state}`);
+    say('with part of their health, and a moment of grace', p.hp === hp && p.invuln > 0, `${p.hp}/${p.maxHp} hp, ${p.invuln.toFixed(1)} s`);
+    say('the second wind builds nothing', nodes() === before, `${nodes() - before} new objects`);
+    for (let i = 0; i < 120; i++) bot.step();
+    say('still standing a second later', game.state === 'playing' && !p.dead, `hp ${p.hp}`);
+
+    kill();
+    say(`${SECOND_WIND.perGateAttempt} per gate attempt: no second offer`, game.state === 'dead' && !game.secondWindOffered());
+    hardStart(game);
+    kill();
+    say('a retry is a new attempt', game.secondWindOffered());
+
+    SECOND_WIND.scope = 'warden';
+    hardStart(game);
+    kill();
+    say("scope 'warden': refused outside a Warden fight", !game.secondWindOffered());
+    SECOND_WIND.scope = original.scope;
+
+    // --- a fall: rise on the ledge, not over the chasm ---
+    let gap = null;
+    for (let i = 0; i < game.gates.length && !gap; i++) {
+      const g = game.gates[i];
+      const lv = game.levels[i];
+      for (let x = g.spawnX + 2; x < g.end; x += 0.5) {
+        if (!(lv.groundAt(x) > g.voidY)) {
+          gap = { i, x };
+          break;
+        }
+      }
+    }
+    if (gap) {
+      hardStart(game);
+      game._enterGate(gap.i);
+      p.x = gap.x;
+      p.y = game.gate.voidY - 1;
+      // Stepped until the void claims them, not once: the kill above left a
+      // hitstop `freeze` behind, and a frozen frame simulates nothing.
+      for (let i = 0; i < 120 && game.state !== 'dead'; i++) bot.step();
+      const fell = game.state === 'dead';
+      game.takeSecondWind();
+      const floor = game.level.groundAt(p.x);
+      say('a fall rises on the ledge behind it', fell && game.state === 'playing' && floor > game.gate.voidY && p.x < gap.x, `gate ${gap.i + 1}, gap at ${gap.x.toFixed(1)}, rose at ${p.x.toFixed(1)}`);
+      for (let i = 0; i < 120; i++) bot.step();
+      say('and stays on it', game.state === 'playing' && p.y > game.gate.voidY, `y ${p.y.toFixed(1)}`);
+    } else {
+      say('a fall rises on the ledge behind it', false, 'no gate has a gap to fall into');
+    }
+
+    // --- the interstitial at the arch ---
+    ads = game.ads = fake();
+    hardStart(game);
+    game.sessionGateClears = 0;
+    const at = [];
+    for (let k = 1; k <= 4; k++) {
+      const n = ads.shown.interstitial;
+      game._stepThrough();
+      if (ads.shown.interstitial > n) at.push(k);
+    }
+    const want = [1, 2, 3, 4].filter((k) => k % INTERSTITIAL.everyNGates === 0);
+    say(`one every ${INTERSTITIAL.everyNGates} gate clears`, at.join() === want.join(), `after clears ${at.join(', ') || 'none'}`);
+    say('and the run goes on through it', game.gateIndex === 4 && game.state === 'playing' && !game.resting, `gate ${game.gateIndex + 1}`);
+
+    ads.defer = true;
+    game.sessionGateClears = INTERSTITIAL.everyNGates - 1;
+    const from = game.gateIndex;
+    game._stepThrough();
+    const held = game.resting && game.gateIndex === from && ads.held;
+    ads.held?.(AD_OUTCOME.CLOSED);
+    say('the next gate waits for the ad to close', held && game.gateIndex === from + 1 && !game.resting);
+    ads.defer = false;
+
+    game._enterGate(game.gates.length - 1);
+    game.sessionGateClears = INTERSTITIAL.everyNGates - 1;
+    const n = ads.shown.interstitial;
+    game._stepThrough();
+    say('none before the run-end screen', game.state === 'ended' && ads.shown.interstitial === n);
+    game.hud.screen('clear', false);
+
+    game.ads = NULL_AD_BRIDGE;
+    hardStart(game);
+    game.sessionGateClears = INTERSTITIAL.everyNGates - 1;
+    game._stepThrough();
+    say('no bridge: the arch is a straight cut', game.gateIndex === 1 && !game.resting);
+  } finally {
+    game.ads = original.ads;
+    SECOND_WIND.scope = original.scope;
+    game.sessionGateClears = original.clears;
+    bot.releaseAll();
+    hardStart(game);
+    game.hud.screen('death', false);
+    game.hud.screen('clear', false);
+    game.hud.secondWindOffer(false);
+  }
+  return rows;
+}
+
 /** Φ(z), via the Abramowitz & Stegun 7.1.26 approximation to erf. */
 function normalCdf(z) {
   const x = Math.abs(z) / Math.SQRT2;
@@ -1929,6 +2101,10 @@ function runAll(game, input, seed) {
   // same kind of check as the touch layout above, drawing nothing — it could
   // sit anywhere, and it sits here because the rule says last.
   report.persist = checkPersist();
+  // And after even that: it kills and raises the hunter, walks five arches
+  // on the shared `Game`, and swaps the ad bridge out and back. Nothing
+  // above it knows ads exist, and it goes where nothing below it can learn.
+  report.secondWind = scope(16, () => secondWind(game, input));
   report.ms = Math.round(performance.now() - t0);
 
   print(report);
@@ -2272,6 +2448,19 @@ function print(r) {
   lines.push('  control. The stale-gate-id row is the negative control: a save naming a');
   lines.push('  gate this build no longer has is a real fault a player\'s device can');
   lines.push('  produce, not a hypothetical one.');
+  lines.push('');
+
+  lines.push('SECOND WIND AND THE INTERSTITIAL   (a scripted ad bridge, then the null one)');
+  for (const t of r.secondWind) {
+    lines.push(`  ${t.what.padEnd(50)} ${t.detail.padEnd(40)} ${ok(t.ok)}`);
+  }
+  lines.push('');
+  lines.push('  Every row above this section ran under the null ad bridge — the web');
+  lines.push('  build as Pages serves it — so none of them can see this feature. This');
+  lines.push('  one scripts the host: an ad that loads or does not, is watched or');
+  lines.push('  closed early, and an interstitial that answers at once or holds. The');
+  lines.push('  last row is the control: with no bridge the arch is the old straight');
+  lines.push('  cut, which is the promise that the web build never waits on an ad.');
   lines.push('');
 
   lines.push('', `seed ${r.seed}   ·   suite ran in ${r.ms} ms`);

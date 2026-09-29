@@ -14,11 +14,12 @@ import { GameCamera } from './camera.js';
 import { VFX } from '../render/vfx.js';
 import { buildShard } from '../render/models.js';
 import { P } from '../render/palette.js';
-import { MAGIC, STYLE, PROGRESSION, PLAYER, BHOOT_BATTI, CHAYA, GATE_ARCH, SYS_WINDOW, KAIKEYI_FORK } from './config.js';
+import { MAGIC, STYLE, PROGRESSION, PLAYER, BHOOT_BATTI, CHAYA, GATE_ARCH, SYS_WINDOW, KAIKEYI_FORK, SECOND_WIND, INTERSTITIAL } from './config.js';
 import { boxHit } from './actor.js';
 import { clamp, rand } from '../engine/mathx.js';
 import { STRINGS } from '../ui/strings.js';
 import { blankSave, resumePoint, recordGateClear, hasTaught, markTaught } from './save.js';
+import { NULL_AD_BRIDGE, AD_OUTCOME } from '../engine/adbridge.js';
 
 /**
  * What an actor's live attack is worth this frame, full stop — damage and
@@ -77,8 +78,10 @@ export class Game {
    *   `src/game/save.js`.
    * @param persistSave writes a save object; a no-op under `?sim` so the
    *   suite never touches real `localStorage` — see `main.js`.
+   * @param ads the ad bridge — see `src/engine/adbridge.js`. The null bridge
+   *   everywhere but the Android shell, which leaves every ad feature dark.
    */
-  constructor(world, hud, audio, input, gates, touch = null, save = blankSave(), persistSave = () => {}) {
+  constructor(world, hud, audio, input, gates, touch = null, save = blankSave(), persistSave = () => {}, ads = NULL_AD_BRIDGE) {
     this.world = world;
     this.hud = hud;
     this.audio = audio;
@@ -87,6 +90,7 @@ export class Game {
     this.gates = gates;
     this.save = save;
     this._persistSave = persistSave;
+    this.ads = ads;
     this.gateIndex = 0;
     this.gate = gates[0];
 
@@ -183,6 +187,20 @@ export class Game {
     this.freeze = 0;
     this.t = 0;
     this.runTime = 0;
+
+    // Second wind and the interstitial — see `SECOND_WIND`/`INTERSTITIAL` in
+    // config. Both are inert under the null bridge: nothing is ever ready, so
+    // neither counter below ever changes what the game does.
+    /** Second winds still available this gate attempt; `_enterGate` refills it. */
+    this.secondWindsLeft = SECOND_WIND.perGateAttempt;
+    /** What `_onDeath` interrupted — the state a second wind hands back, and whether a Warden fight was live. */
+    this._death = null;
+    /**
+     * Gate clears this session, across runs — the interstitial cadence counts
+     * these rather than a run's, so restarting cannot reset it to zero and
+     * dodge the schedule into showing more often, or less.
+     */
+    this.sessionGateClears = 0;
 
     // Progression
     this.level_ = 1;
@@ -296,6 +314,9 @@ export class Game {
     this._levelUpHold = null;
     this._advance = null;
     this.state = 'playing';
+    // A new gate attempt: arriving through an arch, a retry, a restart.
+    this.secondWindsLeft = SECOND_WIND.perGateAttempt;
+    this._death = null;
 
     this.player.reset(this.gate.spawnX, this.level.groundAt(this.gate.spawnX) + 0.2);
     // The chaya comes too, and it has to be *put* there rather than left to
@@ -1402,13 +1423,100 @@ export class Game {
 
   _onDeath() {
     if (this.state !== 'playing' && this.state !== 'cleared') return;
+    const enc = this.activeEncounter;
+    this._death = { state: this.state, wardenFight: !!enc?.spawns?.some((s) => s.type === 'warden') };
     this.state = 'dead';
     this.audio.setIntensity(0);
     this.hud.boss(false);
     this.hud.objective('');
     setTimeout(() => {
-      if (this.state === 'dead') this.hud.screen('death', true);
+      if (this.state !== 'dead') return;
+      this.hud.screen('death', true);
+      this.hud.secondWindOffer(this.secondWindOffered());
     }, 1400);
+  }
+
+  /**
+   * Whether the death screen offers a second wind right now: the hunter is
+   * dead, the policy in `SECOND_WIND` allows one here, one is left this attempt,
+   * and the ad bridge has a rewarded ad loaded. The last condition is the
+   * one that keeps the web build, Pages and `?sim` offer-free — the null
+   * bridge never has one ready.
+   */
+  secondWindOffered() {
+    if (this.state !== 'dead' || !this._death) return false;
+    if (this.secondWindsLeft <= 0) return false;
+    if (SECOND_WIND.scope === 'warden' && !this._death.wardenFight) return false;
+    return this.ads.rewardedReady();
+  }
+
+  /**
+   * The hunter picks SECOND WIND on the death screen. The ad plays; only an
+   * ad watched to its reward raises the hunter. Closing it early, or no ad showing at
+   * all, leaves them on the death screen with the offer re-evaluated — so an
+   * ad that has since loaded is offered again, and one that has not is not.
+   */
+  takeSecondWind() {
+    if (!this.secondWindOffered()) return;
+    this.hud.secondWindOffer(false);
+    this.ads.showRewarded((outcome) => {
+      if (outcome === AD_OUTCOME.REWARDED) this._secondWind();
+      else if (this.state === 'dead') this.hud.secondWindOffer(this.secondWindOffered());
+    });
+  }
+
+  /**
+   * Rise where you fell. Back to whatever `_onDeath` interrupted — a live
+   * gate, or the walk to a lit arch — with part of your health, a moment of
+   * invulnerability, and every encounter exactly as it stood: a second wind
+   * resumes the fight, it does not reset it.
+   *
+   * Allocates nothing. The suite counts the draws around it.
+   */
+  _secondWind() {
+    if (this.state !== 'dead' || !this._death) return;
+    this.secondWindsLeft--;
+    const p = this.player;
+
+    // Fell out of the world: rise on the last floor behind where they went
+    // over, inside the encounter's lock if one is live, rather than over the
+    // chasm that killed them.
+    if (p.y < this.gate.voidY + 1) {
+      const lock = this.activeEncounter?.lock;
+      const x0 = lock ? lock[0] + 0.5 : this.level.leftEdge;
+      const x1 = lock ? lock[1] - 0.5 : Infinity;
+      let x = Math.min(p.x, x1);
+      while (x > x0 && !(this.level.groundAt(x) > this.gate.voidY)) x -= 0.5;
+      x = Math.max(x0, x - SECOND_WIND.ledgeBack);
+      if (!(this.level.groundAt(x) > this.gate.voidY)) x = this.gate.spawnX;
+      p.x = x;
+      p.y = this.level.groundAt(x) + 0.2;
+    }
+
+    p.dead = false;
+    p.hp = Math.max(1, Math.round(p.maxHp * SECOND_WIND.hpFraction));
+    p.state = 'fall';
+    p.vx = 0;
+    p.vy = 0;
+    p.attack = null;
+    p.invuln = SECOND_WIND.invuln;
+
+    this.state = this._death.state;
+    this._death = null;
+    this.input.clearBuffer();
+
+    const enc = this.activeEncounter;
+    this.hud.screen('death', false);
+    this.hud.secondWindOffer(false);
+    if (enc?.boss) this.hud.objective('');
+    else if (enc) this.hud.objective(enc.lock ? STRINGS.OBJ_DEFEAT_ALL : STRINGS.OBJ_CROSS_CHASM);
+    else if (this.wayOpen) this.hud.objective(this._nextGate() ? STRINGS.OBJ_STEP_THROUGH : STRINGS.OBJ_LEAVE_GATE);
+    else this.hud.objective(STRINGS.OBJ_CLEAR_GATE);
+    this.audio.setIntensity(enc?.boss ? 1 : enc ? 0.75 : 0.12);
+    this.audio.play('levelup');
+    this.vfx.shadowBurst(p.x, p.y + 1, 34, P.cyan);
+    this.hud.toast(STRINGS.TOAST_SECOND_WIND, 'gold');
+    this._syncVitals();
   }
 
   /** The gate after this one, or null at the end of the campaign. */
@@ -1441,12 +1549,32 @@ export class Game {
     this._openTheWay();
   }
 
-  /** Into the next gate, or out of the campaign. */
+  /**
+   * Into the next gate, or out of the campaign.
+   *
+   * The boundary between two gates is where the interstitial plays — the
+   * one moment the game already cuts, with the clear recorded and nothing
+   * live on either side. It holds on `resting`, the same literal pause the
+   * boss-rest prompt uses, and the next gate is entered only once the ad
+   * answers. Never before the run-end screen: the last arch goes straight
+   * to it. Under the null bridge no interstitial is ever ready, so this is
+   * exactly the old straight line.
+   */
   _stepThrough() {
     this._recordGateClear();
     const next = this.gateIndex + 1;
-    if (next < this.gates.length) this._enterGate(next);
-    else this._endRun();
+    if (next >= this.gates.length) {
+      this._endRun();
+      return;
+    }
+    this.sessionGateClears++;
+    if (this.sessionGateClears % INTERSTITIAL.everyNGates === 0 && this.ads.interstitialReady()) {
+      this.wayOpen = false;
+      this.resting = true;
+      this.ads.showInterstitial(() => this._enterGate(next));
+      return;
+    }
+    this._enterGate(next);
   }
 
   /**

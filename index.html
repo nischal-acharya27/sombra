@@ -79,6 +79,10 @@
     <!-- Always shown — re-enters the training hall on demand, any time,
          independently of `new-game`'s campaign reset. See issue #35. -->
     <button id="tutorial-btn" class="cta secondary">TUTORIAL</button>
+    <!-- Android shell only, and only where the consent SDK requires a way
+         back to the consent form — `main.js` unhides it. Labelled from
+         `STRINGS.PRIVACY_OPTIONS`. -->
+    <button id="privacy-btn" class="cta secondary hidden"></button>
     <div class="controls-hint">
       <div><kbd>A</kbd><kbd>D</kbd> move</div>
       <div><kbd>Space</kbd> jump / double jump</div>
@@ -98,6 +102,10 @@
   <div id="death" class="screen hidden">
     <h2 class="fail">YOU HAVE DIED</h2>
     <p class="tag">The gate does not remember you.</p>
+    <!-- The rewarded-ad revive. Hidden unless `Game.secondWindOffered()` says
+         otherwise, which under the null ad bridge — the web build, Pages,
+         `?sim` — is never. Labelled from `STRINGS` by `HUD`. -->
+    <button id="second-wind" class="cta second-wind hidden"><b></b><small></small></button>
     <button id="retry" class="cta">RISE AGAIN</button>
   </div>
 

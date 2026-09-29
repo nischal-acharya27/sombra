@@ -1732,3 +1732,54 @@ export const PROGRESSION = {
   hpPerLevel: 14,
   mpPerLevel: 8,
 };
+
+/**
+ * Second wind — the rewarded ad that raises a fallen hunter. `docs/SPEC-ANDROID.md`, and
+ * `docs/DECISIONS.md` § "Amended 2026-09-29: the second wind reaches every
+ * gate", which is why this is a block of values rather than a branch in code:
+ * the placement policy is a decision that was argued twice, and the next time
+ * it moves should be a one-line diff, not an architecture change.
+ *
+ * Nothing here does anything without an ad bridge. The web build, GitHub
+ * Pages and `?sim` all run with the null bridge (`src/engine/adbridge.js`),
+ * whose rewarded ad is never ready, so the offer never appears.
+ */
+export const SECOND_WIND = {
+  /**
+   * Where the offer may appear on death.
+   *   'gate'   — anywhere in a gate (option B, adopted 2026-09-29).
+   *   'warden' — only while the encounter holding the gate's Warden is live
+   *              (option A, the policy recorded 2026-08-03).
+   */
+  scope: 'gate',
+  /**
+   * Second winds per gate attempt. An attempt starts at `_enterGate` — a
+   * retry from the death screen or the pause menu is a new one. `Infinity`
+   * is option C, the continue that was refused.
+   */
+  perGateAttempt: 1,
+  /**
+   * The fraction of max HP the hunter rises with. Not full: levelling is the
+   * game's only other heal, and a second wind that out-healed a level-up would
+   * make dying the better way to recover.
+   */
+  hpFraction: 0.5,
+  /** Seconds of invulnerability on rising, so the blow that killed you cannot land again on the first frame. */
+  invuln: 2.5,
+  /** A hunter who fell out of the world rises this far back from the ledge they left. */
+  ledgeBack: 1.5,
+};
+
+/**
+ * The interstitial at the gate boundary. Plays between `_recordGateClear` and
+ * the next gate's arrival — the one moment the game already cuts — and never
+ * at launch, on exit, mid-fight or before the run-end screen.
+ */
+export const INTERSTITIAL = {
+  /**
+   * One interstitial per this many gate clears in a session. Two is the low
+   * end of the recorded two-to-three cadence (`docs/DECISIONS.md` §
+   * Monetisation); every clear was judged too aggressive at ~130 s a gate.
+   */
+  everyNGates: 2,
+};

@@ -20,6 +20,7 @@ import {
 } from './game/save.js';
 import { STRINGS } from './ui/strings.js';
 import { loadAssets } from './render/assets.js';
+import { NULL_AD_BRIDGE, detectAdBridge } from './engine/adbridge.js';
 
 // Image textures, before anything else exists.
 //
@@ -79,7 +80,13 @@ if (touch) document.body.classList.add('touch');
 const save = simMode ? blankSave() : loadSave();
 const persistSave = simMode ? () => {} : writeSave;
 
-const game = new Game(world, hud, audio, input, GATES, touch, save, persistSave);
+// The ad bridge: the Android shell's if it injected one, the null bridge on
+// the web — and always the null bridge under `?sim`, so the suite runs the
+// game exactly as Pages serves it whatever page it happens to be loaded in.
+// See `src/engine/adbridge.js`.
+const ads = simMode ? NULL_AD_BRIDGE : detectAdBridge();
+
+const game = new Game(world, hud, audio, input, GATES, touch, save, persistSave, ads);
 
 // The training hall — issue #35. Not part of the campaign `Game` runs (see
 // `game/tutorial.js`'s own note), so it is its own object, built lazily here
@@ -101,6 +108,16 @@ document.querySelector('#title .tag').textContent = STRINGS.TITLE_TAG(resume.gat
 // `start` alone already covers a blank save, and showing a reset option for
 // nothing to reset would just be a second button that does the same thing.
 if (resume.gateIndex > 0) document.getElementById('new-game').classList.remove('hidden');
+
+// The consent SDK's way back to its own form — shown only in the Android
+// shell, and there only where the SDK says the player must be able to change
+// their answer (the EEA and the UK). Re-checked on `refresh()`, below: the
+// shell learns the answer asynchronously, often after this line has run.
+const privacyBtn = document.getElementById('privacy-btn');
+privacyBtn.textContent = STRINGS.PRIVACY_OPTIONS;
+const syncPrivacyButton = () => privacyBtn.classList.toggle('hidden', !ads.privacyOptionsRequired());
+syncPrivacyButton();
+privacyBtn.addEventListener('click', () => ads.showPrivacyOptions());
 
 // Every gate's group is in the scene by now, whether visible or not — `Game`
 // just built them all. Three.js otherwise compiles a material's shader
@@ -184,6 +201,7 @@ function startRun() {
   hud.screen('title', false);
   hud.screen('death', false);
   hud.screen('clear', false);
+  hud.secondWindOffer(false);
   hud.hideBossRestPrompt();
   // Restarting from the pause menu left this overlay up: the gate really did
   // reset, you just could not see it happen.
@@ -291,6 +309,7 @@ document.getElementById('story').addEventListener('click', () => {
   showIntro(() => hud.screen('title', true));
 });
 document.getElementById('retry').addEventListener('click', startRun);
+document.getElementById('second-wind').addEventListener('click', () => game.takeSecondWind());
 document.getElementById('again').addEventListener('click', startRun);
 document.getElementById('resume').addEventListener('click', () => setPaused(false));
 
@@ -306,6 +325,60 @@ function setPaused(on) {
   // Drop anything buffered while paused, so resuming doesn't fire off a swing
   // the player queued a minute ago.
   if (!on) input.clearBuffer();
+}
+
+// -- the host ---------------------------------------------------------------
+//
+// What an embedding host calls: the Android shell's activity lifecycle and
+// its back button (`android/`, `docs/SPEC-ANDROID.md`). A browser needs none
+// of it, but `visibilitychange` below is the same `pause()` for a phone
+// playing on Pages, so the two paths are one path.
+
+/** A run is under way and could be paused. */
+const inRun = () => !tutorialActive && (game.state === 'playing' || game.state === 'cleared');
+
+window.__sombraHost = {
+  /**
+   * The app left the foreground, or a full-screen ad is about to cover it.
+   * Silence, and the pause menu if a fight is live — the hunter comes back
+   * to a held game rather than a finished one. `setPaused` already refuses
+   * while `resting` holds or the hunter is dead, which is exactly the two
+   * states an ad plays in, so neither gets a pause menu stacked over it.
+   */
+  pause() {
+    audio.hold();
+    if (inRun()) setPaused(true);
+  },
+  /** Back in the foreground. Sound only: a paused game waits for RESUME. */
+  resume() {
+    audio.release();
+  },
+  /**
+   * Android's back button. Toggles the pause menu during a run, and does
+   * nothing while a resting prompt holds it (a Warden's words, the
+   * boss-rest card) — a stray back must not send the app home mid-scene.
+   * Anywhere else it answers `'exit'` and the shell sends the app to the
+   * background.
+   */
+  back() {
+    if (!inRun()) return 'exit';
+    if (!game.resting) setPaused(!paused);
+    return 'handled';
+  },
+  /** The shell's ad or consent state changed: re-ask what may be offered. */
+  refresh() {
+    syncPrivacyButton();
+    if (game.state === 'dead' && !document.getElementById('death').classList.contains('hidden')) {
+      hud.secondWindOffer(game.secondWindOffered());
+    }
+  },
+};
+
+if (!simMode) {
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) window.__sombraHost.pause();
+    else window.__sombraHost.resume();
+  });
 }
 
 addEventListener('keydown', (e) => {
@@ -340,6 +413,7 @@ if (simMode) {
 } else {
   loop.start();
   document.getElementById('boot').classList.add('hidden');
+  ads.pageReady();
   // `?perf` records frame times and names what the game was doing at each
   // spike. It has to be run in a real browser window: the in-app preview
   // throttles rAF, which is what made the last attempt at the reported spawn
@@ -356,4 +430,4 @@ if (simMode) {
 // the filter itself was removed instead. See the note in src/ui/style.css.
 
 // Handy for poking at a running game from the console.
-window.__game = { game, world, loop, audio, input, hud, touch, tutorial, assets: ASSETS };
+window.__game = { game, world, loop, audio, input, hud, touch, tutorial, assets: ASSETS, ads };
