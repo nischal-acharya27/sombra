@@ -151,6 +151,12 @@ run against all ten gates in milliseconds — see § The level-data seam.
 
 ### Monetisation
 
+> **Amended 2026-09-29.** The second wind now reaches every gate, once per
+> gate attempt, and the cadence is fixed at every second clear. See §
+> "Amended 2026-09-29: the second wind reaches every gate" and the entry
+> after it. The reasoning below is kept as written; it is what the amendment
+> overrode.
+
 **Interstitials** every two to three gate clears. Ten gates give nine natural
 boundaries for free; every boundary is too aggressive at roughly 130 s per gate.
 
@@ -2679,6 +2685,10 @@ scope creep against issue #30, which said nothing about the death screen.
 
 ### The Android packaging plan
 
+> **Superseded 2026-09-29.** A TWA cannot host an ad SDK, so the shell is a
+> native Kotlin WebView in `android/`. See § "Amended 2026-09-29: the
+> Android shell is native, not a TWA".
+
 Decided, not built. The target is the Play Store; the chosen path is a
 **TWA (Trusted Web Activity)**, not Capacitor — a TWA wraps the game's
 existing hosted URL in a thin Android shell and asks nothing of this repo's
@@ -4073,3 +4083,141 @@ game. Stub `requestAnimationFrame` after boot; then the manual frame-step is
 the only thing that advances anything. This amends the "rAF does not tick"
 note — it is not that it never ticks, it is that it ticks unpredictably, which
 is worse.
+
+## Amended 2026-09-29: the second wind reaches every gate
+
+§ Monetisation (under "Campaign, audience and platform") restricted rewarded
+video to a second wind in boss arenas, once per attempt, and refused the
+unrestricted continue with its reasoning on record. The user asked for a
+way back from death (their word was "revive"), and three options were put to them with that reasoning in
+front of them:
+
+| Option | Scope | Cap |
+|---|---|---|
+| A, as recorded | boss encounters only | once per attempt |
+| **B, adopted** | **any gate** | **once per gate attempt** |
+| C, the refused one | anywhere | unlimited |
+
+**Why B.** It gives the user what they asked for, and it bounds how much
+a second wind erodes the design claim. One second wind per attempt means a gate
+is still a skill check: the hunter who cannot read a tell dies twice and
+restarts, exactly as before. What changes is that a single mistake near the
+end of a two-minute gate no longer costs the whole two minutes.
+
+**What this knowingly gives up.** The recorded reasoning is not refuted; it is
+outweighed, by the person it constrains, without the data its reopening
+condition asked for (retention showing players lost at a non-boss wall). The
+game still has one playtester. Record that plainly, so that the next session
+does not read this as evidence. It is a preference, the same shape as §
+"Amended 2026-08-08".
+
+**What holds the line now.** The cap, and only the cap. The rest of the
+policy is values in `SECOND_WIND` (`src/game/config.js`), so option C is one
+number away. Before it moves, the three-round claim in § Monetisation is the
+thing to argue with.
+
+**The second heal source.** Levelling was the game's only heal. A second wind
+restores half of max HP, not all of it, so dying never out-heals a level-up.
+It also puts back the state the death interrupted, frozen since the death, so
+the fight resumes rather than resets. Spec: `docs/SPEC-ANDROID.md`.
+
+## Amended 2026-09-29: the interstitial cadence is confirmed, as a value
+
+The user asked for an interstitial "at the end of a stage". § Monetisation
+recorded one every two to three gate clears, and judged every clear too
+aggressive at about 130 s a gate. The user took the recorded cadence at its
+low end: **every second gate clear**, `INTERSTITIAL.everyNGates = 2`. An
+interstitial after every gate is now a one-number change.
+
+It plays at the arch, between `_recordGateClear` and the next gate's arrival.
+That is the one moment the game already cuts. It never plays at launch, on
+exit, mid-fight, or before the run-end screen. This matches AdMob's own
+placement policy (interstitials only at logical breaks, never on load or
+exit, never after every action). The count is per app session, across runs,
+so restarting neither resets nor skips the schedule.
+
+Code and prose say **gate**. *Stage* is on `CONTEXT.md`'s avoid list.
+
+## Amended 2026-09-29: the Android shell is native, not a TWA
+
+§ "The Android packaging plan" chose a TWA through PWABuilder, explicitly not
+Capacitor, so that the repo never grows an npm toolchain. It left the ad SDK
+as step 5, "undecided". Deciding step 5 breaks step 3: **a TWA runs inside the
+player's Chrome, with no native view to host the AdMob SDK and no JavaScript
+bridge to call it.** Rewarded video and a TWA cannot coexist.
+
+The user chose a **native Kotlin WebView shell in `android/`**, built by
+Gradle only, with no npm. That is what the original rule protected: the game
+at the repo root still has no build step. The shell copies the game's files
+into the APK byte for byte, serves them from
+`https://appassets.androidplatform.net/game/` through `WebViewAssetLoader`,
+and exposes a small `@JavascriptInterface` ad bridge plus the UMP consent
+flow.
+
+| Path | Ads | Repo stays npm-free | Updates |
+|---|---|---|---|
+| TWA (recorded) | impossible | yes | free on every Pages deploy |
+| **Native WebView shell (adopted)** | yes | yes, since only the wrapper builds | a Play release per game update |
+| Capacitor + AdMob plugin | yes | only if isolated to the wrapper | a Play release per game update |
+
+**The trade, stated honestly.** The TWA's one real advantage, that the app
+updates the moment Pages redeploys, is lost. Every game change is now a Play
+release, and Pages and the app can drift apart. `manifest.json` and
+`assetlinks.json` (steps 1–2 of the old plan) are no longer needed.
+
+## Amended 2026-09-29: the campaign is twelve gates, and ships at eleven
+
+`docs/SPEC-CAMPAIGN.md` specifies fifteen gates in four acts, ending on
+Mahishasura. Eleven are built. Two decisions were made together.
+
+**The campaign is twelve gates, and gate 12, Hiranyakashipu, is the finale.**
+Act 4 (Vritra, Trishiras, Mahishasura; issues #61–#63) is cut. The option of
+moving Mahishasura into gate 12 was offered and declined. Acts 1–3 stay intact.
+The finale becomes the Krishna-cycle's own climax, and it takes on the
+campaign's ending: the chaya is let go. The spec's "gate 15 echoes gate 1"
+payoff has to be re-homed in gate 12's own build, or dropped. That is gate
+12's call, not this entry's.
+
+**The app goes to Production with eleven gates.** The recommendation was to
+hold at Internal/closed testing until a finale existed, because a Play
+reviewer's first run ends on a stats screen after Narakasura. The user chose
+to ship now and add gate 12 as an update. Two things follow:
+
+- the store listing must not promise an ending the build does not have (see
+  `docs/store/listing.md`);
+- if the Play account is personal and was created after 2023-11-13, the
+  12-testers-for-14-days closed test still stands between upload and
+  Production, whatever is decided here.
+
+**The full-campaign phone playtest** that § "Amended 2026-08-08" deferred to
+"after all gates exist" now means after twelve. It has still not happened.
+That entry's own check applies: if gate 12 is built and the campaign is still
+unplayed, the amendment was a rationalisation.
+
+## Built 2026-09-29: what the Android build found that the suite could not
+
+`?sim` went from 225 to 244 PASS / 0 FAIL on all five recorded seeds. The 19
+new rows are the second wind and interstitial probe, and the other 225 are
+byte-identical to their baseline. None of the following was visible to it:
+
+- **The consent form starved at boot.** Every WebView in an app shares one
+  renderer process. UMP's form is a web page, and the game spends several
+  seconds building every gate and warming its shaders (7.9 s on the
+  emulator's software GPU, 2.1 s on the host GPU). Every consent attempt made
+  during boot timed out, and one timeout meant no ads for the session. The
+  shell now waits for the page's `pageReady()` (20 s fallback) and retries a
+  failed round trip three times, spaced out.
+- **The release build crashed on launch.** The ads SDK pulls in WorkManager
+  2.7 on Room 2.2, which finds its generated database by reflection with no
+  rule that AGP 9's full-mode R8 honours. The crash happens in a content
+  provider before the activity exists. A debug build cannot show it; a
+  signed release on the emulator did, and a keep rule fixed it.
+- **The title screen did not fit a landscape phone.** At 412 CSS px tall, the
+  column of logo plus five buttons (NEW GAME for a returning save, PRIVACY
+  OPTIONS in the EEA) clipped the logo and the last button. This was already
+  latent on Pages for any returning player with four buttons. Short
+  viewports now tighten the column instead of dropping a button.
+- **"No fill" from Google's own test units** turned out to be geography. The
+  emulator's IP is in Spain, and until the consent form had been answered no
+  ad would fill, not even a test ad. That is correct behaviour, and it is
+  worth knowing before assuming the integration is broken.

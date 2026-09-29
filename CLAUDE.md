@@ -4,6 +4,12 @@ A 2.5D hack & slash: a hunter walks into the machinery of the afterlife and
 finds it stopped. Static three.js (v0.185.1, vendored). **No build step, no npm,
 no node** — do not propose a bundler, a build step, or a dependency.
 
+The one exception is `android/`: a Kotlin WebView shell, built with Gradle
+only, that copies the game into an APK and carries the ads. It is a separate
+toolchain in a separate directory. The game at the root still builds nothing,
+and must run without it: Pages and `?sim` use the null ad bridge. See
+`android/README.md` and `docs/SPEC-ANDROID.md`.
+
 ## Run and verify
 
 ```bash
@@ -25,7 +31,8 @@ wrong diagnoses and several disagreeing playtest verdicts.
 **Verify with `?sim` across seeds before claiming anything works.** One seed is
 not evidence — that mistake is why the suite sweeps rather than samples. The
 five recorded seeds are `20260728`, `1`, `99991`, `20260802`, `7777777`, and the
-suite is 120 PASS / 0 FAIL in ~6.6 s on all five.
+suite is 244 PASS / 0 FAIL on all five (measured 2026-09-29; re-capture the
+baseline before trusting this number).
 
 **Red on one arbitrary seed is not a regression.** The telegraph gate has a
 measured false-negative rate — roughly two arbitrary seeds in nine fail on a
@@ -60,7 +67,8 @@ size, precisely so a failure cannot be answered by adjusting the instrument.
   play plane hides the fight. Models are built facing +X, and the lateral axis
   is Z.
 - **Use `CONTEXT.md` vocabulary in code and prose.** Gate not level, remnant not
-  corpse, shadow not summon, Warden not mini-boss. The glossary lists the words
+  corpse, chaya not summon (or shadow — the code is mid-rename, `shadow.js` is
+  still its file), second wind not revive, Warden not mini-boss. The glossary lists the words
   to avoid per term, and code review enforces it.
 
 ## When a suite number moves unexpectedly
@@ -77,8 +85,14 @@ in-app browser throttles rAF, so wall-clock timing measured there is meaningless
 ## Docs
 
 - `CONTEXT.md` — the glossary. Read before naming anything.
-- `docs/SPEC-CAMPAIGN.md` — the ten-gate campaign; § Further Notes carries the
-  build order and the checkpoint that makes it honest.
+- `docs/SPEC-CAMPAIGN.md` — the campaign, now twelve gates (amended
+  2026-09-29); § Further Notes carries the build order and the checkpoint
+  that makes it honest.
+- `docs/SPEC-ANDROID.md` — the Android shell, the ad bridge, second wind and
+  the interstitial.
+- `docs/PLAY-STORE.md` — the ordered release checklist, and who does each
+  step; drafts for the listing, privacy policy and Data safety are in
+  `docs/store/`.
 - `docs/SPEC-SORGI.md` — the shadow mechanic.
 - `docs/DECISIONS.md` — every decision and the reasoning, including the ones
   that were reversed and why.

@@ -21,7 +21,9 @@ you are in it.
 _Avoid_: World, zone, area, biome
 
 **Campaign**:
-The ordered run of ten gates from the breached world to the Wheel.
+The ordered run of twelve gates, in three acts by source epic, ending on
+Hiranyakashipu, where the chaya is let go. It was fifteen until 2026-09-29,
+when Act 4 was cut; it was ten before that.
 _Avoid_: Story mode, adventure, main quest
 
 **Encounter**:
@@ -55,9 +57,10 @@ _Avoid_: Mini-boss, elite, sub-boss, lieutenant
 
 **Boss**:
 A Warden of the highest order — bespoke, multi-phase, with its own arena
-behaviour rather than parameterised numbers. Reserved for the four locked
-bosses named in `docs/SPEC-CAMPAIGN.md` (Duryodhana, Ravana, Hiranyakashipu,
-Mahishasura); every boss is a Warden, most Wardens are not bosses.
+behaviour rather than parameterised numbers. Reserved for the three locked
+bosses named in `docs/SPEC-CAMPAIGN.md` (Duryodhana, Ravana, Hiranyakashipu;
+Mahishasura was the fourth until Act 4 was cut); every boss is a Warden, most
+Wardens are not bosses.
 _Avoid_: Guardian/Goru-Mukh/Hakim/Chiranjivi/Maun-Ankur (the old ten-gate
 build's boss archetype names, retired gate by gate as the fifteen-gate
 roster in `docs/SPEC-CAMPAIGN.md` replaces them — not currently any gate's
@@ -104,3 +107,24 @@ _Avoid_: Tier, grade, level (which means something else here)
 The score for what the hunter did personally, within a single gate. A shadow's
 kills earn no style, which is what stops leaning on it being free.
 _Avoid_: Combo score, points, rating
+
+## Ads (the Android build only)
+
+**Second wind**:
+The rewarded ad on death: after a death, an ad watched to its reward raises
+the hunter where they fell, with part of their health, back into the fight
+exactly as it stood. One per gate attempt. The word is the recorded one; the
+game has HP, not lives.
+_Avoid_: Revive, continue, extra life, lives, respawn
+
+**Ad bridge**:
+The one seam between the game and whatever host serves ads — an interface
+the game asks "is an ad ready" and "show one, then tell me how it went". The
+null bridge (no host, nothing ever ready) is the web build's, and the
+suite's.
+_Avoid_: Ad manager, ad service, SDK (which is the host's side of the bridge)
+
+**Interstitial**:
+The full-screen ad at the arch between two gates, every second gate clear.
+Never at launch, on exit, mid-fight or before the run-end screen.
+_Avoid_: Stage-end ad, level ad, pop-up
