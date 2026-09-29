@@ -332,6 +332,22 @@ export const KAWACH = {
    * of sync with it.
    */
   armorBreakLaunch: 13.0,
+  /**
+   * What an armoured hit — anything below `armorBreakLaunch` — still gets
+   * through. At 0.3, slashes alone kill one in ~13 hits (about four strings)
+   * and AAGO in 11 bolts, against 4 launchers: slower than breaking the
+   * armour, never impossible. It was 0 until 2026-09-29, which made the
+   * launcher the only way to kill one.
+   *
+   * Not higher, and the reason is measured, not felt. Every value above 0
+   * narrows the frozen telegraph gate's damage gap, because part of what it
+   * measured was a naive bot being bashed while it could not kill a Kawach.
+   * At 0.5 both bots slashed them down inside the 0.6 s wind-up, the median
+   * saving fell from ~32 HP to 0–9, and the gate went red on two recorded
+   * seeds. 0.3 holds all five green at a median saving of 8–17 HP. See
+   * `docs/DECISIONS.md` § "Amended 2026-09-29: Kawach armour reduces damage".
+   */
+  armorDamageMul: 0.3,
   exp: 42,
   contactDamage: 0,
 };

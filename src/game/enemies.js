@@ -705,18 +705,28 @@ export class Kawach extends Enemy {
   }
 
   /**
-   * Armour absorbs anything except a hit that qualifies as `armorBreakLaunch`
-   * or better — see `KAWACH.armorBreakLaunch` in `config.js` for why that
-   * number is the launcher's own `launch` value and not a separate one. A
-   * shrugged-off hit does not so much as flinch the state machine: no hurt
-   * state, no stagger, chase or telegraph or attack keeps running exactly as
-   * it was. A qualifying hit gets none of that protection — it is `Enemy`'s
-   * ordinary reaction, unabridged, because armour that breaks halfway is not
-   * armour breaking.
+   * Armour turns aside most of any hit below `armorBreakLaunch` — see
+   * `KAWACH.armorBreakLaunch` in `config.js` for why that number is the
+   * launcher's own `launch` value and not a separate one. An armoured hit
+   * still costs it `armorDamageMul` of the damage, but does not so much as
+   * flinch the state machine: no hurt state, no stagger, chase or telegraph
+   * or attack keeps running exactly as it was. So slashes and AAGO wear it
+   * down slowly while it keeps swinging; the launcher is the fast answer,
+   * not the only one. A qualifying hit gets none of the protection — it is
+   * `Enemy`'s ordinary reaction, unabridged, because armour that breaks
+   * halfway is not armour breaking. Neither is armour that makes the killing
+   * blow a no-sell, so the hit that empties it dies the ordinary way.
+   *
+   * Until 2026-09-29 an armoured hit did no damage at all, and a hunter who
+   * had not found the launcher could not kill one — see `docs/DECISIONS.md`
+   * § "Amended 2026-09-29: Kawach armour reduces damage".
    */
   takeHit({ damage, knock = 0, launch = 0, fromX = 0 }) {
     if (this.dead) return false;
     if (launch < this.cfg.armorBreakLaunch) {
+      const through = damage * this.cfg.armorDamageMul;
+      if (this.hp - through <= 0) return super.takeHit({ damage: through, knock, launch, fromX });
+      this.hp -= through;
       this.hitFlash = 0.05; // a duller flash than a real hit — a shrug, not a stagger
       this.ctx.audio?.play('impact');
       return true;

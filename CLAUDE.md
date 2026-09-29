@@ -31,7 +31,7 @@ wrong diagnoses and several disagreeing playtest verdicts.
 **Verify with `?sim` across seeds before claiming anything works.** One seed is
 not evidence — that mistake is why the suite sweeps rather than samples. The
 five recorded seeds are `20260728`, `1`, `99991`, `20260802`, `7777777`, and the
-suite is 244 PASS / 0 FAIL on all five (measured 2026-09-29; re-capture the
+suite is 248 PASS / 0 FAIL on all five (measured 2026-09-29; re-capture the
 baseline before trusting this number).
 
 **Red on one arbitrary seed is not a regression.** The telegraph gate has a

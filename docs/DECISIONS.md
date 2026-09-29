@@ -4221,3 +4221,49 @@ byte-identical to their baseline. None of the following was visible to it:
   emulator's IP is in Spain, and until the consent form had been answered no
   ad would fill, not even a test ad. That is correct behaviour, and it is
   worth knowing before assuming the integration is broken.
+
+## Amended 2026-09-29: Kawach armour reduces damage instead of absorbing it
+
+§ "Gate 3 (Naraka): Kawach, Goru-Mukh, and a `Boss` base class" made
+Kawach's armour absolute: any hit below the launcher's `launch` value did
+nothing at all. From play, the user reported it as a bug: *Kawach only die to
+RISE*. A hunter who has not found the launcher, or who is fighting from range
+with AAGO, cannot kill one. The user asked for slashes and AAGO to kill them
+too.
+
+**What changed.** An armoured hit now deals `KAWACH.armorDamageMul` of its
+damage and still does not flinch the state machine: no hurt state, no
+stagger, the bash keeps coming. The launcher still breaks the armour for full
+damage and the ordinary reaction. The hit that empties it dies the ordinary
+way, because armour that no-sells the killing blow is its own bug. Lanka
+soldiers (armour off) and Kawach chayas (no armour) are unaffected.
+
+**Why 0.3, measured across the five recorded seeds.** Every value above 0
+narrows the frozen telegraph gate's damage gap. Part of what that gate
+measured was the naive bot being bashed while it could not kill a Kawach
+(gate 1's court guards):
+
+| `armorDamageMul` | Slash hits / AAGO bolts to kill | Median saving (reader vs naive) | Gate |
+|---|---|---|---|
+| 0 (before) | impossible | ~26–42 HP | green 5/5 |
+| 0.1 | 37 / 32 | 17–23 HP | green 5/5 |
+| 0.2 | 19 / 16 | 9–25 HP | red on 99991 |
+| **0.3** | **13 / 11** | **8–17 HP** | **green 5/5** |
+| 0.5 | 8 / 7 | 0–9 HP | red on 20260802, 7777777 |
+
+At 0.5 the suite named the failure itself: something now kills enemies
+faster than they can commit. Both bots slashed Kawach down inside the 0.6 s
+wind-up, so reading the tell stopped mattering. 0.1 keeps the widest gap, but
+37 slashes to kill one guard does not answer the complaint. 0.3 is the value
+that answers it and holds the recorded seeds.
+
+The single red at 0.2 sits inside the gate's known false-negative band, at
+the same saving as 0.3's weakest seed. So the true line between 0.2 and 0.3
+is noise, not a threshold, and nobody should read 0.3 as "the most it can
+take". The gate itself was not touched: not the test, the alpha, the sample
+or either bot.
+
+**What it knowingly costs.** The measured advantage of reading tells over
+ignoring them roughly halves: a median saving of about 32 HP becomes about
+13. It is still positive and significant on every recorded seed. If a later
+change narrows it further, this entry is the first place to look.

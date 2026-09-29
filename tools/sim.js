@@ -8,7 +8,7 @@
 // and winnability* can, and both are easy to break while tuning. Every bot
 // below has caught a real bug at least once.
 
-import { PLAYER, ATTACKS, CHAYA, CHARGER, GATE_ARCH, SECOND_WIND, INTERSTITIAL } from '../src/game/config.js';
+import { PLAYER, ATTACKS, CHAYA, CHARGER, GATE_ARCH, SECOND_WIND, INTERSTITIAL, KAWACH, MAGIC } from '../src/game/config.js';
 import { NULL_AD_BRIDGE, AD_OUTCOME } from '../src/engine/adbridge.js';
 import { ChargerChaya } from '../src/game/shadow.js';
 import { buildShard } from '../src/render/models.js';
@@ -1788,6 +1788,47 @@ function secondWind(game, input) {
   return rows;
 }
 
+/**
+ * Kawach's armour, against each way the hunter has to hurt it.
+ *
+ * Until 2026-09-29 an armoured hit did nothing, and the launcher was the only
+ * way to kill one — reported from play as "they only die to RISE". This
+ * counts hits to kill with slashes alone, AAGO alone, and the launcher, and
+ * asserts the order a player should feel: the launcher fastest, but neither
+ * of the others impossible, and the armour still worth something.
+ */
+function kawachArmour(game) {
+  const rows = [];
+  const say = (what, ok, detail = '') => rows.push({ what, ok, detail });
+  const hitsToKill = (hit) => {
+    hardStart(game);
+    const p = game.player;
+    const k = game.spawnMinion('kawach', p.x + 1.5, p.y, null);
+    let n = 0;
+    while (!k.dead && n < 200) {
+      game._damageEnemy(k, { ...hit(n), hitstop: 0, shake: 0, move: `probe${n % 4}`, style: 0 });
+      game.freeze = 0;
+      n++;
+    }
+    return { n, dead: k.dead, hp: k.hp };
+  };
+  const string = ['light1', 'light2', 'light3'];
+  const slash = hitsToKill((n) => {
+    const a = ATTACKS[string[n % 3]];
+    return { damage: a.damage, knock: a.knock ?? 0, launch: a.launch ?? 0 };
+  });
+  const aago = hitsToKill(() => ({ damage: MAGIC.damage, knock: MAGIC.knock, launch: 0 }));
+  const launcher = hitsToKill(() => ({ damage: ATTACKS.launcher.damage, knock: ATTACKS.launcher.knock ?? 0, launch: ATTACKS.launcher.launch }));
+  // What the same slash string costs an unarmoured body of the same health.
+  const bare = Math.ceil(KAWACH.hp / ((ATTACKS.light1.damage + ATTACKS.light2.damage + ATTACKS.light3.damage) / 3));
+  say('slashes alone kill one', slash.dead, `${slash.n} hits`);
+  say('AAGO alone kills one', aago.dead, `${aago.n} bolts`);
+  say('the launcher breaks it fastest', launcher.dead && launcher.n < slash.n && launcher.n < aago.n, `${launcher.n} hits`);
+  say('armour still costs the slasher', slash.n > bare, `${slash.n} armoured vs ${bare} bare`);
+  hardStart(game);
+  return rows;
+}
+
 /** Φ(z), via the Abramowitz & Stegun 7.1.26 approximation to erf. */
 function normalCdf(z) {
   const x = Math.abs(z) / Math.SQRT2;
@@ -2105,6 +2146,9 @@ function runAll(game, input, seed) {
   // on the shared `Game`, and swaps the ad bridge out and back. Nothing
   // above it knows ads exist, and it goes where nothing below it can learn.
   report.secondWind = scope(16, () => secondWind(game, input));
+  // And after even that: it spawns three armoured bodies mid-run, which is
+  // allocation, and nothing may come after allocation but more of it.
+  report.kawachArmour = scope(17, () => kawachArmour(game));
   report.ms = Math.round(performance.now() - t0);
 
   print(report);
@@ -2461,6 +2505,16 @@ function print(r) {
   lines.push('  closed early, and an interstitial that answers at once or holds. The');
   lines.push('  last row is the control: with no bridge the arch is the old straight');
   lines.push('  cut, which is the promise that the web build never waits on an ad.');
+  lines.push('');
+
+  lines.push("KAWACH'S ARMOUR   (hits to kill, one body, no fight around it)");
+  for (const t of r.kawachArmour) {
+    lines.push(`  ${t.what.padEnd(50)} ${t.detail.padEnd(40)} ${ok(t.ok)}`);
+  }
+  lines.push('');
+  lines.push('  Armour turns aside half of any hit below the launcher and never flinches;');
+  lines.push('  the launcher breaks it for full damage. The last row is the control that');
+  lines.push('  the armour still means something, not a relabelled raakchyas.');
   lines.push('');
 
   lines.push('', `seed ${r.seed}   ·   suite ran in ${r.ms} ms`);
