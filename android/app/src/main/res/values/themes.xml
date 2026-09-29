@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The boot screen's own colour (#06040e, style.css #boot), so launch
+         goes dark to dark with no white flash before the WebView paints. -->
+    <color name="boot">#06040E</color>
+    <color name="violet">#9D5CFF</color>
+
+    <style name="Theme.Sombra" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/boot</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

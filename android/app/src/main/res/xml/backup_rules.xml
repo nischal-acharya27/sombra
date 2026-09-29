@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The save is the WebView's localStorage (app_webview/). Backing it up
+     means a reinstall or a new phone keeps the hunter's progress. -->
+<full-backup-content>
+    <include domain="root" path="app_webview/" />
+</full-backup-content>

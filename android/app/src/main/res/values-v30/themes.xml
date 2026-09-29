@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Draw under a notch; index.html's viewport-fit=cover and #touch's
+         safe-area padding take it from there. -->
+    <style name="Theme.Sombra" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/boot</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">always</item>
+    </style>
+</resources>
