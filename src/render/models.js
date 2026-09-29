@@ -1883,6 +1883,320 @@ export function buildDuryodhana() {
 }
 
 // ---------------------------------------------------------------------------
+// Hiranyakashipu — gate 12's boss, and the campaign's last
+// ---------------------------------------------------------------------------
+
+/** A soft, see-through glow sphere, faded by opacity; one material per rig, since each is animated on its own. */
+function glowBall(color) {
+  return new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, depthWrite: false, fog: false, toneMapped: false });
+}
+
+/** One factor for the whole body, the way `SHAKUNI_SCALE` does it: `hh ≈ 1.85` against Duryodhana's 1.35. */
+const HIRANYA_SCALE = 1.38;
+
+/**
+ * The Daitya king. A regal, physically dominant humanoid asura — one head,
+ * two arms, no weapon, per his roster entry: he carries nothing because he
+ * does not believe anything can touch him, which is the boon's "nor by any
+ * weapon" clause stated as a silhouette. Bare-chested, the oxblood register
+ * carried in the skin; gold only as crown, collar and bands.
+ *
+ * Two things ride hidden inside the rig, built once here so nothing is ever
+ * built mid-fight:
+ *
+ * - `doorway` — the boon-summoned threshold he stands in during his one
+ *   vulnerable move, lit in `hiranyaBoon`. Posts at the rig's front and back
+ *   (local ±X) so they frame him left and right on screen whichever way he
+ *   faces.
+ * - `narasimha` — the finishing beat. A figure of light who steps out of the
+ *   threshold while he dies: not the hunter in a costume (his roster note is
+ *   explicit that nothing should put the hunter in the avatar's role), and
+ *   not a weapon anyone wields. Unlit materials, so he reads as light rather
+ *   than as another painted body in the scene.
+ */
+export function buildHiranyakashipu() {
+  const root = new THREE.Group();
+  const rig = new THREE.Group();
+  rig.scale.setScalar(HIRANYA_SCALE);
+  root.add(rig);
+  const n = {};
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const hip = new THREE.Group();
+    hip.position.set(0, 0.92, side * 0.2);
+    rig.add(hip);
+    n['hip' + key] = hip;
+
+    const thigh = roundedPart(0.3, 0.5, 0.3, P.hiranyaCloth, { pivot: 'top' });
+    hip.add(thigh);
+
+    const knee = new THREE.Group();
+    knee.position.y = -0.5;
+    hip.add(knee);
+    n['knee' + key] = knee;
+
+    const shin = roundedPart(0.22, 0.44, 0.22, P.hiranyaSkin, { pivot: 'top' });
+    knee.add(shin);
+    const anklet = roundedPart(0.25, 0.06, 0.25, P.hiranyaGold, { pivot: 'top', outline: 0.018, radius: 0.02 });
+    anklet.position.y = -0.36;
+    knee.add(anklet);
+    const foot = roundedPart(0.32, 0.12, 0.24, P.hiranyaSkinDark, { pivot: 'top' });
+    foot.position.set(0.06, -0.44, 0);
+    knee.add(foot);
+  }
+
+  const hips = new THREE.Group();
+  hips.position.y = 0.92;
+  rig.add(hips);
+  n.hips = hips;
+
+  // The dhoti's front fall, hanging from the waist between the thighs.
+  const fall = roundedPart(0.2, 0.46, 0.24, P.hiranyaCloth, { pivot: 'top', outline: 0.02 });
+  fall.position.set(0.16, 0.04, 0);
+  hips.add(fall);
+
+  const torso = roundedPart(0.56, 0.68, 0.42, P.hiranyaSkin, { pivot: 'bottom', outline: 0.034 });
+  hips.add(torso);
+  n.torso = torso;
+
+  // Muscle, drawn rather than modelled: two darker plates on the chest and a
+  // shaded line down the middle — enough that a bare torso reads as mass.
+  for (const side of [-1, 1]) {
+    const pec = decal(0.2, 0.14, P.hiranyaSkinDark);
+    pec.position.set(0.282, 0.5, side * 0.1);
+    pec.rotation.y = Math.PI / 2;
+    torso.add(pec);
+  }
+  const midline = decal(0.03, 0.34, P.hiranyaSkinDark);
+  midline.position.set(0.283, 0.24, 0);
+  midline.rotation.y = Math.PI / 2;
+  torso.add(midline);
+
+  const waist = roundedPart(0.6, 0.12, 0.46, P.hiranyaGold, { pivot: 'bottom', outline: 0.026, radius: 0.03 });
+  waist.position.y = 0;
+  torso.add(waist);
+
+  // The collar: a broad gold ring at the base of the neck.
+  const collar = shaped(tor(0.2, 0.045, 6, 18), P.hiranyaGold, { outline: 0.016 });
+  collar.rotation.x = Math.PI / 2;
+  collar.position.y = 0.66;
+  torso.add(collar);
+
+  const neck = roundedPart(0.18, 0.14, 0.18, P.hiranyaSkin, { pivot: 'bottom', outline: 0.02 });
+  neck.position.y = 0.66;
+  torso.add(neck);
+  n.neck = neck;
+
+  for (const side of [-1, 1]) {
+    const key = side < 0 ? 'L' : 'R';
+    const shoulder = new THREE.Group();
+    shoulder.position.set(0.02, 0.6, side * 0.3);
+    torso.add(shoulder);
+    n['shoulder' + key] = shoulder;
+
+    const delt = roundedPart(0.24, 0.2, 0.24, P.hiranyaSkin, { pivot: 'center', outline: 0.028 });
+    delt.position.y = 0.02;
+    shoulder.add(delt);
+
+    const upper = roundedPart(0.2, 0.34, 0.2, P.hiranyaSkin, { pivot: 'top' });
+    upper.position.y = -0.04;
+    shoulder.add(upper);
+    const band = roundedPart(0.23, 0.07, 0.23, P.hiranyaGold, { pivot: 'top', outline: 0.02, radius: 0.02 });
+    band.position.y = -0.1;
+    shoulder.add(band);
+
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.36;
+    shoulder.add(elbow);
+    n['elbow' + key] = elbow;
+
+    const fore = roundedPart(0.17, 0.3, 0.17, P.hiranyaSkin, { pivot: 'top' });
+    elbow.add(fore);
+    const bracer = roundedPart(0.2, 0.08, 0.2, P.hiranyaGold, { pivot: 'top', outline: 0.02, radius: 0.02 });
+    bracer.position.y = -0.2;
+    elbow.add(bracer);
+
+    const hand = roundedPart(0.16, 0.15, 0.14, P.hiranyaSkin, { pivot: 'top', radius: 0.05 });
+    hand.position.y = -0.3;
+    elbow.add(hand);
+    n['hand' + key] = hand;
+
+    // The claws he fights with — bone, three to a hand.
+    for (let i = -1; i <= 1; i++) {
+      const claw = shaped(cone(0.022, 0.11, 5), P.bone, { pivot: 'top', outline: 0.006 });
+      claw.rotation.z = Math.PI;
+      claw.position.set(0.05, -0.14, i * 0.04);
+      hand.add(claw);
+    }
+    // Two lights on each hand, never on at once: amber is an attack coming
+    // (the roster's shared threat colour), the boon's violet-white is the
+    // opening. Separate glows rather than one re-tinted one, so no frame can
+    // ever show the wrong colour mid-blend — and spheres, not quads: a flat
+    // decal seen edge-on from the side camera read as a playing card.
+    const threat = new THREE.Mesh(sph(0.15), glowBall(P.amber));
+    threat.position.set(0.05, -0.17, 0);
+    hand.add(threat);
+    n['clawThreat' + key] = threat;
+    const boon = new THREE.Mesh(sph(0.17), glowBall(P.hiranyaBoon));
+    boon.position.set(0.05, -0.17, 0);
+    hand.add(boon);
+    n['clawBoon' + key] = boon;
+  }
+
+  const head = new THREE.Group();
+  head.position.y = 0.15;
+  neck.add(head);
+  n.head = head;
+
+  const skull = roundedPart(0.3, 0.28, 0.28, P.hiranyaSkin, { pivot: 'bottom', outline: 0.026, radius: 0.055 });
+  head.add(skull);
+
+  for (const side of [-1, 1]) {
+    const brow = decal(0.11, 0.035, 0x0a0813);
+    brow.position.set(0.158, 0.215, side * 0.078);
+    brow.rotation.set(0, Math.PI / 2, side * 0.45);
+    skull.add(brow);
+
+    const socket = decal(0.07, 0.042, 0x0a0813);
+    socket.position.set(0.157, 0.168, side * 0.076);
+    socket.rotation.y = Math.PI / 2;
+    skull.add(socket);
+    const eye = decal(0.045, 0.024, P.hiranyaEye, { opacity: 0.7 });
+    eye.position.set(0.159, 0.168, side * 0.076);
+    eye.rotation.y = Math.PI / 2;
+    skull.add(eye);
+    n['eyeGlow' + (side < 0 ? 'L' : 'R')] = eye;
+
+    // The moustache, swept up at the ends — a king's, not a brute's.
+    const tash = decal(0.09, 0.03, P.hiranyaSkinDark);
+    tash.position.set(0.158, 0.1, side * 0.05);
+    tash.rotation.set(0, Math.PI / 2, side * -0.35);
+    skull.add(tash);
+    const fang = part(0.022, 0.05, 0.022, P.bone, { pivot: 'top', outline: 0.006 });
+    fang.position.set(0.158, 0.075, side * 0.04);
+    skull.add(fang);
+  }
+  const mouth = decal(0.13, 0.024, 0x0a0813);
+  mouth.position.set(0.158, 0.078, 0);
+  mouth.rotation.y = Math.PI / 2;
+  skull.add(mouth);
+
+  // The crown: a tall, tapering kirita, worn low at the brow so it tucks
+  // behind the face rather than burying the eyes.
+  const crown = new THREE.Group();
+  crown.position.y = 0.2;
+  skull.add(crown);
+  const brow = roundedPart(0.28, 0.07, 0.34, P.hiranyaGold, { pivot: 'bottom', outline: 0.022, radius: 0.02 });
+  crown.add(brow);
+  const tierA = roundedPart(0.24, 0.14, 0.28, P.hiranyaGold, { pivot: 'bottom', outline: 0.022, radius: 0.03 });
+  tierA.position.y = 0.06;
+  crown.add(tierA);
+  const tierB = roundedPart(0.18, 0.12, 0.2, P.hiranyaGold, { pivot: 'bottom', outline: 0.02, radius: 0.025 });
+  tierB.position.y = 0.19;
+  crown.add(tierB);
+  const spire = shaped(cone(0.07, 0.2, 6), P.hiranyaGold, { pivot: 'bottom', outline: 0.014 });
+  spire.position.y = 0.3;
+  crown.add(spire);
+  const jewel = decal(0.06, 0.08, P.hiranyaEye);
+  jewel.position.set(0.123, 0.12, 0);
+  jewel.rotation.y = Math.PI / 2;
+  tierA.add(jewel);
+
+  // -- the threshold -------------------------------------------------------
+  const doorway = new THREE.Group();
+  doorway.position.z = -0.42;
+  doorway.visible = false;
+  rig.add(doorway);
+  n.doorway = doorway;
+  n.doorGlow = [];
+  for (const side of [-1, 1]) {
+    const post = roundedPart(0.24, 2.7, 0.24, P.daityaStone, { pivot: 'bottom', outline: 0.03, radius: 0.04 });
+    post.position.x = side * 1.02;
+    doorway.add(post);
+    const base = roundedPart(0.34, 0.16, 0.34, P.daityaStoneDark, { pivot: 'bottom', outline: 0.024 });
+    base.position.x = side * 1.02;
+    doorway.add(base);
+    // On both faces: the rig yaws half a turn to face left, and a strip on
+    // one face alone ends up behind its own post.
+    for (const face of [-1, 1]) {
+      const strip = decal(0.14, 2.4, P.hiranyaBoon, { opacity: 0 });
+      strip.position.set(side * 1.02, 1.35, face * 0.13);
+      doorway.add(strip);
+      n.doorGlow.push(strip);
+    }
+  }
+  const lintel = roundedPart(2.5, 0.26, 0.32, P.daityaStone, { pivot: 'bottom', outline: 0.03, radius: 0.04 });
+  lintel.position.y = 2.7;
+  doorway.add(lintel);
+  for (const face of [-1, 1]) {
+    const lintelGlow = decal(2.1, 0.1, P.hiranyaBoon, { opacity: 0 });
+    lintelGlow.position.set(0, 2.83, face * 0.17);
+    doorway.add(lintelGlow);
+    n.doorGlow.push(lintelGlow);
+  }
+
+  // -- Narasimha -----------------------------------------------------------
+  //
+  // Stands in the threshold, just behind the king, and is scaled from zero
+  // by the death animation rather than faded — a scale needs no transparent
+  // material, and "steps out of the threshold" is what a growing figure
+  // looks like from the side.
+  const narasimha = new THREE.Group();
+  narasimha.position.set(-0.3, 0, -0.5);
+  narasimha.scale.setScalar(0.001);
+  narasimha.visible = false;
+  rig.add(narasimha);
+  n.narasimha = narasimha;
+  const light = { material: unlit(P.narasimhaLight), outline: 0.02 };
+  const mane = { material: unlit(P.narasimhaMane), outline: 0.016 };
+  const halo = unlit(P.narasimhaHalo);
+
+  for (const side of [-1, 1]) {
+    const leg = part(0.24, 0.96, 0.24, 0, { ...light, pivot: 'bottom' });
+    leg.position.set(0, 0, side * 0.19);
+    narasimha.add(leg);
+  }
+  const nTorso = part(0.52, 0.78, 0.46, 0, { ...light, pivot: 'bottom' });
+  nTorso.position.y = 0.94;
+  narasimha.add(nTorso);
+  for (const side of [-1, 1]) {
+    const arm = part(0.18, 0.72, 0.18, 0, { ...light, pivot: 'top' });
+    arm.position.set(0.1, 1.66, side * 0.34);
+    arm.rotation.z = 0.55; // reaching forward, toward the king at his feet
+    narasimha.add(arm);
+  }
+  const nHead = new THREE.Group();
+  nHead.position.y = 1.78;
+  narasimha.add(nHead);
+  // The mane first, so the face sits in front of it: petals around the head
+  // in the plane behind the face, the lion read carried by silhouette alone.
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    const petal = part(0.1, 0.36, 0.2, 0, { ...mane, pivot: 'bottom' });
+    petal.position.set(-0.06, 0.2 + Math.cos(a) * 0.08, Math.sin(a) * 0.08);
+    petal.rotation.x = a;
+    nHead.add(petal);
+  }
+  const face = part(0.34, 0.36, 0.34, 0, { ...light, pivot: 'bottom' });
+  face.position.y = 0.02;
+  nHead.add(face);
+  const muzzle = part(0.14, 0.14, 0.2, 0, { ...light, pivot: 'bottom' });
+  muzzle.position.set(0.2, 0.04, 0);
+  nHead.add(muzzle);
+  const crownN = part(0.2, 0.16, 0.22, 0, { ...mane, pivot: 'bottom' });
+  crownN.position.y = 0.4;
+  nHead.add(crownN);
+  const ring = new THREE.Mesh(tor(0.62, 0.035, 6, 28), halo);
+  ring.rotation.y = Math.PI / 2;
+  ring.position.set(-0.22, 0.2, 0);
+  nHead.add(ring);
+
+  root.userData.nodes = n;
+  return root;
+}
+
+// ---------------------------------------------------------------------------
 // Taraka — gate 4's Warden, two curse-phase rigs sharing one node vocabulary
 // ---------------------------------------------------------------------------
 

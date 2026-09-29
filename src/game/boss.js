@@ -17,8 +17,9 @@
 
 import * as THREE from 'three';
 import { Actor } from './actor.js';
-import { buildGuardian, buildGoruMukh, buildHakim, buildChiranjivi, buildMaunAnkur, buildRavana, buildDuryodhana } from '../render/models.js';
-import { GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR, RAVANA, DURYODHANA, PHYS } from './config.js';
+import { buildGuardian, buildGoruMukh, buildHakim, buildChiranjivi, buildMaunAnkur, buildRavana, buildDuryodhana, buildHiranyakashipu } from '../render/models.js';
+import { GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR, RAVANA, DURYODHANA, HIRANYAKASHIPU, PHYS } from './config.js';
+import { STRINGS } from '../ui/strings.js';
 import { P } from '../render/palette.js';
 import { clamp, damp, lerp, rand, pick } from '../engine/mathx.js';
 
@@ -3048,5 +3049,505 @@ export class Ravana extends Boss {
     ap(n.armVolley, 'z', n.armVolley.userData.rest + t.volleyA);
     ap(n.armSlam, 'z', n.armSlam.userData.rest + t.slamA);
     n.hips.position.y = lerp(n.hips.position.y, 1.74 + t.hipsY, blend);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Hiranyakashipu — gate 12's boss, and the campaign's last
+// ---------------------------------------------------------------------------
+
+/**
+ * The Daitya king, whose boon is the fight: he takes no damage at all except
+ * inside `threshold`, a window he commits to himself and announces in the
+ * boon's own violet-white — the one telegraph in the game that means "now
+ * you can", not "now it hurts". Everywhere else a hit turns aside with a
+ * spark and a clang, so the hunter learns the rule from the first swing
+ * rather than from a line of text.
+ *
+ * His kit is two bare-handed moves from the vocabulary every locked boss
+ * shares — a claw sweep and a leap-and-crush — so the only new thing to read
+ * is the opening itself. It cycles from the first second (every two to three
+ * attacks), and cornered he attacks faster and opens less often and for
+ * less long: tighter, never locked.
+ *
+ * Because he is hittable nowhere else, every killing blow lands in the
+ * doorway, and his death is the finishing beat: Narasimha steps out of the
+ * threshold while the hunter is held still (`holdsHunter`, read by
+ * `Game.update`), and the king falls at the threshold, at twilight. Nothing
+ * about it is played. See his roster entry's respectful-treatment note and
+ * `docs/DECISIONS.md` § "Gate 12".
+ */
+export class Hiranyakashipu extends Boss {
+  static stats = HIRANYAKASHIPU;
+
+  constructor(level, ctx, x, y, cfg = HIRANYAKASHIPU) {
+    super(level, ctx, x, y, cfg, buildHiranyakashipu);
+    this.phase = 2.0;
+    this.walkPhase = 0;
+    this.attacksSinceOpening = 0;
+    this.openingAfter = this._drawOpening();
+    /** 0–1, how lit the doorway is; eased in `_animate` rather than snapped. */
+    this.doorLight = 0;
+    this._finaleBurst = false;
+  }
+
+  /** The hunter is still while Narasimha is on screen — see `Game.update`. */
+  get holdsHunter() {
+    return this.state === 'dying' && this.deathT > 0;
+  }
+
+  get vulnerable() {
+    return this.state === 'threshold';
+  }
+
+  _drawOpening() {
+    const [lo, hi] = this.enraged ? this.cfg.threshold.enrageEvery : this.cfg.threshold.every;
+    return Math.round(rand(lo, hi));
+  }
+
+  attackBox() {
+    if (this.dead || this.state !== 'sweeping') return null;
+    const a = this.cfg.attacks.sweep;
+    if (this.sub > a.active) return null;
+    const f = this.facing;
+    const cx = this.x + f * (a.reach * 0.5 + 0.5);
+    return { x0: cx - a.reach * 0.5, x1: cx + a.reach * 0.5, y0: this.y, y1: this.y + 3.2 };
+  }
+
+  currentAttackDamage() {
+    if (this.state !== 'sweeping') return null;
+    const a = this.cfg.attacks.sweep;
+    return { damage: a.damage, knock: a.knock };
+  }
+
+  /**
+   * The boon. Outside the doorway nothing lands: not a slash, not AAGO, not
+   * the chaya. Answered with a spark in the boon's colour and a clang, and
+   * `false`, so `Game._damageEnemy` shows no damage number and pays no style
+   * for a hit that did nothing.
+   */
+  takeHit(hit) {
+    if (this.dead) return false;
+    if (!this.vulnerable) {
+      const dir = Math.sign(this.x - hit.fromX) || 1;
+      this.ctx.vfx.hitSpark(this.x - dir * this.hw * 0.8, this.y + 2.2, -dir, 0.5, P.hiranyaBoon);
+      this.ctx.audio?.play('impact');
+      return false;
+    }
+    const landed = super.takeHit(hit);
+    if (this.dead) this.deathT = this.cfg.finaleT;
+    return landed;
+  }
+
+  /**
+   * His one mid-fight beat, the locked "Blood is not a weapon" line, fired
+   * through `Game.firePhaseBeat` like every boss since Duryodhana — and kept
+   * apart from the opening on purpose (see `docs/SPEC-CAMPAIGN.md` § Act 3
+   * Dialogue): it fires wherever the threshold crosses, and the doorway waits
+   * out the held window with him in it. Guarded on `hp > 0` for the same
+   * reason `Duryodhana._enrage` is.
+   */
+  _enrage() {
+    this.enraged = true;
+    this.ctx.shake?.(0.5);
+    this.ctx.audio?.play('enrage');
+    this.coreFlare = 1;
+    this.ctx.vfx.shadowBurst(this.x, this.y + 2.4, 40, P.hiranyaEye);
+    if (this.hp > 0) this.ctx.firePhaseBeat?.();
+  }
+
+  _updateAlive(dt, player) {
+    const dx = player.x - this.x;
+    const dist = Math.abs(dx);
+    const speedMul = this.enraged ? this.cfg.enrageSpeedMul : 1;
+    const A = this.cfg.attacks;
+
+    switch (this.state) {
+      case 'entering': {
+        this.phase -= dt;
+        this.vx = 0;
+        if (this.phase <= 0) this.state = 'idle';
+        break;
+      }
+
+      case 'idle': {
+        this.faceToward(player.x);
+        this.cooldown -= dt;
+        const want = dist > 5.0 ? Math.sign(dx) * this.cfg.speed * speedMul
+          : dist < 2.8 ? -Math.sign(dx) * this.cfg.speed * 0.5
+          : 0;
+        this.vx = damp(this.vx, want, 0.002, dt);
+        if (this.cooldown <= 0) this._chooseAttack(dist);
+        break;
+      }
+
+      case 'telegraph': {
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0001, dt);
+        const total = this._tellTime();
+        if (this.phase > total * 0.35) this.faceToward(player.x);
+        this.coreFlare = clamp(1 - this.phase / total, 0, 1);
+        if (this.phase <= 0) this._commit(player);
+        break;
+      }
+
+      case 'threshold': {
+        // Standing in the doorway, arms wide. No attack, no movement: the
+        // whole window is the hunter's.
+        this.sub -= dt;
+        this.vx = damp(this.vx, 0, 0.0001, dt);
+        if (this.sub <= 0) {
+          this.state = 'recover';
+          this.phase = this.cfg.threshold.recover;
+          this.attacksSinceOpening = 0;
+          this.openingAfter = this._drawOpening();
+          this.ctx.audio?.play('bossTell');
+        }
+        break;
+      }
+
+      case 'leaping': {
+        this.sub -= dt;
+        this.applyGravity(dt, PHYS.gravity * 1.15);
+        const hit = this.moveAndCollide(dt);
+        if (hit.floor && this.sub < A.slam.rise) this._slamLand();
+        this._animate(dt);
+        this.syncRig();
+        return;
+      }
+
+      case 'sweeping': {
+        this.sub -= dt;
+        this.vx = damp(this.vx, this.facing * 3.2, 0.001, dt);
+        if (this.sub <= -0.05) {
+          this.state = 'recover';
+          this.phase = A.sweep.recover;
+        }
+        break;
+      }
+
+      case 'recover': {
+        this.phase -= dt;
+        this.vx = damp(this.vx, 0, 0.0004, dt);
+        if (this.phase <= 0) {
+          this.state = 'idle';
+          const [lo, hi] = this.cfg.cooldown;
+          this.cooldown = rand(lo, hi) * (this.enraged ? 0.62 : 1);
+        }
+        break;
+      }
+    }
+
+    this._physicsTail(dt);
+  }
+
+  /** The opening has its own announce time; the two attacks use `Boss._windupTime`. */
+  _tellTime() {
+    return this.attackName === 'threshold' ? this.cfg.threshold.windup : this._windupTime();
+  }
+
+  _chooseAttack(dist) {
+    if (this.attacksSinceOpening >= this.openingAfter) {
+      this.attackName = 'threshold';
+      this.state = 'telegraph';
+      this.phase = this._tellTime();
+      this.ctx.audio?.play('systemOpen');
+      this.ctx.toast?.(STRINGS.GATE12_TOAST_THRESHOLD, 'gold');
+      return;
+    }
+    const opts = [];
+    if (dist < 6.5) opts.push('sweep', 'sweep', 'slam');
+    else opts.push('slam');
+    if (this.enraged) opts.push('slam');
+    this.attackName = pick(opts);
+    this.attacksSinceOpening++;
+    this.state = 'telegraph';
+    this.phase = this._tellTime();
+    this.ctx.audio?.play('bossTell');
+    this.ctx.onTelegraph?.(this.attackName);
+  }
+
+  _commit(player) {
+    const A = this.cfg.attacks;
+    this.coreFlare = 1;
+    this.chargeHitSet.clear();
+    switch (this.attackName) {
+      case 'threshold': {
+        const T = this.cfg.threshold;
+        this.state = 'threshold';
+        this.sub = T.open * (this.enraged ? T.enrageOpenMul : 1);
+        this.ctx.vfx.shockRing(this.x, this.y, 2.2, P.hiranyaBoon);
+        this.ctx.audio?.play('gateOpen');
+        break;
+      }
+      case 'slam': {
+        this.state = 'leaping';
+        this.sub = A.slam.rise + A.slam.fall;
+        this.vy = 15;
+        const target = clamp(player.x - this.x, -11, 11);
+        this.vx = target / (A.slam.rise + A.slam.fall) * 1.05;
+        this.grounded = false;
+        this.ctx.audio?.play('bossLeap');
+        break;
+      }
+      case 'sweep':
+        this.state = 'sweeping';
+        this.sub = A.sweep.active;
+        this.ctx.audio?.play('bossSweep');
+        this.ctx.shake?.(0.14);
+        break;
+    }
+  }
+
+  _slamLand() {
+    const a = this.cfg.attacks.slam;
+    this.state = 'recover';
+    this.phase = a.recover;
+    this.vx = 0;
+    const r = a.radius * (this.enraged ? 1.15 : 1);
+    this.ctx.shockwaveFromBoss(this.x, this.y, { radius: r, damage: a.damage, knock: a.knock });
+    this.ctx.vfx.groundBurst(this.x, this.y, 2.2);
+    this.ctx.vfx.shockRing(this.x, this.y, r, P.amber);
+    this.ctx.shake?.(a.shake);
+    this.ctx.audio?.play('slam');
+    this.coreFlare = 1;
+  }
+
+  /** `Boss._die` with this fight's own length: the finishing beat runs `finaleT`, not 3 s. */
+  _die(dt, player) {
+    this.deathT -= dt;
+    this.vx = damp(this.vx, 0, 0.001, dt);
+    this.applyGravity(dt, PHYS.gravity);
+    this.moveAndCollide(dt);
+    this._dieAnimate(clamp(this.deathT / this.cfg.finaleT, 0, 1), player);
+    if (this.deathT <= 0) this.removeMe = true;
+    this.syncRigNoY();
+  }
+
+  /**
+   * The finishing beat. At twilight — the realm is already neither day nor
+   * night — on the threshold he summoned himself, the king who could not be
+   * killed by man or beast is met by the one who is neither. Narasimha steps
+   * out of the doorway, the king falls, Narasimha is gone. No line, no blow
+   * shown, no credit to the hunter, who is held still for all of it; short,
+   * because it is a restoration and not a spectacle.
+   */
+  _dieAnimate(u) {
+    const n = this.n;
+    const T = this.cfg.finaleT;
+    const e = (1 - u) * T; // seconds since the killing blow
+    const ease = (a, b) => {
+      const k = clamp((e - a) / (b - a), 0, 1);
+      return k * k * (3 - 2 * k);
+    };
+
+    // The doorway stays lit through all of it, and goes out with Narasimha.
+    n.doorway.visible = true;
+    n.doorway.scale.y = 1;
+    const door = 1 - ease(T - 0.8, T);
+    for (const g of n.doorGlow) g.material.opacity = door;
+    for (const s of ['L', 'R']) {
+      n['clawBoon' + s].material.opacity = 0;
+      n['clawThreat' + s].material.opacity = 0;
+      n['eyeGlow' + s].material.opacity = 0.7 * (1 - ease(1.2, 2.4));
+    }
+
+    // Narasimha: out of the threshold between 0.35 s and 1.2 s, gone in the
+    // last 0.8.
+    const rise = ease(0.35, 1.2) * (1 - ease(T - 0.8, T));
+    n.narasimha.visible = rise > 0.001;
+    n.narasimha.scale.setScalar(Math.max(0.001, rise));
+    if (!this._finaleBurst && e >= 0.35) {
+      this._finaleBurst = true;
+      this.ctx.vfx.shockRing(this.x, this.y, 3.2, P.narasimhaHalo);
+      this.ctx.vfx.shadowBurst(this.x, this.y + 2.2, 36, P.narasimhaLight);
+      this.ctx.audio?.play('levelup');
+      this.ctx.shake?.(0.35);
+    }
+
+    // The king: rears at the blow, then goes down at the threshold.
+    const rear = ease(0, 0.4) * (1 - ease(0.9, 1.4));
+    const fold = ease(1.2, 2.4);
+    n.torso.rotation.z = -rear * 0.35 + fold * 0.9;
+    n.head.rotation.z = -rear * 0.4 + fold * 0.7;
+    n.hipL.rotation.z = fold * 1.5;
+    n.hipR.rotation.z = fold * 1.2;
+    n.kneeL.rotation.z = -fold * 2.0;
+    n.kneeR.rotation.z = -fold * 1.7;
+    n.shoulderL.rotation.z = -fold * 1.1;
+    n.shoulderR.rotation.z = fold * 1.3;
+    n.shoulderL.rotation.x = 0;
+    n.shoulderR.rotation.x = 0;
+    const sink = fold * 1.1;
+    this.root.position.y = this.y - sink;
+    // The doorway and Narasimha stand on the floor, not on the falling king.
+    n.doorway.position.y = sink / 1.38;
+    n.narasimha.position.y = sink / 1.38;
+
+    if (e > 0.35 && e < T - 0.6 && Math.random() < 0.6) {
+      this.ctx.vfx.emit({
+        x: this.x + rand(-1.4, 1.4),
+        y: this.y + rand(0.2, 3.2),
+        z: rand(-1, 0.4),
+        vx: rand(-0.6, 0.6),
+        vy: rand(1.2, 3.4),
+        size: rand(0.1, 0.24),
+        color: Math.random() < 0.5 ? P.narasimhaHalo : P.narasimhaLight,
+        life: rand(0.8, 1.6),
+        grav: -0.6,
+        drag: 1.4,
+      });
+    }
+  }
+
+  // -- animation --------------------------------------------------------------
+
+  _animate(dt) {
+    const n = this.n;
+    const k = 1 - Math.pow(0.0004, dt);
+
+    // Two lights on the claws, never both: amber while an attack winds up,
+    // the boon's violet-white while the opening winds up and holds.
+    const opening = this.state === 'threshold' || (this.state === 'telegraph' && this.attackName === 'threshold');
+    const threat = !opening && (this.state === 'telegraph' || this.state === 'sweeping' || this.state === 'leaping');
+    const boonTarget = this.state === 'threshold' ? 1 : opening ? this.coreFlare : 0;
+    // In gently, out fast: a doorway still glowing into the next attack's
+    // tell would be the one lie this fight cannot afford.
+    this.doorLight = lerp(this.doorLight, boonTarget, 1 - Math.pow(boonTarget > this.doorLight ? 0.002 : 1e-6, dt));
+    n.doorway.visible = this.doorLight > 0.02;
+    for (const g of n.doorGlow) g.material.opacity = this.doorLight;
+    n.doorway.scale.y = 0.6 + 0.4 * this.doorLight;
+    for (const s of ['L', 'R']) {
+      n['clawBoon' + s].material.opacity = opening ? 0.15 + this.doorLight * 0.4 : 0;
+      n['clawThreat' + s].material.opacity = threat ? 0.1 + this.coreFlare * 0.8 : 0;
+      n['eyeGlow' + s].material.opacity = 0.55 + this.coreFlare * 0.4;
+    }
+
+    let t = {
+      torsoZ: 0, torsoY: 0, headZ: 0,
+      shLz: 0, shRz: 0, shLx: 0, shRx: 0, elLz: -0.2, elRz: -0.2,
+      hipLz: 0, hipRz: 0, kneeLz: 0, kneeRz: 0, hipsY: 0,
+    };
+    let snap = false;
+
+    switch (this.state) {
+      case 'entering': {
+        const u = clamp(1 - this.phase / 2.0, 0, 1);
+        t.hipsY = lerp(-1.2, 0, u);
+        t.torsoZ = lerp(0.5, 0, u);
+        t.headZ = lerp(0.7, 0, u);
+        t.kneeLz = lerp(-1.8, 0, u);
+        break;
+      }
+      case 'telegraph': {
+        const u = clamp(1 - this.phase / this._tellTime(), 0, 1);
+        if (this.attackName === 'threshold') {
+          // Straightening, chin up, arms swept back — the boast before the dare.
+          t.headZ = -0.3 * u;
+          t.torsoZ = -0.16 * u;
+          t.shLz = 0.7 * u;
+          t.shRz = 0.7 * u;
+          t.shLx = 0.35 * u;
+          t.shRx = -0.35 * u;
+        } else if (this.attackName === 'slam') {
+          t.hipsY = -0.7 * u;
+          t.hipLz = 0.9 * u;
+          t.hipRz = 0.9 * u;
+          t.kneeLz = -1.6 * u;
+          t.kneeRz = -1.6 * u;
+          t.shLz = -2.0 * u;
+          t.shRz = -2.0 * u;
+        } else {
+          // The claws drawn back, low and wide.
+          t.shRz = -2.2 * u;
+          t.torsoY = 0.8 * u;
+          t.shLz = 0.7 * u;
+          t.elRz = -0.9 * u;
+        }
+        break;
+      }
+      case 'threshold': {
+        // Chest out, arms swept back, chin up — "strike, then", readable
+        // from the side, where arms spread along the depth axis only ever
+        // looked like one arm reaching at the camera.
+        const b = Math.sin(this.t * 2.2);
+        t.headZ = -0.32;
+        t.torsoZ = -0.16 + b * 0.02;
+        t.shLz = 0.75;
+        t.shRz = 0.75;
+        t.shLx = 0.35;
+        t.shRx = -0.35;
+        t.elLz = -0.3;
+        t.elRz = -0.3;
+        break;
+      }
+      case 'leaping': {
+        const rising = this.vy > 0;
+        t.hipLz = rising ? -0.9 : 0.5;
+        t.hipRz = rising ? -0.9 : 0.5;
+        t.kneeLz = rising ? -1.6 : -0.3;
+        t.kneeRz = rising ? -1.6 : -0.3;
+        t.torsoZ = rising ? -0.2 : 0.35;
+        t.shLz = rising ? -2.0 : 1.5;
+        t.shRz = rising ? -2.0 : 1.5;
+        snap = true;
+        break;
+      }
+      case 'sweeping': {
+        const a = this.cfg.attacks.sweep;
+        const u = clamp(1 - this.sub / a.active, 0, 1);
+        t.shRz = lerp(-2.2, 1.8, u);
+        t.torsoY = lerp(0.8, -0.7, u);
+        t.shLz = lerp(0.7, -0.8, u);
+        snap = true;
+        break;
+      }
+      case 'recover': {
+        t.torsoZ = 0.2;
+        t.headZ = -0.1;
+        t.hipsY = -0.14;
+        t.kneeLz = -0.22;
+        t.kneeRz = -0.22;
+        break;
+      }
+      default: {
+        const moving = Math.abs(this.vx) > 0.5;
+        if (moving) {
+          this.walkPhase += dt * (3.0 + Math.abs(this.vx) * 0.6);
+          const s = Math.sin(this.walkPhase);
+          t.hipLz = s * 0.5;
+          t.hipRz = -s * 0.5;
+          t.kneeLz = -Math.max(0, -s) * 0.8;
+          t.kneeRz = -Math.max(0, s) * 0.8;
+          t.hipsY = Math.abs(Math.cos(this.walkPhase)) * 0.09 - 0.045;
+        } else {
+          const b = Math.sin(this.t * 1.1);
+          t.hipsY = b * 0.05;
+          t.torsoZ = b * 0.03 - 0.05;
+          t.headZ = -0.08;
+          t.shLz = 0.14;
+          t.shRz = 0.14;
+        }
+      }
+    }
+
+    const blend = snap ? 1 : k;
+    const ap = (node, prop, v) => {
+      node.rotation[prop] = lerp(node.rotation[prop], v, blend);
+    };
+    ap(n.torso, 'z', t.torsoZ);
+    ap(n.torso, 'y', t.torsoY);
+    ap(n.head, 'z', t.headZ);
+    ap(n.shoulderL, 'z', t.shLz);
+    ap(n.shoulderR, 'z', t.shRz);
+    ap(n.shoulderL, 'x', t.shLx);
+    ap(n.shoulderR, 'x', t.shRx);
+    ap(n.elbowL, 'z', t.elLz);
+    ap(n.elbowR, 'z', t.elRz);
+    ap(n.hipL, 'z', t.hipLz);
+    ap(n.hipR, 'z', t.hipRz);
+    ap(n.kneeL, 'z', t.kneeLz);
+    ap(n.kneeR, 'z', t.kneeRz);
+    n.hips.position.y = lerp(n.hips.position.y, 0.92 + t.hipsY, blend);
   }
 }

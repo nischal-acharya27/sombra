@@ -482,6 +482,13 @@ structure and stance, not final text.
 
 ## Hiranyakashipu
 
+> **Built 2026-09-29 as gate 12, the campaign's finale.** One departure from
+> this entry, on purpose: Narasimha appears as his own figure stepping out of
+> the threshold, not as an overlay on the *hunter's* rig. This entry's own
+> respectful-treatment note (and the spec's "no hunter-is-secretly-an-avatar")
+> rules the overlay out. `hw` is 1.2, not ≈ 1.5, measured against the built
+> rig. See `docs/DECISIONS.md` § "Gate 12 (The Pillared Hall)".
+
 **Source.** *Bhagavata Purana* (the widest-known telling), with variant boon
 wording across the *Vishnu Purana*, *Shiva Purana* and *Vayu Purana*.
 

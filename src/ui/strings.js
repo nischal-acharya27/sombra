@@ -718,8 +718,11 @@ export const STRINGS = {
   INTRO_THREAT_BIG: 'WHAT COMES THROUGH',
   INTRO_THREAT_BODY: 'Souls that did not move on. Some of them have turned hostile.',
   INTRO_GOAL_TITLE: 'THE SYSTEM',
-  INTRO_GOAL_BIG: 'THE WAY DOWN',
-  INTRO_GOAL_BODY: 'Six realms stand between this gate and the Wheel. At the end of them: Yama, who stopped judging.',
+  INTRO_GOAL_BIG: 'THE WAY THROUGH',
+  // Rewritten 2026-09-29 with the finale: the old line promised six realms
+  // and Yama, the ten-gate campaign's shape, and the ending this campaign
+  // actually reaches is the Wheel turning again, not a court.
+  INTRO_GOAL_BODY: 'Every gate holds one soul the Wheel could not move on. Clear them all, and it may turn again.',
 
   // -- the training hall: gated practice, one verb at a time (issue #35) ----
   TUTORIAL_NAME: 'the Proving Ground',
@@ -831,4 +834,72 @@ export const STRINGS = {
   GATE3_CAVALRY_BODY: 'Charger × 1',
   GATE3_INFANTRY_TITLE: 'THREAT DETECTED',
   GATE3_INFANTRY_BODY: 'Kawach × 1',
+
+  // -- gate 12: the Daitya palace, Hiranyakashipu — the campaign's finale ------
+  //
+  // His scene makes his own case, the way Ravana's does: a brother killed by
+  // Vishnu, the austerity, the boon phrased over years, the three worlds
+  // taken — and it owns what he did to his son plainly and without staging
+  // it (roster: "reverent, not a power-fantasy"). The thirteenth beat is the
+  // spec's locked pre-fight line and the phase beat its locked mid-fight one,
+  // both verbatim.
+  //
+  // The closing beats are the System's, not his: he does not get last words
+  // after Narasimha, and the hunter gets no credit (see
+  // `Hiranyakashipu._dieAnimate`). Beat 6 carries `release` in the gate file —
+  // the chaya is let go as it opens, which is the campaign's ending.
+  GATE12_NAME: 'The Pillared Hall',
+  GATE12_WARDEN_TITLE: 'HIRANYAKASHIPU',
+  GATE12_HIRANYA_TITLE: 'GATE BOSS',
+  GATE12_GUARD_TOAST: 'Kawach × 1',
+  GATE12_ZEALOTS_TOAST: 'Kawach × 1  ·  Raakchyas × 2',
+  /** The opening — the one telegraph in the game that means "now you can". */
+  GATE12_TOAST_THRESHOLD: 'THRESHOLD',
+
+  GATE12_HIRANYA_INTRO_1_BIG: 'So the gates finally sent me someone who walks.',
+  GATE12_HIRANYA_INTRO_1_BODY: 'Come in. Nothing in this hall has hurt me in a very long time.',
+  GATE12_HIRANYA_INTRO_2_BIG: 'I am Hiranyakashipu, king of the Daityas.',
+  GATE12_HIRANYA_INTRO_2_BODY: 'My brother Hiranyaksha ruled beside me, once.',
+  GATE12_HIRANYA_INTRO_3_BIG: 'Vishnu came for my brother as a boar, out of the sea.',
+  GATE12_HIRANYA_INTRO_3_BODY: 'He ended him and walked away. No one asked what my brother was to me.',
+  GATE12_HIRANYA_INTRO_4_BIG: 'I did not weep. I went to the mountain instead.',
+  GATE12_HIRANYA_INTRO_4_BODY: 'I stood so still, for so long, that the ants built their hill over me.',
+  GATE12_HIRANYA_INTRO_5_BIG: 'Brahma came at last, because the heavens were burning with it.',
+  GATE12_HIRANYA_INTRO_5_BODY: 'He asked me what I wanted. I had had years to phrase it.',
+  GATE12_HIRANYA_INTRO_6_BIG: 'Not by man. Not by beast. Not indoors, not out.',
+  GATE12_HIRANYA_INTRO_6_BODY: 'Not by day or night, not on earth or in the sky, not by any weapon.',
+  GATE12_HIRANYA_INTRO_7_BIG: 'Every door that death could use, I had bricked shut.',
+  GATE12_HIRANYA_INTRO_7_BODY: 'So I took the three worlds, and told them whom to worship.',
+  GATE12_HIRANYA_INTRO_8_BIG: "Then my own son folded his hands to my brother's killer.",
+  GATE12_HIRANYA_INTRO_8_BODY: 'Prahlada. A child, and he would not say my name in prayer.',
+  GATE12_HIRANYA_INTRO_9_BIG: 'I tried to break him. I will not pretend otherwise.',
+  GATE12_HIRANYA_INTRO_9_BODY: 'Every way I tried to end it, he walked out of — still praying, still unafraid.',
+  GATE12_HIRANYA_INTRO_10_BIG: 'He says his Vishnu is everywhere. In the hall. In the stone.',
+  GATE12_HIRANYA_INTRO_10_BODY: 'So I asked him if his god was in this pillar. He said yes.',
+  GATE12_HIRANYA_INTRO_11_BIG: 'What father is refused by his own child, for his enemy?',
+  GATE12_HIRANYA_INTRO_11_BODY: 'I have asked that every night since. I have not liked a single answer.',
+  GATE12_HIRANYA_INTRO_12_BIG: 'And now you come, to finish what a god could not.',
+  GATE12_HIRANYA_INTRO_12_BODY: 'Look around you, hunter. There is no door in my boon for you.',
+  GATE12_HIRANYA_INTRO_13_BIG: 'Not man. Not beast. Not day. Not night.',
+  GATE12_HIRANYA_INTRO_13_BODY: "Say the words that could kill me — you don't have them.",
+
+  GATE12_HIRANYA_PHASE_BIG: 'Blood is not a weapon.',
+  GATE12_HIRANYA_PHASE_BODY: 'Whatever you are, you have found no weapon yet.',
+
+  GATE12_ENDING_1_BIG: 'AT THE THRESHOLD, AT TWILIGHT',
+  GATE12_ENDING_1_BODY: 'Not by man, not by beast. Not indoors or out, not by day or night. Not by any weapon.',
+  GATE12_ENDING_2_BIG: 'THE BOON WAS KEPT',
+  GATE12_ENDING_2_BODY: 'Every word of it. The ending came through the one door he never thought to close.',
+  GATE12_ENDING_3_BIG: 'IT WAS NEVER YOURS',
+  GATE12_ENDING_3_BODY: 'Some endings belong to someone else. You were here to witness this one.',
+  GATE12_ENDING_4_BIG: 'A CHILD IS STILL PRAYING',
+  GATE12_ENDING_4_BODY: 'Somewhere past this hall, a boy who was never afraid is no longer in danger.',
+  GATE12_ENDING_5_BIG: 'THE GATES ARE CLOSING',
+  GATE12_ENDING_5_BODY: 'The souls they held are moving again, one by one, toward wherever they were always going.',
+  GATE12_ENDING_6_BIG: 'YOUR CHAYA',
+  GATE12_ENDING_6_BODY: 'Every soul you raised and carried, you were carrying here. This one does not need to walk any further.',
+  GATE12_ENDING_7_BIG: 'LET IT GO',
+  GATE12_ENDING_7_BODY: 'It is not lost. It is going on, which is all it was waiting for.',
+  GATE12_ENDING_8_BIG: 'THE WHEEL TURNS',
+  GATE12_ENDING_8_BODY: 'Slowly. Then less slowly. The work is done, hunter. Walk out through the gate.',
 };

@@ -25,7 +25,7 @@
 // descriptor is authored correctly, that one asks whether `Level` built what
 // the descriptor said.
 
-import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, LANKA_SOLDIER, KUMBHAKARNA, MATHURA_WRESTLER, KAMSA, PUTANA, NARAKASURA, RAVANA, DURYODHANA, GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR } from '../src/game/config.js';
+import { PLAYER, BARRIER, RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, LANKA_SOLDIER, KUMBHAKARNA, MATHURA_WRESTLER, KAMSA, PUTANA, NARAKASURA, RAVANA, DURYODHANA, HIRANYAKASHIPU, GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR } from '../src/game/config.js';
 import { ARCHETYPES } from '../src/game/game.js';
 import { GATES } from '../src/game/gates/index.js';
 
@@ -594,6 +594,16 @@ const TELLS = [
     archetype: 'ravana',
     tell: `${name}, enraged`,
     windup: a.windup * RAVANA.enrageWindupMul,
+  })),
+  // Hiranyakashipu's two bare-handed moves, generated like every boss's —
+  // and only those two. His `threshold` lives outside `attacks` precisely so
+  // it never lands here: it announces an opening, not a threat, and holding
+  // it to the reaction floor would be measuring the wrong thing. The sweep
+  // is the tightest at 0.62 × 0.8 = 0.496s.
+  ...Object.entries(HIRANYAKASHIPU.attacks).map(([name, a]) => ({
+    archetype: 'hiranyakashipu',
+    tell: `${name}, enraged`,
+    windup: a.windup * HIRANYAKASHIPU.enrageWindupMul,
   })),
   // Duryodhana's three weapon-swings, same generated shape as every other
   // boss's row below — the sweep is the tightest at 0.58 × 0.8 = 0.464s.

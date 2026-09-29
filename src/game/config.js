@@ -1195,6 +1195,61 @@ export const DURYODHANA = {
   cooldown: [0.9, 1.7],
 };
 
+/**
+ * Hiranyakashipu — gate 12, the campaign's finale and its last locked boss.
+ *
+ * The boon is the fight. He takes no damage at all except inside
+ * `threshold`: a self-committed window, announced by a boon-coloured flare
+ * rather than the shared amber, in which he stands in a summoned doorway and
+ * *can* be hit. It is woven into the rotation from the first second rather
+ * than unlocked at a threshold of HP — a boss invulnerable for a whole
+ * opening phase leaves the hunter nothing to do but wait — and every killing
+ * blow therefore lands inside it, which is what lets the finishing beat need
+ * no trigger of its own. See `Hiranyakashipu` in `boss.js`.
+ *
+ * `hw` is below the roster entry's `≈ 1.5`: measured against the built rig,
+ * 1.5 put the hurtbox half a body-width outside his silhouette on both sides,
+ * and a hunter who can hit air beside a boss is being lied to by the one
+ * fight built around exactly when he can be hit.
+ */
+export const HIRANYAKASHIPU = {
+  hp: 760, // gate 12: the last boss, but only vulnerable a fraction of the time
+  hw: 1.2,
+  hh: 1.85,
+  speed: 3.8,
+  exp: 500,
+  contactDamage: 0,
+  enrageAt: 0.5,
+  enrageSpeedMul: 1.25,
+  enrageWindupMul: 0.8,
+  attacks: {
+    // Bare-handed, both of them — the boon's "nor by any weapon" worn as a
+    // kit. The sweep is the claws; the slam is the leap-and-crush every
+    // locked boss shares, so nothing here is a verb the hunter has not met.
+    sweep: { windup: 0.62, active: 0.26, recover: 0.8, damage: 19, reach: 5.2, knock: 11, shake: 0.26 },
+    slam: { windup: 0.7, rise: 0.36, fall: 0.26, recover: 1.0, damage: 23, radius: 5.4, knock: 14, shake: 0.55 },
+  },
+  cooldown: [0.8, 1.5],
+  /**
+   * The opening. Not in `attacks` on purpose: `tools/gatecheck.js` reads
+   * every entry there as a *threat* tell to hold against the reaction floor,
+   * and this one announces the reverse.
+   */
+  threshold: {
+    /** Attacks between openings, drawn fresh each time; tighter once enraged. */
+    every: [2, 3],
+    enrageEvery: [3, 3],
+    /** The boon flare that announces it — long, because missing an opening costs a whole cycle. */
+    windup: 0.75,
+    /** Seconds he stands in the doorway, hittable. */
+    open: 2.6,
+    enrageOpenMul: 0.75,
+    recover: 0.45,
+  },
+  /** The finishing beat's length — a little longer than every other boss's 3 s collapse, and no more. */
+  finaleT: 3.8,
+};
+
 export const RAVANA = {
   hp: 900, // gate 8: act 2's locked boss, at the pre-hack GUARDIAN 900
   hw: 1.7,

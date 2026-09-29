@@ -6,7 +6,9 @@
 > ships to Production at eleven gates, and gate 12 follows as an update. See
 > `docs/DECISIONS.md` § "Amended 2026-09-29: the campaign is twelve gates, and
 > ships at eleven". Act 4 below is kept for the record, not as a build plan.
-> Wherever this document says "fifteen", read "twelve".
+> Wherever this document says "fifteen", read "twelve". **Gate 12 was built
+> the same day** (`DECISIONS.md` § "Gate 12 (The Pillared Hall)"), so all twelve
+> exist and the first release can carry the whole campaign.
 
 Status: content drafted, not yet built. Gates 1–10 exist (`src/game/gates/gate1.js`–`gate10.js`) but hold the old ten-gate content and are rewritten in place, not replaced; gates 11–15 do not exist yet. `boss.js` holds five old boss subclasses (`Guardian`, `GoruMukh`, `Hakim`, `Chiranjivi`, `MaunAnkur`) that are retired once the four bosses below exist. Design settled in `DECISIONS.md`, the campaign-redesign map (`wayfinder:map` issue #38) and its child tickets, and `docs/research/villain-roster.md` (per-villain source research). This document does not reopen any of it; it turns it into work. Vocabulary is defined in `/CONTEXT.md` and used here without gloss.
 

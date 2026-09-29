@@ -9,7 +9,7 @@ import { Level } from './level.js';
 import { Player } from './player.js';
 import { Raakchyas, Charger, Kawach, BhootBatti, Tantrik, Shakuni, Bakasura, Taraka, Shurpanakha, LankaSoldier, Kumbhakarna, MathuraWrestler, Kamsa, Putana, Narakasura, Bolt } from './enemies.js';
 import { Corpse } from './shadow.js';
-import { Guardian, GoruMukh, Hakim, Chiranjivi, MaunAnkur, Ravana, Duryodhana } from './boss.js';
+import { Guardian, GoruMukh, Hakim, Chiranjivi, MaunAnkur, Ravana, Duryodhana, Hiranyakashipu } from './boss.js';
 import { GameCamera } from './camera.js';
 import { VFX } from '../render/vfx.js';
 import { buildShard } from '../render/models.js';
@@ -62,12 +62,28 @@ export const ARCHETYPES = {
   narakasura: Narakasura,
   ravana: Ravana,
   duryodhana: Duryodhana,
+  hiranyakashipu: Hiranyakashipu,
   guardian: Guardian,
   goruMukh: GoruMukh,
   hakim: Hakim,
   chiranjivi: Chiranjivi,
   maunAnkur: MaunAnkur,
 };
+
+/**
+ * What the hunter is driven by while a boss holds them still — every query
+ * answers "nothing pressed". One frozen object, built at load, so holding the
+ * hunter allocates nothing. Only Hiranyakashipu's finishing beat asks for it
+ * (`Boss.holdsHunter`): the kill there is not the hunter's to make.
+ */
+const HELD_STILL = Object.freeze({
+  moveX: 0,
+  moveY: 0,
+  down: () => false,
+  pressed: () => false,
+  peek: () => false,
+  released: () => false,
+});
 
 export class Game {
   /**
@@ -430,6 +446,9 @@ export class Game {
       onDrained?.();
       return;
     }
+    // A beat may let the chaya go as it opens — the campaign's ending, on the
+    // last gate's closing beats. See `_releaseChaya`.
+    if (b.release) this._releaseChaya();
     this.audio.play('systemOpen');
     const isLast = queue.length === 0;
     const onNext = isLast ? undefined : () => this._showBeatQueue(queue, onDrained);
@@ -500,7 +519,7 @@ export class Game {
     this.t += dt;
     this.runTime += dt;
 
-    this.player.update(dt, this.input);
+    this.player.update(dt, this.boss?.holdsHunter ? HELD_STILL : this.input);
 
     for (const e of this.enemies) e.update(dt, this.player);
     if (this.chaya) this.chaya.update(dt, this.player, this.enemies);
@@ -576,7 +595,9 @@ export class Game {
     this.decayFreeze(dt);
     if (this.resting) this._pollAdvanceInput();
 
-    const focus = this.boss && !this.boss.dead ? this.boss : null;
+    // A dying boss is out of frame as soon as it falls — except one whose
+    // death is a scene the hunter is being held still to watch.
+    const focus = this.boss && (!this.boss.dead || this.boss.holdsHunter) ? this.boss : null;
     this.cam.update(dt, this.player, focus, this._wardenIntro);
     this.vfx.update(dt);
     this.world.update(dt);
@@ -1283,6 +1304,23 @@ export class Game {
       }
     }
     return best;
+  }
+
+  /**
+   * The campaign ends by letting the chaya go (`CONTEXT.md` § Chaya): the soul
+   * the hunter has been escorting moves on, in light rather than in the
+   * shadow-burst every other exit uses. Fired by a beat carrying `release`,
+   * so the words and the leaving are the same moment. A hunter carrying none
+   * sees the words and nothing else — the line is written to hold either way.
+   */
+  _releaseChaya() {
+    const sh = this.chaya;
+    if (!sh) return;
+    this.vfx.shadowBurst(sh.x, sh.y + 0.8, 40, P.narasimhaHalo);
+    this.vfx.shockRing(sh.x, sh.y, 1.6, P.violetGlow);
+    this.audio.play('levelup');
+    this.entityRoot.remove(sh.root);
+    this.chaya = null;
   }
 
   /** The channel completed. Raise it — and let go of whatever came before. */

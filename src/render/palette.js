@@ -490,5 +490,47 @@ export const P = {
   pragIron: 0x4a4f58,
   pragIronDark: 0x272b31,
 
+  // -- Gate 12: Hiranyakashipu, the Daitya palace --------------------------
+  //
+  // Straight from his roster entry, which already checked these against what
+  // Duryodhana and Ravana spent: a third gold-and-dark-red court would be the
+  // least differentiated boss on the roster, so the register moves into his
+  // *skin* and gold survives only as minimal regalia.
+  hiranyaSkin: 0x6b1f28,
+  hiranyaSkinDark: 0x330e14,
+  hiranyaGold: 0xc9a355,
+  // His dhoti — near-black violet, so the oxblood skin carries the figure.
+  hiranyaCloth: 0x1c1626,
+  // His eyes: a hot red, and *not* the shared damage amber — the eyes are
+  // always lit, and an always-lit amber would teach nothing.
+  hiranyaEye: 0xff3b4e,
+  // The boon. Pale near-white violet-gold, deliberately off `amber`: every
+  // other flare on the roster warns of an incoming hit, and his signature
+  // move is the inverse — a window where *he* can be hit. His attack tells
+  // stay on `amber` like everyone else's, so the two can never be confused.
+  hiranyaBoon: 0xf3e9ff,
+
+  // The palace: pale sandstone under a twilight sky — "neither day nor
+  // night" carried by the realm itself rather than by a lighting trick.
+  daityaStone: 0x9a7f86,
+  daityaStoneDark: 0x4a3440,
+  // His palace guard (`Kawach`) and court zealots (`Raakchyas`), reskinned
+  // into his register — oxblood plate, not his skin, so none of them can be
+  // mistaken for the king at a glance. Their eyes keep their archetypes' own
+  // tell colours: a reskin never repaints a tell.
+  daityaGuardPlate: 0x6e2f3a,
+  daityaGuardPlateDark: 0x2e1419,
+  daityaZealot: 0x3e2334,
+  daityaZealotDark: 0x1c0f18,
+
+  // Narasimha — a figure of light, not a costume. A warm body and a saffron
+  // mane, both well off the boon's cool violet so the one reads as the
+  // answer to the other. The body is held short of white on purpose: at
+  // full white the bloom washed the mane into the head and the lion's
+  // silhouette — the whole read — was lost.
+  narasimhaLight: 0xf4d9a8,
+  narasimhaMane: 0xd8872c,
+  narasimhaHalo: 0xffd36a,
+
   outline: 0x0a0813,
 };

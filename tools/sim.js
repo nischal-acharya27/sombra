@@ -1829,6 +1829,126 @@ function kawachArmour(game) {
   return rows;
 }
 
+/**
+ * Gate 12's boss, fought — the finale.
+ *
+ * The suite has never fought a late boss (a NaN-HP Warden once passed a full
+ * sweep), and this one's whole kit is a rule about *when* it can be hit, so
+ * the rule is asserted by hitting it. The hunter is kept invulnerable and out
+ * of the way; the rows are about the boss, the finishing beat and the ending,
+ * read the way a player would see them — hp, opacity, visibility, state.
+ */
+function finale(game, input) {
+  const rows = [];
+  const say = (what, ok, detail = '') => rows.push({ what, ok, detail });
+  const bot = new Bot(game, input);
+  const p = game.player;
+  const hit = (b, damage) =>
+    game._damageEnemy(b, { damage, knock: 0, launch: 0, hitstop: 0, shake: 0, move: 'probe', style: 0 });
+  // New objects, by identity: a count would let an effect leaving the scene
+  // cancel an object being built, and read as zero when it is not.
+  const ids = () => {
+    const seen = new Set();
+    game.scene.traverse((o) => seen.add(o.uuid));
+    return seen;
+  };
+  const added = (before) => {
+    let n = 0;
+    game.scene.traverse((o) => {
+      if (!before.has(o.uuid)) n++;
+    });
+    return n;
+  };
+
+  hardStart(game);
+  const last = game.gates.length - 1;
+  game._enterGate(last);
+  say('the last gate is his', game.gate.warden?.archetype === 'hiranyakashipu', game.gate.id);
+  giveChaya(game, bot);
+  const hadChaya = !!game.chaya;
+  const enc = game.encounters.find((e) => e.spawns.some((s) => s.type === 'warden'));
+  for (const e of game.encounters) if (e !== enc) e.started = e.cleared = true;
+  p.x = enc.trigger + 1;
+  p.y = game.level.groundAt(p.x) + 0.2;
+  let t = 0;
+  while (!game.boss && t < 30) {
+    p.invuln = 99;
+    bot.step();
+    t += DT;
+  }
+  const b = game.boss;
+  say('he arrives with finite, full health', !!b && Number.isFinite(b.hp) && b.hp === b.maxHp, b ? `${b.hp}/${b.maxHp}` : 'no boss');
+  if (!b) return rows;
+
+  // The boon, from the first swing.
+  for (let i = 0; i < 240 && b.state === 'entering'; i++) {
+    p.invuln = 99;
+    bot.step();
+  }
+  const before = b.hp;
+  hit(b, 60);
+  say('outside the doorway a hit does nothing', b.hp === before, `${b.state}, hp ${b.hp}`);
+
+  // The opening comes on its own, announced in the boon's colour.
+  let tellSeen = false;
+  let tellRight = true;
+  t = 0;
+  while (b.state !== 'threshold' && t < 60) {
+    p.invuln = 99;
+    bot.step();
+    t += DT;
+    if (b.state === 'telegraph' && b.attackName === 'threshold' && b.coreFlare > 0.3) {
+      tellSeen = true;
+      tellRight &&= b.n.clawBoonL.material.opacity > 0 && b.n.clawThreatL.material.opacity === 0;
+    }
+  }
+  say('an opening comes by itself', b.state === 'threshold', `after ${t.toFixed(1)}s`);
+  say('announced in the boon, never amber', tellSeen && tellRight);
+  const inside = b.hp;
+  hit(b, 60);
+  say('inside it, hits land', b.hp === inside - 60, `hp ${b.hp}`);
+
+  // The finishing beat.
+  b.hp = 10;
+  b.enraged = true; // past the phase beat, so the kill is only the kill
+  if (b.state !== 'threshold') {
+    b.state = 'threshold';
+    b.sub = 2;
+  }
+  const count = ids();
+  hit(b, 60);
+  say('the killing blow starts the finishing beat', b.dead && b.holdsHunter, `state ${b.state}`);
+  p.vx = 0;
+  const x0 = p.x;
+  input.held.add('right');
+  let shown = false;
+  for (t = 0; t < 1.6; t += DT) bot.step();
+  shown = b.n.narasimha.visible && b.n.narasimha.scale.x > 0.9;
+  say('Narasimha steps out of the threshold', shown, `scale ${b.n.narasimha.scale.x.toFixed(2)}`);
+  say('the hunter is held still for it', Math.abs(p.x - x0) < 0.05, `moved ${(p.x - x0).toFixed(2)}`);
+  const built = added(count);
+  say('and nothing was built to show it', built === 0, `${built} new objects`);
+  input.held.delete('right');
+  for (t = 0; t < b.cfg.finaleT + 0.5 && game.enemies.includes(b); t += DT) bot.step();
+  say('then he is gone, and so is Narasimha', !game.enemies.includes(b) && !b.n.narasimha.visible);
+
+  // The ending: the closing beats, the chaya let go, the last arch.
+  let waited = 0;
+  while ((game.resting || game.state === 'playing') && waited < 2000) {
+    game._advance?.();
+    bot.step();
+    waited++;
+    if (!game.resting && game.wayOpen) break;
+  }
+  say('the gate clears', game.state === 'cleared' && game.wayOpen, `state ${game.state}`);
+  say('the closing beats let the chaya go', hadChaya && !game.chaya, hadChaya ? '' : 'no chaya was raised');
+  game._stepThrough();
+  say('the last arch ends the campaign', game.state === 'ended');
+  game.hud.screen('clear', false);
+  hardStart(game);
+  return rows;
+}
+
 /** Φ(z), via the Abramowitz & Stegun 7.1.26 approximation to erf. */
 function normalCdf(z) {
   const x = Math.abs(z) / Math.SQRT2;
@@ -2149,6 +2269,9 @@ function runAll(game, input, seed) {
   // And after even that: it spawns three armoured bodies mid-run, which is
   // allocation, and nothing may come after allocation but more of it.
   report.kawachArmour = scope(17, () => kawachArmour(game));
+  // And after even that: it fights the last boss to the death on the shared
+  // `Game`, raises a chaya, and walks out of the campaign.
+  report.finale = scope(18, () => finale(game, input));
   report.ms = Math.round(performance.now() - t0);
 
   print(report);
@@ -2505,6 +2628,18 @@ function print(r) {
   lines.push('  closed early, and an interstitial that answers at once or holds. The');
   lines.push('  last row is the control: with no bridge the arch is the old straight');
   lines.push('  cut, which is the promise that the web build never waits on an ad.');
+  lines.push('');
+
+  lines.push('THE FINALE   (gate 12: Hiranyakashipu, fought; the ending, walked)');
+  for (const t of r.finale) {
+    lines.push(`  ${t.what.padEnd(50)} ${t.detail.padEnd(40)} ${ok(t.ok)}`);
+  }
+  lines.push('');
+  lines.push('  His kit is a rule about when he can be hit, so the rule is asserted by');
+  lines.push('  hitting him: outside the doorway, inside it, and the blow that ends it.');
+  lines.push('  The finishing beat is read the way a player sees it — the hunter held,');
+  lines.push('  Narasimha out of the threshold, nothing built — and the ending by the');
+  lines.push('  chaya gone and the campaign over.');
   lines.push('');
 
   lines.push("KAWACH'S ARMOUR   (hits to kill, one body, no fight around it)");

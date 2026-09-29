@@ -4267,3 +4267,96 @@ or either bot.
 ignoring them roughly halves: a median saving of about 32 HP becomes about
 13. It is still positive and significant on every recorded seed. If a later
 change narrows it further, this entry is the first place to look.
+
+## Gate 12 (The Pillared Hall): Hiranyakashipu, the finale
+
+Built 2026-09-29, the same day the campaign was cut to twelve gates, which
+made this gate the ending. The boss is the last of the three locked bosses
+the campaign kept. The approach reuses what the act already taught: gate 8's
+validated four-ledge climb, `Kawach` alone, then `Kawach` with `Raakchyas`,
+reskinned into his register. No new archetype. Files: `buildHiranyakashipu`
+(models.js), `HIRANYAKASHIPU` (config.js), `Hiranyakashipu` (boss.js),
+`gates/gate12.js`, and the `GATE12_*` strings.
+
+**The boon is the fight, as his roster entry designed it.** He takes no
+damage outside `threshold`: a window he commits to himself every two to three
+attacks, from the first second, announced in `hiranyaBoon`. It is the only
+telegraph in the game that means "now you can", and it stays off the shared
+amber, which his two attacks keep. Outside it a hit turns aside with a spark
+and a clang, and returns `false`, so no damage number or style is paid for a
+hit that did nothing. Every killing blow therefore lands in the doorway, so
+the finishing beat needs no trigger of its own. `threshold` lives outside
+`attacks` on purpose: gatecheck reads every entry there as a threat tell to
+hold against the reaction floor, and this one announces the reverse.
+
+**One deliberate departure from the roster entry: Narasimha is his own
+figure, not an overlay on the hunter.** The entry's mechanism swaps the
+*hunter's* model for a Narasimha overlay during the death window. Its own
+respectful-treatment note says nothing in play should put the hunter in the
+avatar's role, and that the beat must not be "a power-fantasy costume swap".
+The spec's Act 3 throughline says the same: no "the hunter is secretly an
+avatar". Those cannot both hold, so the note won. Narasimha steps out of the
+threshold as a figure of light, as the source has him step out of the pillar
+Hiranyakashipu dared his son's god to be in. The hunter is held still
+(`Boss.holdsHunter`, read by `Game.update` as an all-false input) and gets no
+credit. The king falls at the threshold, at twilight: the realm is twilight,
+so the staging needs no lighting trick. No blow is shown, no line is spoken,
+and it runs 3.8 s. The rig is built once with the boss, so the beat
+allocates nothing; the finale probe counts new objects by identity and gets
+zero.
+
+**The ending.** The closing beats are the System's, not his. He gets no last
+words after Narasimha. The sixth carries `release`, and `Game._showBeatQueue`
+lets the chaya go as it opens, in light rather than the shadow-burst every
+other exit uses. That is the campaign's promised ending, moved here from
+Mahishasura. The opening's last card, which still promised "six realms"
+and Yama from the ten-gate campaign, is rewritten to promise what the
+campaign actually reaches: the Wheel turning again.
+
+**Two numbers that differ from the roster, measured.** `hw` is 1.2, not
+≈ 1.5: against the built rig, 1.5 put the hurtbox half a body-width outside
+his silhouette, and a fight built on when he can be hit cannot let the hunter
+hit air beside him. The finale runs `finaleT` (3.8 s), not every boss's
+3 s: enough for Narasimha to arrive and leave, and no more.
+
+**What the photographs found that the suite could not.** Every item below
+was green in `?sim`:
+
+- the claw glows were flat quads, and edge-on to the side camera they read as
+  a white card and a yellow card; they are now glow spheres;
+- the doorway's light strips sat on one face only, and vanished behind their
+  own posts whenever he faced left;
+- "arms wide" spread the arms along the depth axis, which from the side
+  looks like one arm reaching at the camera; the pose is now chest out, arms
+  swept back;
+- Narasimha at full white bloomed the mane into the head and lost the lion's
+  silhouette, which is the whole read; the body is now a warm cream and the
+  mane saffron;
+- the doorway faded out slowly enough to still be glowing into the next
+  attack's tell; it now goes out fast.
+
+**The ship decision this overtakes.** § "Amended 2026-09-29: the campaign is
+twelve gates, and ships at eleven" chose Production at eleven gates, because
+the finale did not exist. It now does, so the first build can carry all
+twelve and the listing can say so. The full-campaign playtest on a phone,
+twelve gates end to end, is still owed.
+
+**Verification.** 271 PASS / 0 FAIL on all five recorded seeds. Gate 12
+passes every static row: 26% jump reserve, 8 of 8 platforms reachable, spawns
+clear, locks sealed, 22 glance-length beats, and tells at 0.496 s and 0.560 s
+enraged. A new `FINALE` probe, last in `runAll`, fights him. It covers:
+
+- finite, full HP;
+- the boon turning a hit aside;
+- an opening arriving on its own, announced in the boon's colour and never
+  amber;
+- hits landing inside it;
+- the killing blow starting the finishing beat;
+- Narasimha appearing, with the hunter held still and nothing built;
+- the king removed;
+- the gate clearing;
+- the chaya released;
+- the last arch ending the campaign.
+
+The only pre-existing rows that moved are two campaign-wide counts that now
+include gate 12 (47 tells, 52 barriers).

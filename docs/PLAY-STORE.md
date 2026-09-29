@@ -15,8 +15,9 @@ Decisions this rests on:
 - **Audience:** built for 9+, declared 13+ (`DECISIONS.md` § Audience).
 - **Ads:** a second wind once per gate attempt, and an interstitial every
   second gate clear (`DECISIONS.md` § "Amended 2026-09-29", both entries).
-- **Ship:** Production with eleven gates, with gate 12 (the finale) to follow
-  as an update.
+- **Ship:** Production. The decision on record was eleven gates with the
+  finale to follow, but gate 12 was built the same day, so the first build
+  carries all twelve and the ending.
 
 ---
 
@@ -63,7 +64,8 @@ Decisions this rests on:
 
 ## 3. Build the bundle (agent or you)
 
-- [ ] `?sim` across the five recorded seeds: 244 PASS / 0 FAIL expected.
+- [ ] `?sim` across the five recorded seeds: 271 PASS / 0 FAIL expected
+  (re-capture before trusting the number).
 - [ ] `cd android && ./gradlew bundleRelease` produces
   `app/build/outputs/bundle/release/app-release.aab`. It is an AAB, which
   Play requires for new apps; an APK is not accepted.
@@ -157,8 +159,7 @@ Create the app: a free game, category **Action**. Then App content:
   `docs/store/listing.md`, written to three constraints:
   - the 13+ declaration;
   - the respectful-treatment flags in `docs/research/villain-roster.md`;
-  - an honest "eleven gates, the finale coming". It does not promise an
-    ending this build lacks.
+  - an honest "twelve gates, and an ending", which this build has.
 - [ ] **App icon**, 512×512 PNG. The launcher icon is a vector (the boot
   mark ✦). A PNG export of it is a design task the agent can do on request.
 - [ ] **Feature graphic**, 1024×500, and **at least 2 phone screenshots**
@@ -173,9 +174,10 @@ Create the app: a free game, category **Action**. Then App content:
 
 - [ ] Promote the tested build to Production, starting with a staged
   rollout (for example 20%).
-- [ ] **What a reviewer and a player will meet:** eleven gates, then the
-  run-end screen after Narakasura. That is the decision on record. Make sure
-  the listing says the finale is coming, not that the story ends.
+- [ ] **What a reviewer and a player will meet:** twelve gates, ending on
+  Hiranyakashipu, the chaya let go, then the run-end screen. Still owed
+  before Production: one human playing the whole campaign on a phone
+  (`DECISIONS.md` § "Amended 2026-08-08").
 - [ ] **Every later game change is a new `.aab`** with a bumped
   `versionCode`. Pages and the app now update separately, which is the cost
   of the native shell (`DECISIONS.md` § "…the Android shell is native, not a

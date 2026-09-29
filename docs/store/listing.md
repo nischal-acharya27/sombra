@@ -17,8 +17,9 @@ Four constraints shaped every line:
    from its own text. Kaikeyi's gate has no fight, and the copy must not
    imply one. Shurpanakha's mutilation is not a selling point, and nothing
    here mentions it.
-3. **Eleven gates, and the finale is not built.** The copy says so, and
-   promises nothing the build does not have.
+3. **Twelve gates, the whole campaign.** Gate 12 and its ending landed on
+   2026-09-29, so the copy can promise an ending. If a build ever ships
+   without it again, this line and the description change first.
 4. **No "no ads" claim, and nothing misleading about the ads.** The free
    restart is always there; the second wind is the ad.
 
@@ -39,9 +40,9 @@ Alternatives, if the name alone is taken or too bare:
 
 (79 characters.) Alternative:
 
-> Hack-and-slash through eleven gates drawn from the Mahabharata and Ramayana.
+> Hack-and-slash through twelve gates drawn from the Mahabharata and Ramayana.
 
-(76 characters.)
+(77 characters.)
 
 ## Full description (4000 characters max)
 
@@ -67,8 +68,8 @@ Alternatives, if the name alone is taken or too bare:
 > - Wardens with their own tells, phases and last words.
 > - Touch controls built for a phone held sideways.
 >
-> **Eleven gates are open now.** The twelfth, and the campaign's ending,
-> is on its way as a free update.
+> **Twelve gates, one campaign, and an ending** — the one the whole walk
+> has been escorting you toward.
 >
 > Free to play. SOMBRA shows an occasional ad between gates. When you fall,
 > you can always rise again from the start of the gate for free, or watch
@@ -104,7 +105,7 @@ avoid any frame whose point is a figure's humiliation.
 | Don't | Because |
 |---|---|
 | "Slay the demons of Hindu myth" | Flattens figures the tradition itself argues about, and several are venerated today (Ravana in parts of South India and Sri Lanka) |
-| "The complete saga" / "the full Mahabharata" | Eleven gates, no finale yet |
+| "The complete saga" / "the full Mahabharata" | Twelve figures from three traditions is a campaign, not the epics retold |
 | "For all ages" / "kids" / "cute" | The declared audience is 13+; this is the reclassification risk |
 | "No ads" / "ad-free" | Untrue |
 | Any gate's twist or ending | The Warden's last words are the reward |
