@@ -4360,3 +4360,131 @@ enraged. A new `FINALE` probe, last in `runAll`, fights him. It covers:
 
 The only pre-existing rows that moved are two campaign-wide counts that now
 include gate 12 (47 tells, 52 barriers).
+
+## The rigs are rebuilt from lofted forms, and a rig build stops spending the seeded stream
+
+Built 2026-09-29, before the Play Store build. The user's verdict on the
+cast: most characters "seem to be like 3D boxes tied together". The boxes'
+hard, flat faces cause that, not the idea of a rig made of rigid parts. A cel
+ramp lights a flat face as one card, and a box limb has no taper and no
+silhouette but a rectangle.
+
+**What changed.** `src/render/shapes.js` is a small geometry kit. Every
+surface in it is a *loft*: superellipse rings stacked along an axis and
+skinned into one closed, indexed mesh with smooth normals. A ring's `p` sets
+its squareness (2 is an ellipse, above 3 a rounded plate), so one function
+makes a forearm, a breastplate, a boot and a pleated robe. `models.js` wraps
+the kit in part-shaped helpers: `limb`, `trunk`, `skull`, `block`, `blob`,
+`boot`, `skirt` and `tube`, plus `capOf` for hair and helmets grown from the
+skull beneath them, and `nose`. All 34 rigs the campaign builds are rebuilt
+with them: the hunter, every grunt and skin, all twelve Wardens and both
+second forms, Kaikeyi and Narasimha.
+
+**What was kept, deliberately.** Each helper takes the w/h/d of the box it
+replaces, and every group's origin is still the joint it turns on. No node
+name moved and no joint moved, so no animator, hitbox, hurtbox or telegraph
+changed; each builder was converted one call at a time. A limb's round ends
+are centred on both its joints, so a bent elbow or knee stays closed instead
+of opening a gap. The five retired rigs (Guardian, Goru-Mukh, Hakim,
+Chiranjivi, Maun-Ankur) are left as boxes, since nothing in the campaign
+builds them.
+
+**Two rendering rules the new surfaces needed.**
+
+- **Smooth geometry is outlined along its normals.** Box outlines push
+  radially from the centre. That is right for boxes, whose face normals would
+  tear the hull open at every corner, and wrong for anything long: near the
+  ends of a forearm, "away from the centre" points down the bone, and the ink
+  thins to nothing along the sides. `outlineFor` switches on
+  `geometry.userData.smooth`, and normal-mode materials are shared per
+  thickness and colour.
+- **Lofted parts cast shadows and never receive them.** A curved surface
+  shadowing itself under the 2048 map breaks into blotches, a dark bruise
+  across a belly or a breastplate, where the toon ramp alone draws one clean
+  terminator. The ground still takes every shadow.
+
+**The seeded stream, and the amendment it forced.** Three.js draws four
+`Math.random()` values per object, geometry and material for its UUID, and
+enemies are built when their encounter spawns them, mid-run. So a rig's part
+count was a gameplay input: a redrawn horn re-rolled every enemy's jitter
+after the first spawn, and the suite could not tell an art pass from a
+behaviour change. `unseeded(build)` in models.js runs a build against the
+page's own `Math.random`, then puts the seeded stream back. Every enemy rig
+build runs inside it, and so do `unshareMaterials` and the `Boss`
+constructor's build and material clones; chayas inherit it from the classes
+they extend. Gameplay draws, such as a first cooldown or a leg phase, stay
+outside it. This amends *allocate nothing during a run* for rig builds only:
+a rig now draws nothing from the stream, whatever it contains. Everything
+else built mid-run is still bound by the rule.
+
+The isolation landed first, and alone, because it re-rolls the suite once.
+Every report hash changed. Between 17 and 20 of 479 report lines moved per
+seed, all of them jitter-driven: bot run times, boss-fight HP, the chaya
+raise count and the telegraph gate's samples. Every seed stayed at
+271 PASS / 0 FAIL. The telegraph gate's median saving still spans 8–17 HP
+across the seeds, and its weakest seed went from p 0.049 to p 0.013. The art
+pass was then held against that re-baselined report twice, after the rebuild
+and after the walk cycles and faces, and was byte-identical on all five
+recorded seeds both times. That identity is the evidence that the redesign
+changed no behaviour.
+
+**A bug the rebuild surfaced: enemies had no rim.** Every enemy and boss
+takes its own copy of its materials so it can flash white when hit, and
+`Material.clone()` copies neither `onBeforeCompile` nor
+`customProgramCacheKey`. So every copy rendered without the rim light
+`toon.js` exists to add, which meant every character except the hunter.
+`cloneMaterial()` in toon.js carries both across.
+
+**Other visible changes that ride along.**
+
+- Kawach, Bakasura, Kamsa, Putana and Narakasura glided with locked legs.
+  A shared `walkLegs` in enemies.js now swings them while they move, driven
+  by clocks they already had, and draws nothing.
+- Kumbhakarna's lids lift in `_wake`, as its comment always said they did.
+- Narakasura's horns splay outward instead of crossing above his head.
+- The hunter's coat is lifted from near-black (`0x2b2f45`) to a mid indigo
+  (`0x3a4368`): a coat darker than the realm's shadow band shows no form
+  however well it is modelled.
+- Putana's disguise gets its own dark hair (`putanaHair`), where the box rig
+  had borrowed the drape's mustard.
+
+**Buttons.** `.cta` becomes a lit panel: a gradient face, a sheen that
+crosses it on hover, a 1 px cyan edge and corner brackets. `.cta.second-wind`
+is gold, so the rewarded ad never reads as the same offer as RISE AGAIN
+beside it. The touch controls get a lit radial face and an inset ring, and
+stay translucent because they sit over the fight.
+
+**What it costs, and what is not yet measured.** Across all 34 rigs, outlines
+included, the count went from 47k triangles in 1,853 meshes to 294k in 2,339,
+by the gallery's own count. A first pass reached 430k and was trimmed by
+cutting rings and segments the game camera cannot resolve. A frame draws only
+the hunter, the chaya and one encounter, so the per-frame figure is a
+fraction of the total. **Frame time on a real phone is not yet measured.** It
+is the first check owed before the store build. If it fails, the dial is ring
+and segment counts, not a return to boxes.
+
+**The gallery.** `tools/gallery.html` renders every character the campaign
+builds, one cell each, lit, tone-mapped and bloomed by the game's own `World`
+and seen from the game camera's direction. `?view=all` adds front, back and
+face crops, and `?pose=bend` bends every joint. `?sim` cannot see geometry,
+so this page is where an art pass gets looked at. Its roster is harvested
+from `GATES`, so a skin that a gate adds shows up without anyone listing it.
+
+**What the photographs found that the suite could not.** Every item below
+was green in `?sim`:
+
+- The first Kawach was all curves and read as a bubble. A guard must read as
+  plate, so its plates went back toward square (`p` 3.2–3.4) under a bucket
+  helm and sloped pauldrons.
+- Hair scaled ring by ring left the crown bare. Caps now grow about the
+  skull's centre.
+- An inverted `smoothstep` at the hairline put hair over the eyes.
+- Narasimha rendered black, because the new helpers dropped the `material`
+  his body of light passes in.
+- Loft ends dimpled where the last ring closed. `roundEnds` now caps them.
+- Kaikeyi's gold hem read as a dashed line until it followed her skirt's own
+  folds.
+
+**One trap for the next rig.** Never name a local after a helper.
+`const skirt = …` inside a builder shadows `skirt()`, and the error
+("skirt is not a function") surfaces several calls later.

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SOMBRA — rig gallery</title>
+<!-- Every character the campaign builds, lit and tone-mapped the way the game
+     is, one cell each. `?sim` cannot see geometry; this is how an art pass is
+     looked at. Serve with tools/serve.py and open /tools/gallery.html.
+       ?rig=hunter,kawach        only these (substring match on the label)
+       &view=game|front|back|face camera: the game's angle (default), the
+                                  face-on +X view, from behind, or a head crop
+       &pose=bend                 bend every elbow/knee/shoulder/hip, to see
+                                  what a joint looks like mid-swing
+       &gate=N                    light with gate N's realm (1-based)
+       &size=N                    cell size in px (default 300) -->
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #0d0a14; color: #cfc6e8; font: 12px/1.4 ui-monospace, Menlo, monospace; }
+  #grid { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; }
+  figure { margin: 0; background: #16111f; border: 1px solid #2a2238; }
+  figure img { display: block; }
+  figcaption { padding: 4px 6px; white-space: pre; }
+  figcaption b { color: #fff; }
+  #status { padding: 8px; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "../vendor/three/build/three.module.js",
+    "three/addons/": "../vendor/three/addons/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="status">building…</div>
+<div id="grid"></div>
+<script type="module" src="gallery.js"></script>
+</body>
+</html>

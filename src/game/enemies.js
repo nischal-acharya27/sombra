@@ -8,10 +8,11 @@
 
 import * as THREE from 'three';
 import { Actor, boxHit } from './actor.js';
-import { buildRaakchyas, buildCharger, buildKawach, buildBhootBatti, buildTantrik, buildShakuni, buildBakasura, buildTaraka, buildShurpanakha, buildLankaSoldier, buildKumbhakarna, buildMathuraWrestler, buildKamsa, buildPutana, buildNarakasura } from '../render/models.js';
+import { unseeded, buildRaakchyas, buildCharger, buildKawach, buildBhootBatti, buildTantrik, buildShakuni, buildBakasura, buildTaraka, buildShurpanakha, buildLankaSoldier, buildKumbhakarna, buildMathuraWrestler, buildKamsa, buildPutana, buildNarakasura } from '../render/models.js';
 import { RAAKCHYAS, CHARGER, KAWACH, BHOOT_BATTI, TANTRIK, SHAKUNI, BAKASURA, TARAKA, SHURPANAKHA, LANKA_SOLDIER, KUMBHAKARNA, MATHURA_WRESTLER, KAMSA, PUTANA, NARAKASURA, PHYS, JUGGLE } from './config.js';
 import { P } from '../render/palette.js';
 import { assets } from '../render/assets.js';
+import { cloneMaterial } from '../render/toon.js';
 import { clamp, damp, lerp, rand } from '../engine/mathx.js';
 
 /**
@@ -22,10 +23,26 @@ function unshareMaterials(root) {
   const list = [];
   root.traverse((o) => {
     if (!o.isMesh || !o.material || o.material.isShaderMaterial) return; // skip outlines
-    o.material = o.material.clone();
+    o.material = cloneMaterial(o.material);
     if (o.material.color) list.push({ mat: o.material, base: o.material.color.clone() });
   });
   return list;
+}
+
+/**
+ * Swing a biped's legs while it walks: hips opposed, the forward-swinging
+ * knee folding. Cosmetic only, and it draws nothing — the phase rides the
+ * enemy's own clock — so it cannot move a number in the suite. Before this,
+ * several bipeds glided with their legs locked, which a box rig got away
+ * with and a jointed one does not.
+ */
+function walkLegs(n, walking, phase, k, amp = 0.4) {
+  const swing = walking ? Math.sin(phase) * amp : 0;
+  const lift = walking ? Math.cos(phase) * amp * 1.3 : 0;
+  n.hipL.rotation.z = lerp(n.hipL.rotation.z, swing, k);
+  n.hipR.rotation.z = lerp(n.hipR.rotation.z, -swing, k);
+  if (n.kneeL) n.kneeL.rotation.z = lerp(n.kneeL.rotation.z, -Math.max(0, lift), k);
+  if (n.kneeR) n.kneeR.rotation.z = lerp(n.kneeR.rotation.z, -Math.max(0, -lift), k);
 }
 
 class Enemy extends Actor {
@@ -44,7 +61,7 @@ class Enemy extends Actor {
   }
 
   finishSetup() {
-    this.mats = unshareMaterials(this.root);
+    this.mats = unseeded(() => unshareMaterials(this.root));
     this.root.scale.setScalar(0.01);
   }
 
@@ -164,7 +181,7 @@ export class Raakchyas extends Enemy {
    */
   constructor(level, ctx, x, y, cfg = RAAKCHYAS, skin = null, buildRig = buildRaakchyas) {
     super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
-    this.root = buildRig(skin);
+    this.root = unseeded(() => buildRig(skin));
     this.n = this.root.userData.nodes;
     this.finishSetup();
     this.pounceCd = rand(0.4, 1.2);
@@ -405,7 +422,7 @@ export class Charger extends Enemy {
    */
   constructor(level, ctx, x, y, cfg = CHARGER, skin = null, buildRig = buildCharger) {
     super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
-    this.root = buildRig(skin);
+    this.root = unseeded(() => buildRig(skin));
     this.n = this.root.userData.nodes;
     this.finishSetup();
     this.phase = 0;
@@ -689,7 +706,7 @@ export class Kawach extends Enemy {
    */
   constructor(level, ctx, x, y, cfg = KAWACH, skin = null, buildRig = buildKawach) {
     super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
-    this.root = buildRig(skin);
+    this.root = unseeded(() => buildRig(skin));
     this.n = this.root.userData.nodes;
     this.finishSetup();
     this.phase = 0;
@@ -849,6 +866,7 @@ export class Kawach extends Enemy {
     const B = this.cfg.bash;
     let bodyZ = 0;
     let bodyY = 0;
+    let walking = false;
     let headZ = 0;
 
     if (this.state === 'telegraph') {
@@ -883,6 +901,7 @@ export class Kawach extends Enemy {
       bodyZ = 0.2;
     } else if (this.state === 'chase' && Math.abs(this.vx) > 0.3) {
       bodyY = Math.abs(Math.sin(this.t * 6)) * 0.03;
+      walking = true;
     } else if (this.state !== 'telegraph') {
       bodyY = Math.sin(this.t * 1.6) * 0.025;
     }
@@ -890,6 +909,7 @@ export class Kawach extends Enemy {
     n.body.rotation.z = lerp(n.body.rotation.z, bodyZ, k);
     n.body.position.y = lerp(n.body.position.y, 0.72 + bodyY, k);
     n.head.rotation.z = lerp(n.head.rotation.z, headZ, k);
+    walkLegs(n, walking, this.t * 6, k, 0.45);
   }
 }
 
@@ -902,7 +922,7 @@ export class BhootBatti extends Enemy {
 
   constructor(level, ctx, x, y, cfg = BHOOT_BATTI, skin = null) {
     super(level, ctx, BHOOT_BATTI, { x, y, hw: BHOOT_BATTI.hw, hh: BHOOT_BATTI.hh, maxHp: BHOOT_BATTI.hp });
-    this.root = buildBhootBatti(skin);
+    this.root = unseeded(() => buildBhootBatti(skin));
     this.n = this.root.userData.nodes;
     this.finishSetup();
     this.baseY = y;
@@ -1029,7 +1049,7 @@ export class Tantrik extends Enemy {
 
   constructor(level, ctx, x, y, cfg = TANTRIK, skin = null) {
     super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
-    this.root = buildTantrik(skin);
+    this.root = unseeded(() => buildTantrik(skin));
     this.n = this.root.userData.nodes;
     this.finishSetup();
     this.phase = 0;
@@ -1267,7 +1287,7 @@ export class Shakuni extends Enemy {
 
   constructor(level, ctx, x, y, cfg = SHAKUNI) {
     super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
-    this.root = buildShakuni();
+    this.root = unseeded(() => buildShakuni());
     this.n = this.root.userData.nodes;
     this.finishSetup();
     this.state = 'chase';
@@ -1856,7 +1876,7 @@ export class Bakasura extends Enemy {
 
   constructor(level, ctx, x, y, cfg = BAKASURA, skin = null) {
     super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
-    this.root = buildBakasura(skin);
+    this.root = unseeded(() => buildBakasura(skin));
     this.n = this.root.userData.nodes;
     this.finishSetup();
     this.phase = 0;
@@ -2063,6 +2083,7 @@ export class Bakasura extends Enemy {
     const T = this.cfg.tackle;
     let bodyZ = 0;
     let bodyY = 0;
+    let walking = false;
     let armZ = 0;
     let glow = 0;
 
@@ -2094,6 +2115,7 @@ export class Bakasura extends Enemy {
       bodyZ = 0.18;
     } else if (Math.abs(this.vx) > 0.3) {
       bodyY = Math.abs(Math.sin(this.t * 5)) * 0.04;
+      walking = true;
     } else {
       bodyY = Math.sin(this.t * 1.4) * 0.03;
     }
@@ -2102,6 +2124,7 @@ export class Bakasura extends Enemy {
     n.belly.position.y = lerp(n.belly.position.y, bodyY, k);
     n.shoulderL.rotation.z = lerp(n.shoulderL.rotation.z, -armZ, k);
     n.shoulderR.rotation.z = lerp(n.shoulderR.rotation.z, armZ, k);
+    walkLegs(n, walking, this.t * 5, k, 0.32);
 
     for (const key of ['L', 'R']) {
       const g = n['handGlow' + key];
@@ -2521,7 +2544,7 @@ export class Kumbhakarna extends Enemy {
 
   constructor(level, ctx, x, y, cfg = KUMBHAKARNA, skin = null) {
     super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
-    this.root = buildKumbhakarna(skin);
+    this.root = unseeded(() => buildKumbhakarna(skin));
     this.n = this.root.userData.nodes;
     this.finishSetup();
     this.phase = 0;
@@ -2558,6 +2581,9 @@ export class Kumbhakarna extends Enemy {
    */
   _wake() {
     this._retint(this.n.skinMeshes, P.kumbhaSkin);
+    // The lids lift — hung from their top edge, so shortening them opens the
+    // eye beneath rather than sliding the lid off it.
+    for (const lid of [this.n.lidL, this.n.lidR]) if (lid) lid.scale.y = 0.3;
     this.ctx.audio?.play('waking');
     this.ctx.shake?.(0.4);
   }
@@ -2931,7 +2957,7 @@ export class Kamsa extends Enemy {
 
   constructor(level, ctx, x, y, cfg = KAMSA, skin = null) {
     super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
-    this.root = buildKamsa(skin);
+    this.root = unseeded(() => buildKamsa(skin));
     this.n = this.root.userData.nodes;
     this.finishSetup();
     this.phase = 0;
@@ -3115,6 +3141,7 @@ export class Kamsa extends Enemy {
     const windupMul = this.enraged ? this.cfg.enrageWindupMul : 1;
     let bodyZ = 0;
     let bodyY = 0;
+    let walking = false;
     let armZ = 0;
     // Rest hang: the grip is built laid along +X, so a rotation is what
     // brings the head down into a natural hang — the same job Kumbhakarna's
@@ -3159,6 +3186,7 @@ export class Kamsa extends Enemy {
       bodyZ = 0.18;
     } else if (Math.abs(this.vx) > 0.3) {
       bodyY = Math.abs(Math.sin(this.t * 5)) * 0.03;
+      walking = true;
     } else {
       bodyY = Math.sin(this.t * 1.2) * 0.025;
     }
@@ -3168,6 +3196,7 @@ export class Kamsa extends Enemy {
     n.shoulderR.rotation.z = lerp(n.shoulderR.rotation.z, armZ, k);
     n.shoulderL.rotation.z = lerp(n.shoulderL.rotation.z, -armZ * 0.3, k);
     n.mace.rotation.z = lerp(n.mace.rotation.z, maceZ, k);
+    walkLegs(n, walking, this.t * 5, k, 0.4);
 
     for (const key of ['L', 'R']) {
       const e = n['eye' + key];
@@ -3197,7 +3226,7 @@ export class Putana extends Enemy {
 
   constructor(level, ctx, x, y, cfg = PUTANA, skin = null) {
     super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
-    this.root = buildPutana(skin);
+    this.root = unseeded(() => buildPutana(skin));
     this.forms = this.root.userData.forms;
     this.form = 'disguised';
     this.n = this.forms.disguised.nodes;
@@ -3400,6 +3429,7 @@ export class Putana extends Enemy {
     const B = this.cfg.breath;
     let bodyZ = 0;
     let bodyY = 0;
+    let walking = false;
     let armZ = 0;
     let glow = 0;
     let mouthGlow = this.form === 'revealed' ? 0.9 : 0.15;
@@ -3435,6 +3465,7 @@ export class Putana extends Enemy {
       bodyZ = 0.2;
     } else if (Math.abs(this.vx) > 0.3) {
       bodyY = Math.abs(Math.sin(this.t * 5)) * 0.03;
+      walking = true;
     } else {
       bodyY = Math.sin(this.t * 1.4) * 0.025;
     }
@@ -3443,6 +3474,7 @@ export class Putana extends Enemy {
     n.body.position.y = lerp(n.body.position.y, n.baseY + bodyY, k);
     n.shoulderR.rotation.z = lerp(n.shoulderR.rotation.z, armZ, k);
     n.shoulderL.rotation.z = lerp(n.shoulderL.rotation.z, -armZ * 0.3, k);
+    walkLegs(n, walking, this.t * 5, k, 0.38);
 
     n.mouth.material.transparent = true;
     n.mouth.material.opacity = lerp(n.mouth.material.opacity, mouthGlow, k);
@@ -3655,7 +3687,7 @@ export class Narakasura extends Enemy {
 
   constructor(level, ctx, x, y, cfg = NARAKASURA, skin = null) {
     super(level, ctx, cfg, { x, y, hw: cfg.hw, hh: cfg.hh, maxHp: cfg.hp });
-    this.root = buildNarakasura(skin);
+    this.root = unseeded(() => buildNarakasura(skin));
     this.n = this.root.userData.nodes;
     this.finishSetup();
     this.phase = 0;
@@ -3881,6 +3913,7 @@ export class Narakasura extends Enemy {
     const windupMul = this.enraged ? this.cfg.enrageWindupMul : 1;
     let bodyZ = 0;
     let bodyY = 0;
+    let walking = false;
     let armZ = 0;
     let spearZ = REST_SPEAR;
     let glow = 0;
@@ -3927,6 +3960,7 @@ export class Narakasura extends Enemy {
       bodyZ = 0.18;
     } else if (Math.abs(this.vx) > 0.3) {
       bodyY = Math.abs(Math.sin(this.t * 4.4)) * 0.03;
+      walking = true;
     } else {
       bodyY = Math.sin(this.t * 1.1) * 0.025;
     }
@@ -3936,6 +3970,7 @@ export class Narakasura extends Enemy {
     n.shoulderR.rotation.z = lerp(n.shoulderR.rotation.z, armZ, k);
     n.shoulderL.rotation.z = lerp(n.shoulderL.rotation.z, -armZ * 0.3, k);
     n.spear.rotation.z = lerp(n.spear.rotation.z, spearZ, k);
+    walkLegs(n, walking, this.t * 4.4, k, 0.4);
 
     for (const key of ['L', 'R']) {
       const e = n['eye' + key];

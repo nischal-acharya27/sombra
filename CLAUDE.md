@@ -27,6 +27,7 @@ wrong diagnoses and several disagreeing playtest verdicts.
 | `?sim&seed=N` | one seed |
 | `?perf` | frame panel |
 | `?touch` | force the on-screen controls on, on a device with no thumb |
+| `/tools/gallery.html` | every character rig, lit the game's way (`?rig=`, `?view=all`, `?pose=bend`) — how an art pass is looked at |
 
 **Verify with `?sim` across seeds before claiming anything works.** One seed is
 not evidence — that mistake is why the suite sweeps rather than samples. The
@@ -56,6 +57,11 @@ size, precisely so a failure cannot be answered by adjusting the instrument.
   jitter after it. **Gate transitions obey this by pre-building**: `Game`
   constructs every gate up front and switches between them with a `visible`
   flag, and the suite's `GATE TRANSITION` row counts the draws to prove it.
+  **Rig builds obey it by isolation instead**: enemies are built when they
+  spawn, so every rig build and its material cloning runs inside `unseeded()`
+  (models.js), which lends the build the page's own `Math.random`. Build any
+  new rig the same way, or its part count becomes a gameplay input (see
+  `docs/DECISIONS.md` § "The rigs are rebuilt from lofted forms").
 - **New suite probes go last in `runAll`.** Scoped seeds isolate a probe's
   randomness, not what thousands of frames do to the shared `Game` object.
 - **No passive contact damage on anything.** Nothing harms the hunter by

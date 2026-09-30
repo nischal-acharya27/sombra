@@ -13,6 +13,39 @@
 import * as THREE from 'three';
 import { toonMaterial, glowMaterial, outlineFor, faceted } from './toon.js';
 import { P } from './palette.js';
+import { loft, loftX, frontOf, limbRings, blobRings, blockRings, trunkRings, skullRings, skirtRings, bootGeo, tubeGeo, merge, place } from './shapes.js';
+
+/**
+ * The page's own `Math.random`, captured when this module loads — before
+ * `tools/sim.js` has seeded anything.
+ */
+const pageRandom = Math.random;
+
+/**
+ * Run `build` with the page's own `Math.random` in place, then put back
+ * whatever stream was there.
+ *
+ * Three.js draws four `Math.random()` values for the UUID of every object,
+ * geometry and material it constructs, and the suite plays the game against
+ * a seeded `Math.random`. Enemies are built when their encounter spawns them,
+ * mid-run, so every rig used to spend the gameplay stream by however many
+ * objects it happened to contain — which made the *art* a gameplay input: a
+ * redrawn horn re-rolled every enemy's jitter after the first spawn, and the
+ * suite could not tell an art pass from a behaviour change. Wrapped in this,
+ * a rig build draws nothing from the stream whatever it contains.
+ *
+ * Only the build goes inside. An enemy's gameplay draws (its first cooldown,
+ * its leg phase) stay outside on the seeded stream, where they belong.
+ */
+export function unseeded(build) {
+  const stream = Math.random;
+  Math.random = pageRandom;
+  try {
+    return build();
+  } finally {
+    Math.random = stream;
+  }
+}
 
 const matCache = new Map();
 
@@ -177,6 +210,217 @@ export function decal(w, h, color, { opacity = 1 } = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// Lofted parts
+//
+// The same contract as `part()` — a group whose origin is the joint it turns
+// on, a cel material from `mat()`, an ink outline — with a lofted body from
+// `shapes.js` inside instead of a box. Each takes the w/h/d of the box it
+// replaces (w along X, the facing axis; d along Z, the lateral one), so a rig
+// converts one call at a time and its joints, and therefore its animator,
+// never move. See `docs/DECISIONS.md` § "The rigs are rebuilt from lofted
+// forms".
+// ---------------------------------------------------------------------------
+
+/** A lofted geometry as a part. `dy` offsets the mesh inside its group, the way `part()` resolves a pivot. */
+function softPart(geo, color, { outline = 0.02, opts, material, dy = 0, flip = false } = {}) {
+  const g = new THREE.Group();
+  const m = new THREE.Mesh(geo, material || mat(color, opts));
+  // Cast, never receive. A curved surface self-shadowing under a 2048 map
+  // breaks into blotches — a dark bruise across a belly or a breastplate —
+  // where the toon ramp alone draws one clean terminator. The ground still
+  // takes every character's shadow.
+  m.castShadow = true;
+  m.receiveShadow = false;
+  m.position.y = dy;
+  if (flip) m.rotation.z = Math.PI;
+  g.add(m);
+  if (outline > 0) {
+    const o = outlineFor(geo, outline);
+    o.position.y = dy;
+    if (flip) o.rotation.z = Math.PI;
+    g.add(o);
+  }
+  g.userData.mesh = m;
+  g.userData.dy = dy;
+  return g;
+}
+
+/**
+ * A limb segment hanging from its joint: `w`×`d` at the joint, narrowing by
+ * `taper` over `h` to the next joint, with round ends centred on both joints
+ * so a bent elbow or knee stays closed. `up` stands it on its joint instead.
+ */
+export function limb(w, h, d, color, { taper = 0.8, bulge = 0.08, bulgeAt = 0.3, p = 2, seg = 10, outline = 0.018, up = false, opts, material } = {}) {
+  const { rings, bottomY, topY } = limbRings(w / 2, d / 2, (w / 2) * taper, (d / 2) * taper, h, { bulge, bulgeAt, p });
+  return softPart(loft(rings, { seg, bottomY, topY }), color, { outline, opts, material, flip: up });
+}
+
+/**
+ * A torso standing on its hips (the group origin), `h` to the base of the
+ * neck: waist, ribcage, shoulders, in one surface. See `trunkRings` for the
+ * shaping options.
+ */
+export function trunk(w, h, d, color, { outline = 0.026, seg = 14, opts, material, ...shape } = {}) {
+  const { rings, bottomY, topY } = trunkRings(w / 2, h, d / 2, shape);
+  return softPart(loft(rings, { seg, bottomY, topY }), color, { outline, opts, material });
+}
+
+/** A head sitting on its neck (the group origin), face toward +X. See `skullRings`. */
+export function skull(w, h, d, color, { outline = 0.02, seg = 16, opts, material, ...shape } = {}) {
+  const { rings, bottomY, topY } = skullRings(w / 2, h, d / 2, shape);
+  return softPart(loft(rings, { seg, bottomY, topY }), color, { outline, opts, material });
+}
+
+/** A rounded block — `part()` with its edges eased. `round` is the edge radius over the smallest half-size. */
+export function block(w, h, d, color, { pivot = 'center', round = 0.35, p, seg = 12, outline = 0.02, opts, material } = {}) {
+  const { rings, bottomY, topY } = blockRings(w / 2, h / 2, d / 2, { round, p });
+  const dy = pivot === 'top' ? -h / 2 : pivot === 'bottom' ? h / 2 : 0;
+  return softPart(loft(rings, { seg, bottomY, topY }), color, { outline, opts, material, dy });
+}
+
+/** An ellipsoid filling a w×h×d box. `p` above 2 squares its plan, `pv` its elevation. */
+export function blob(w, h, d, color, { pivot = 'center', p = 2, pv = 2, seg = 12, n = 7, outline = 0.02, opts, material } = {}) {
+  const { rings, bottomY, topY } = blobRings(w / 2, h / 2, d / 2, { p, pv, n });
+  const dy = pivot === 'top' ? -h / 2 : pivot === 'bottom' ? h / 2 : 0;
+  return softPart(loft(rings, { seg, bottomY, topY }), color, { outline, opts, material, dy });
+}
+
+/** A foot hanging from the ankle, toe toward +X, sole flat at `-h`. */
+export function boot(w, h, d, color, { toe = 0.34, outline = 0.016, opts, material } = {}) {
+  return softPart(bootGeo(w, h, d, { toe }), color, { outline, opts, material });
+}
+
+/** A skirt or robe hanging from the waist, flaring to the hem. See `skirtRings`. */
+export function skirt(wT, dT, wB, dB, len, color, { outline = 0.024, seg = 18, opts, material, ...shape } = {}) {
+  const { rings, bottomY, topY } = skirtRings(wT / 2, dT / 2, wB / 2, dB / 2, len, shape);
+  return softPart(loft(rings, { seg, bottomY, topY }), color, { outline, opts, material });
+}
+
+/** A tapered tube along `[[x, y, z, r], ...]` — horns, tails, tusks, locks. */
+export function tube(pts, color, { seg = 8, squash = 1, outline = 0.014, opts, material } = {}) {
+  return softPart(tubeGeo(pts, { seg, squash }), color, { outline, opts, material });
+}
+
+/** A loft along +X as a part — a beast's barrel, a snout, a jaw. See `loftX`. */
+export function barrel(rings, color, { seg = 12, backX, frontX, outline = 0.022, opts, material } = {}) {
+  return softPart(loftX(rings, { seg, backX, frontX }), color, { outline, opts, material });
+}
+
+/** Any ring list as a part — for the one-off shapes (a collar, a hood) no recipe covers. */
+export function ringed(rings, color, { seg = 12, bottomY, topY, outline = 0.02, opts, material, dy = 0 } = {}) {
+  return softPart(loft(rings, { seg, bottomY, topY }), color, { outline, opts, material, dy });
+}
+
+/**
+ * A hand hanging from the wrist: a rounded mitten and a thumb on its inner
+ * side, merged into one mesh. `fist` balls it up, for a hand that grips.
+ */
+export function mitt(w, h, d, color, { fist = true, side = 1, outline = 0.012, opts, material } = {}) {
+  const key = `mitt:${w},${h},${d},${fist},${side}`;
+  const palm = blockRings(w / 2, h / 2, d / 2, { round: fist ? 0.7 : 0.5 });
+  const thumb = limbRings(w * 0.2, w * 0.18, w * 0.15, w * 0.14, h * 0.42, { bulge: 0 });
+  const geo = merge(key, [
+    { geo: loft(palm.rings, { seg: 10, bottomY: palm.bottomY, topY: palm.topY }), matrix: place(0, -h / 2) },
+    {
+      geo: loft(thumb.rings, { seg: 8, bottomY: thumb.bottomY, topY: thumb.topY }),
+      matrix: place(w * 0.34, -h * 0.18, side * -d * 0.22, side * 0.35, 0, 0.5),
+    },
+  ]);
+  return softPart(geo, color, { outline, opts, material });
+}
+
+/**
+ * A cap grown from a lofted head's own rings above `from` — hair, a helm, a
+ * hood's crown — so it hugs the skull it sits on instead of being guessed
+ * at and burying the face. `grow` scales it out from the skull, `back`
+ * slides it toward the nape, and `brow` pulls the front edge further back
+ * still so a fringe never crosses the eyes.
+ */
+export function capOf(head, from, color, { grow = 1.08, back = 0.0, brow = 0.0, hairline = Infinity, seg = 16, outline = 0.016, wave = 0, waves = 7, opts } = {}) {
+  const geo = head.userData.mesh.geometry;
+  const src = geo.userData.rings;
+  const dy = head.userData.dy ?? 0;
+  const bb = geo.boundingBox;
+  // Grown about the skull's own centre rather than ring by ring, so the cap
+  // stands off the crown as far as it does off the temples: scaling each
+  // ring's radius leaves almost no margin where the radius is small.
+  const cy = (bb.min.y + bb.max.y) / 2;
+  // Start exactly at `from`: the skull's ring there, interpolated, then every
+  // ring above it.
+  const y0 = from - dy;
+  let k = 0;
+  while (k < src.length - 2 && src[k + 1].y < y0) k++;
+  const a = src[k];
+  const b = src[k + 1];
+  const t = THREE.MathUtils.clamp((y0 - a.y) / (b.y - a.y || 1), 0, 1);
+  const mix = (f) => (a[f] ?? 0) + ((b[f] ?? 0) - (a[f] ?? 0)) * t;
+  const start = { y: y0, rx: mix('rx'), rz: mix('rz'), x: mix('x'), z: mix('z'), p: a.p ?? 2 };
+  // `back` slides the cap's lower edge toward the nape, fading out toward the
+  // crown; `brow` pulls its front edge clear of the face below `hairline`
+  // and lets it come forward over the forehead above it.
+  const list = [start, ...src.filter((r) => r.y > y0 + 1e-4)];
+  const rings = list.map((r, i) => {
+    const fade = 1 - i / Math.max(1, list.length - 1);
+    const below = 1 - THREE.MathUtils.smoothstep(r.y + dy, hairline - 0.025, hairline + 0.025);
+    const w = hairline === Infinity ? fade : below;
+    return {
+      ...r,
+      y: cy + (r.y - cy) * grow + dy,
+      rx: r.rx * grow - brow * 0.5 * w,
+      rz: r.rz * grow,
+      x: (r.x ?? 0) * grow - back * fade - brow * 0.5 * w,
+      wave: i < 2 ? wave : 0,
+      waves,
+    };
+  });
+  const top = cy + (bb.max.y - cy) * grow + dy;
+  const cap = ringed(rings, color, { seg, bottomY: rings[0].y, topY: top, outline, opts });
+  head.parent ? head.parent.add(cap) : head.add(cap);
+  cap.position.copy(head.position);
+  return cap;
+}
+
+/**
+ * A nose on a lofted face: bridge from `top` down to a tip `len` below it,
+ * standing `jut` proud of the surface. The side camera sees every head in
+ * near-profile, and a profile with no nose reads as a mannequin.
+ */
+export function nose(face, top, len, color, { jut = 0.03, r = 0.016, outline = 0.006 } = {}) {
+  const geo = face.userData.mesh.geometry;
+  const dy = face.userData.dy ?? 0;
+  const at = (y) => frontOf(geo, y - dy, 0).x;
+  const n = tube(
+    [
+      [at(top) - 0.004, top, 0, r * 0.7],
+      [at(top - len * 0.6) + jut * 0.7, top - len * 0.6, 0, r],
+      [at(top - len) + jut, top - len, 0, r * 0.9],
+      [at(top - len) + jut * 0.4, top - len - r * 0.8, 0, r * 0.3],
+    ],
+    color,
+    { seg: 6, outline }
+  );
+  face.add(n);
+  return n;
+}
+
+/**
+ * Lay a decal flat on a lofted part's front (+X) surface, at `y` in the
+ * part's own frame and lateral offset `z`, lifted `lift` clear of it.
+ *
+ * A box had a front plane to put an eye on; a curved face does not, and a
+ * decal parked where the plane used to be floats visibly clear of the cheek
+ * the moment the rig turns. This finds the surface and its facing instead.
+ */
+export function onFront(target, d, y, z, lift = 0.004) {
+  const geo = target.userData.mesh.geometry;
+  const f = frontOf(geo, y - (target.userData.dy ?? 0), z);
+  d.position.set(f.x + lift * Math.sin(f.yaw), y, z + lift * Math.cos(f.yaw));
+  d.rotation.y = f.yaw;
+  target.add(d);
+  return d;
+}
+
+// ---------------------------------------------------------------------------
 // The hunter
 // ---------------------------------------------------------------------------
 
@@ -184,64 +428,171 @@ export function buildHunter() {
   const root = new THREE.Group();
   const n = {}; // named nodes the animator drives
 
-  const coat = { color: P.hunterCoat };
-  const coatDark = { color: P.hunterCoatDark };
-
   // Root origin is at the feet, so world position is ground contact.
   const hips = new THREE.Group();
   hips.position.y = 0.74;
   root.add(hips);
   n.hips = hips;
 
-  const torso = part(0.30, 0.50, 0.40, P.hunterCoat, { pivot: 'bottom' });
+  // The seat of the trousers: what the thighs' ball joints turn inside, so a
+  // stride never opens a gap at the crotch.
+  const seat = blob(0.27, 0.2, 0.34, P.hunterCoatDark, { outline: 0.018 });
+  seat.position.y = -0.03;
+  hips.add(seat);
+
+  // The coat: narrow at the belt, full through the chest, shoulders sloping
+  // into a high collar.
+  const torso = trunk(0.3, 0.5, 0.4, P.hunterCoat, { waist: 0.74, chest: 0.12 });
   hips.add(torso);
   n.torso = torso;
 
+  // A standing collar, leaned back so it frames the jaw instead of hiding it.
+  const collar = ringed(
+    [
+      { y: -0.02, rx: 0.1, rz: 0.13 },
+      { y: 0.04, rx: 0.112, rz: 0.138 },
+      { y: 0.1, rx: 0.124, rz: 0.148, x: -0.008 },
+      { y: 0.125, rx: 0.118, rz: 0.142, x: -0.012 },
+    ],
+    P.hunterCoatDark,
+    { seg: 14, outline: 0.016 }
+  );
+  collar.position.y = 0.44;
+  collar.rotation.z = 0.32;
+  torso.add(collar);
+
+  // The coat's open front: a darker placket down the chest, and the belt.
+  const placket = decal(0.05, 0.34, P.hunterCoatDark);
+  onFront(torso, placket, 0.24, 0, 0.003);
+  const belt = ringed(
+    [
+      { y: -0.005, rx: 0.123, rz: 0.158, p: 2.4 },
+      { y: 0.07, rx: 0.121, rz: 0.156, p: 2.4 },
+    ],
+    P.hunterTrim,
+    { seg: 14, outline: 0.012 }
+  );
+  torso.add(belt);
+  const buckle = block(0.03, 0.06, 0.07, P.bladeSteel, { outline: 0.008, round: 0.4 });
+  buckle.position.set(0.128, 0.032, 0);
+  torso.add(buckle);
+
   // Coat tails — two loose panels behind the hips that the animator swings.
   for (const side of [-1, 1]) {
-    const tail = part(0.24, 0.52, 0.16, P.hunterCoatDark, { pivot: 'top' });
-    tail.position.set(-0.06, 0.04, side * 0.11);
+    const tail = ringed(
+      [
+        { y: -0.56, rx: 0.016, rz: 0.085, x: -0.07, p: 2.6 },
+        { y: -0.52, rx: 0.024, rz: 0.1, x: -0.058, p: 2.6 },
+        { y: -0.26, rx: 0.028, rz: 0.094, x: -0.02, p: 2.6 },
+        { y: 0, rx: 0.032, rz: 0.084, p: 2.6 },
+        { y: 0.03, rx: 0.022, rz: 0.07, p: 2.6 },
+      ],
+      P.hunterCoatDark,
+      { seg: 10, outline: 0.014 }
+    );
+    tail.position.set(-0.08, 0.04, side * 0.095);
     hips.add(tail);
     n[side < 0 ? 'coatL' : 'coatR'] = tail;
   }
 
-  const belt = part(0.32, 0.07, 0.42, P.hunterTrim, { outline: 0.015 });
-  belt.position.y = 0.03;
-  torso.add(belt);
-
   // Chest sigil: the mark of the System.
-  const sigil = decal(0.12, 0.16, P.cyan);
-  sigil.position.set(0.16, 0.30, 0);
-  sigil.rotation.y = Math.PI / 2;
-  torso.add(sigil);
+  const sigil = decal(0.075, 0.075, P.cyan);
+  onFront(torso, sigil, 0.32, 0.07, 0.006);
+  sigil.rotation.z = Math.PI / 4;
   n.sigil = sigil;
 
   const head = new THREE.Group();
-  head.position.y = 0.50;
+  head.position.y = 0.5;
   torso.add(head);
   n.head = head;
 
-  const skull = part(0.24, 0.26, 0.24, P.hunterSkin, { pivot: 'bottom', outline: 0.02 });
-  head.add(skull);
+  const neck = limb(0.1, 0.08, 0.1, P.hunterSkin, { taper: 1, bulge: 0, outline: 0.012, up: true });
+  neck.position.y = -0.04;
+  head.add(neck);
 
-  const hair = part(0.26, 0.16, 0.27, P.hunterHair, { pivot: 'bottom', outline: 0.02 });
-  hair.position.y = 0.17;
+  const face = skull(0.24, 0.27, 0.23, P.hunterSkin, { jaw: 0.68 });
+  face.position.y = 0.02;
+  head.add(face);
+
+  // Hair: a swept mass over the crown and back, bangs over the brow, and
+  // spikes raking back — the silhouette that says anime hunter at any size.
+  const hair = ringed(
+    [
+      { y: 0.1, rx: 0.1, rz: 0.1, x: -0.06 },
+      { y: 0.14, rx: 0.13, rz: 0.125, x: -0.03 },
+      { y: 0.2, rx: 0.14, rz: 0.13, x: -0.01 },
+      { y: 0.26, rx: 0.135, rz: 0.13, x: 0 },
+      { y: 0.3, rx: 0.115, rz: 0.115, x: -0.005 },
+      { y: 0.325, rx: 0.07, rz: 0.075, x: -0.01 },
+    ],
+    P.hunterHair,
+    { seg: 14, outline: 0.016, topY: 0.335, bottomY: 0.1 }
+  );
+  hair.position.y = 0.02;
   head.add(hair);
-  // Spikes, front to back, shrinking — reads as anime hair in silhouette.
-  for (let i = 0; i < 4; i++) {
-    const s = part(0.10 - i * 0.012, 0.14 - i * 0.02, 0.20, P.hunterHair, { pivot: 'bottom', outline: 0.016 });
-    s.position.set(0.09 - i * 0.07, 0.24, 0);
-    s.rotation.z = 0.5 - i * 0.16;
+  // Bangs: locks falling over the brow, and one at each temple, pointing
+  // down and forward — the face-framing half of the silhouette.
+  const bangs = [
+    // z, length, lateral lean, forward reach
+    [-0.075, 0.1, -0.35, 0.05],
+    [-0.025, 0.13, -0.1, 0.06],
+    [0.03, 0.12, 0.15, 0.06],
+    [0.08, 0.09, 0.4, 0.045],
+    [-0.115, 0.14, -0.1, 0.0],
+    [0.115, 0.14, 0.1, 0.0],
+  ];
+  for (const [z, len, lean, reach] of bangs) {
+    const temple = Math.abs(z) > 0.1;
+    const x0 = temple ? 0.02 : 0.075;
+    const lock = tube(
+      [
+        [x0, 0.31, z, 0.036],
+        [x0 + reach, 0.28, z + lean * 0.04, 0.03],
+        [x0 + reach * 1.25, 0.31 - len, z + lean * 0.08, 0.005],
+      ],
+      P.hunterHair,
+      { seg: 6, outline: 0.011, squash: 0.62 }
+    );
+    lock.position.y = 0.02;
+    head.add(lock);
+  }
+
+  // Spikes raking back off the crown and the nape, fanned in Z so the head
+  // reads spiky from the side the camera sees, not just in profile.
+  const spikes = [
+    // x, y, z, length, radius, lateral spread, lift
+    [0.0, 0.33, 0.0, 0.12, 0.05, 0.0, 0.45],
+    [-0.05, 0.32, -0.07, 0.12, 0.045, -0.5, 0.35],
+    [-0.05, 0.32, 0.07, 0.12, 0.045, 0.5, 0.35],
+    [-0.1, 0.27, 0.0, 0.14, 0.05, 0.0, 0.15],
+    [-0.1, 0.25, -0.09, 0.11, 0.04, -0.6, 0.05],
+    [-0.1, 0.25, 0.09, 0.11, 0.04, 0.6, 0.05],
+    [-0.11, 0.18, -0.05, 0.1, 0.04, -0.3, -0.25],
+    [-0.11, 0.18, 0.05, 0.1, 0.04, 0.3, -0.25],
+  ];
+  for (const [x, y, z, len, r, spread, lift] of spikes) {
+    const s = tube(
+      [
+        [x, y, z, r],
+        [x - len * 0.55, y + len * lift * 0.6, z + spread * len * 0.35, r * 0.6],
+        [x - len, y + len * lift, z + spread * len * 0.8, r * 0.08],
+      ],
+      P.hunterHair,
+      { seg: 7, outline: 0.012 }
+    );
     head.add(s);
   }
 
-  // Eyes on the +X face: the direction the model faces.
+  nose(face, 0.15, 0.06, P.hunterSkin, { jut: 0.022, r: 0.014 });
+
+  // Eyes on the face: the direction the model faces.
   for (const side of [-1, 1]) {
-    const eye = decal(0.055, 0.035, P.cyan);
-    eye.position.set(0.125, 0.15, side * 0.06);
-    eye.rotation.y = Math.PI / 2;
-    head.add(eye);
+    const eye = decal(0.055, 0.032, P.cyan);
+    onFront(face, eye, 0.155, side * 0.056, 0.004);
     n[side < 0 ? 'eyeL' : 'eyeR'] = eye;
+    const brow = decal(0.06, 0.014, P.hunterHair);
+    onFront(face, brow, 0.19, side * 0.058, 0.004);
+    brow.rotation.z = side * 0.18;
   }
 
   // Arms. Offset in Z because the lateral axis is Z when facing +X.
@@ -252,7 +603,7 @@ export function buildHunter() {
     torso.add(shoulder);
     n['shoulder' + key] = shoulder;
 
-    const upper = part(0.13, 0.26, 0.13, P.hunterCoat, { pivot: 'top', outline: 0.018 });
+    const upper = limb(0.135, 0.26, 0.135, P.hunterCoat, { taper: 0.84, bulge: 0.06 });
     shoulder.add(upper);
 
     const elbow = new THREE.Group();
@@ -260,11 +611,21 @@ export function buildHunter() {
     shoulder.add(elbow);
     n['elbow' + key] = elbow;
 
-    const fore = part(0.115, 0.25, 0.115, P.hunterCoatDark, { pivot: 'top', outline: 0.018 });
+    const fore = limb(0.118, 0.25, 0.118, P.hunterCoatDark, { taper: 0.78, bulge: 0.07 });
     elbow.add(fore);
+    const cuff = ringed(
+      [
+        { y: -0.235, rx: 0.052, rz: 0.052 },
+        { y: -0.2, rx: 0.058, rz: 0.058 },
+        { y: -0.16, rx: 0.056, rz: 0.056 },
+      ],
+      P.hunterTrim,
+      { seg: 10, outline: 0.01 }
+    );
+    elbow.add(cuff);
 
-    const hand = part(0.11, 0.10, 0.12, P.hunterSkin, { pivot: 'top', outline: 0.015 });
-    hand.position.y = -0.25;
+    const hand = mitt(0.1, 0.1, 0.11, P.hunterSkin, { side });
+    hand.position.y = -0.245;
     elbow.add(hand);
     n['hand' + key] = hand;
   }
@@ -273,11 +634,11 @@ export function buildHunter() {
   for (const side of [-1, 1]) {
     const key = side < 0 ? 'L' : 'R';
     const hip = new THREE.Group();
-    hip.position.set(0, 0, side * 0.10);
+    hip.position.set(0, 0, side * 0.1);
     hips.add(hip);
     n['hip' + key] = hip;
 
-    const thigh = part(0.15, 0.34, 0.16, P.hunterCoatDark, { pivot: 'top', outline: 0.018 });
+    const thigh = limb(0.155, 0.34, 0.16, P.hunterCoatDark, { taper: 0.8, bulge: 0.1 });
     hip.add(thigh);
 
     const knee = new THREE.Group();
@@ -285,11 +646,23 @@ export function buildHunter() {
     hip.add(knee);
     n['knee' + key] = knee;
 
-    const shin = part(0.13, 0.32, 0.14, P.hunterCoatDark, { pivot: 'top', outline: 0.018 });
+    const shin = limb(0.13, 0.32, 0.135, P.hunterCoatDark, { taper: 0.72, bulge: 0.12, bulgeAt: 0.22 });
     knee.add(shin);
+    // Boots to mid-shin: the trim colour, flared at the top.
+    const shaft = ringed(
+      [
+        { y: -0.33, rx: 0.052, rz: 0.054 },
+        { y: -0.22, rx: 0.058, rz: 0.06 },
+        { y: -0.12, rx: 0.07, rz: 0.072 },
+        { y: -0.1, rx: 0.066, rz: 0.068 },
+      ],
+      P.hunterTrim,
+      { seg: 10, outline: 0.012 }
+    );
+    knee.add(shaft);
 
-    const foot = part(0.22, 0.08, 0.15, P.hunterTrim, { pivot: 'top', outline: 0.015 });
-    foot.position.set(0.04, -0.32, 0);
+    const foot = boot(0.23, 0.09, 0.14, P.hunterTrim);
+    foot.position.set(0.04, -0.31, 0);
     knee.add(foot);
   }
 
@@ -405,51 +778,124 @@ export function buildRaakchyas(skin = null) {
   root.add(body);
   n.body = body;
 
-  const chest = part(0.86, 0.42, 0.46, c.body, { outline: 0.026 });
+  // A hound's barrel: deep through the chest, tucked at the waist, rising
+  // again into the haunches — the silhouette of something built to lunge.
+  const chest = barrel(
+    [
+      { x: -0.46, ry: 0.1, rz: 0.1, y: 0.03 },
+      { x: -0.4, ry: 0.16, rz: 0.16, y: 0.03 },
+      { x: -0.27, ry: 0.19, rz: 0.19, y: 0.04 },
+      { x: -0.1, ry: 0.145, rz: 0.15, y: 0.06 },
+      { x: 0.1, ry: 0.19, rz: 0.2, y: 0.01 },
+      { x: 0.27, ry: 0.23, rz: 0.23, y: -0.01 },
+      { x: 0.4, ry: 0.19, rz: 0.2, y: 0.03 },
+      { x: 0.47, ry: 0.11, rz: 0.12, y: 0.06 },
+    ],
+    c.body,
+    { seg: 14, backX: -0.5, frontX: 0.5, outline: 0.026 }
+  );
   body.add(chest);
   n.chest = chest;
 
-  // Spines along the back.
+  // Spines along the back, raking toward the tail.
   for (let i = 0; i < 4; i++) {
-    const spine = part(0.07, 0.18 - i * 0.02, 0.06, c.spine, { pivot: 'bottom', outline: 0.014 });
-    spine.position.set(0.26 - i * 0.17, 0.20, 0);
-    spine.rotation.z = -0.35;
+    const len = 0.2 - i * 0.025;
+    const x0 = 0.28 - i * 0.17;
+    const spine = tube(
+      [
+        [x0, 0.17, 0, 0.04],
+        [x0 - len * 0.35, 0.17 + len * 0.6, 0, 0.026],
+        [x0 - len * 0.9, 0.17 + len * 0.95, 0, 0.004],
+      ],
+      c.spine,
+      { seg: 6, outline: 0.012 }
+    );
     body.add(spine);
   }
 
   const neck = new THREE.Group();
-  neck.position.set(0.40, 0.10, 0);
+  neck.position.set(0.4, 0.1, 0);
   body.add(neck);
   n.neck = neck;
 
-  const head = part(0.40, 0.28, 0.32, c.dark, { outline: 0.024 });
-  head.position.x = 0.18;
+  // The head: a heavy brow over a tapering muzzle, ears laid back, fangs
+  // hanging past the lip.
+  const head = barrel(
+    [
+      { x: -0.06, ry: 0.07, rz: 0.08, y: 0.02 },
+      { x: 0.02, ry: 0.13, rz: 0.15, y: 0.03 },
+      { x: 0.13, ry: 0.135, rz: 0.155, y: 0.03 },
+      { x: 0.24, ry: 0.095, rz: 0.11, y: 0.0 },
+      { x: 0.34, ry: 0.075, rz: 0.085, y: -0.02 },
+      { x: 0.39, ry: 0.05, rz: 0.06, y: -0.02 },
+    ],
+    c.dark,
+    { seg: 12, backX: -0.1, frontX: 0.41, outline: 0.022 }
+  );
   neck.add(head);
+  for (const side of [-1, 1]) {
+    const ear = tube(
+      [
+        [0.02, 0.12, side * 0.08, 0.035],
+        [-0.06, 0.2, side * 0.11, 0.022],
+        [-0.14, 0.24, side * 0.12, 0.004],
+      ],
+      c.dark,
+      { seg: 6, outline: 0.012, squash: 0.55 }
+    );
+    neck.add(ear);
+    const fang = tube(
+      [
+        [0.31, -0.06, side * 0.045, 0.016],
+        [0.325, -0.12, side * 0.045, 0.01],
+        [0.33, -0.16, side * 0.043, 0.002],
+      ],
+      P.bone,
+      { seg: 5, outline: 0.006 }
+    );
+    neck.add(fang);
+  }
 
-  const jaw = part(0.26, 0.10, 0.26, c.dark, { pivot: 'top', outline: 0.018 });
-  jaw.position.set(0.26, -0.10, 0);
+  const jaw = barrel(
+    [
+      { x: -0.16, ry: 0.035, rz: 0.08, y: -0.04 },
+      { x: -0.05, ry: 0.045, rz: 0.09, y: -0.045 },
+      { x: 0.06, ry: 0.04, rz: 0.075, y: -0.045 },
+      { x: 0.12, ry: 0.03, rz: 0.055, y: -0.04 },
+    ],
+    c.dark,
+    { seg: 10, backX: -0.18, frontX: 0.14, outline: 0.016 }
+  );
+  jaw.position.set(0.26, -0.1, 0);
   neck.add(jaw);
   n.jaw = jaw;
 
+  // Eyes set into the brow, angled forward and out so the near one faces
+  // the camera as the rig turns.
   for (const side of [-1, 1]) {
-    const eye = decal(0.10, 0.07, c.eye);
-    eye.position.set(0.38, 0.06, side * 0.09);
-    eye.rotation.y = Math.PI / 2;
+    const eye = decal(0.08, 0.045, c.eye);
+    eye.position.set(0.25, 0.065, side * 0.105);
+    eye.rotation.set(0, Math.PI / 2 - side * 0.75, side * -0.2);
     neck.add(eye);
     n[side < 0 ? 'eyeL' : 'eyeR'] = eye;
   }
 
-  // Legs: front pair and back pair, each offset laterally in Z.
+  // Legs: straight at the front, a hock at the back. Each is one rigid
+  // piece swung from its hip, as before.
   let i = 0;
   for (const fx of [0.3, -0.3]) {
+    const front = fx > 0;
     for (const side of [-1, 1]) {
       const hip = new THREE.Group();
       hip.position.set(fx, -0.18, side * 0.17);
       body.add(hip);
-      const upper = part(0.13, 0.26, 0.13, c.dark, { pivot: 'top', outline: 0.016 });
-      hip.add(upper);
-      const paw = part(0.17, 0.10, 0.15, c.dark, { pivot: 'top', outline: 0.014 });
-      paw.position.set(0.02, -0.26, 0);
+      const pts = front
+        ? [[0, 0.1, 0, 0.085], [0.01, -0.1, 0, 0.066], [0.0, -0.26, 0, 0.046], [0.03, -0.33, 0, 0.042]]
+        : [[0, 0.12, 0, 0.1], [0.05, -0.08, 0, 0.075], [-0.04, -0.24, 0, 0.045], [0.0, -0.33, 0, 0.042]];
+      const leg = tube(pts, c.dark, { seg: 8, outline: 0.016 });
+      hip.add(leg);
+      const paw = boot(0.17, 0.08, 0.14, c.dark, { toe: 0.45 });
+      paw.position.set(0.03, -0.33, 0);
       hip.add(paw);
       n['leg' + i] = hip;
       i++;
@@ -460,8 +906,16 @@ export function buildRaakchyas(skin = null) {
   tail.position.set(-0.42, 0.08, 0);
   body.add(tail);
   n.tail = tail;
-  const tailSeg = part(0.34, 0.09, 0.09, c.dark, { outline: 0.014 });
-  tailSeg.position.x = -0.17;
+  const tailSeg = tube(
+    [
+      [0.04, 0, 0, 0.06],
+      [-0.12, 0.02, 0, 0.045],
+      [-0.26, 0.06, 0, 0.03],
+      [-0.38, 0.12, 0, 0.012],
+    ],
+    c.dark,
+    { seg: 7, outline: 0.014 }
+  );
   tail.add(tailSeg);
 
   root.userData.nodes = n;
@@ -496,48 +950,110 @@ export function buildCharger(skin = null) {
   root.add(body);
   n.body = body;
 
-  const chest = part(1.02, 0.54, 0.62, c.body, { outline: 0.03 });
+  // Front-heavy: a bull's depth through the chest falling away to narrow
+  // hindquarters, so the mass visibly leads.
+  const chest = barrel(
+    [
+      { x: -0.5, ry: 0.13, rz: 0.15, y: 0.04 },
+      { x: -0.42, ry: 0.2, rz: 0.23, y: 0.03 },
+      { x: -0.24, ry: 0.23, rz: 0.27, y: 0.02 },
+      { x: -0.02, ry: 0.25, rz: 0.29, y: 0.0 },
+      { x: 0.22, ry: 0.29, rz: 0.32, y: -0.02 },
+      { x: 0.42, ry: 0.27, rz: 0.3, y: -0.03 },
+      { x: 0.53, ry: 0.17, rz: 0.2, y: -0.05 },
+    ],
+    c.body,
+    { seg: 14, backX: -0.56, frontX: 0.57, outline: 0.03 }
+  );
   body.add(chest);
 
-  // The slab over the shoulders. This is the part that arrives first, and it
-  // is the heaviest thing on the model for that reason.
-  const plate = part(0.40, 0.44, 0.66, c.dark, { outline: 0.026 });
-  plate.position.set(0.34, 0.09, 0);
+  // The slab over the shoulders: the part that arrives first, and the
+  // heaviest thing on the model for that reason — plated, with a ridge.
+  const plate = blob(0.46, 0.34, 0.7, c.dark, { p: 3.4, pv: 2.2, outline: 0.026, seg: 14 });
+  plate.position.set(0.3, 0.2, 0);
+  plate.rotation.z = -0.28;
   body.add(plate);
+  for (let i = 0; i < 3; i++) {
+    const ridge = tube(
+      [
+        [0.42 - i * 0.14, 0.34 - i * 0.02, 0, 0.045],
+        [0.36 - i * 0.14, 0.44 - i * 0.03, 0, 0.03],
+        [0.28 - i * 0.14, 0.5 - i * 0.04, 0, 0.005],
+      ],
+      P.bone,
+      { seg: 6, outline: 0.012 }
+    );
+    body.add(ridge);
+  }
 
   const neck = new THREE.Group();
   neck.position.set(0.48, -0.06, 0);
   body.add(neck);
   n.neck = neck;
 
-  const head = part(0.40, 0.32, 0.40, c.dark, { outline: 0.026 });
-  head.position.x = 0.19;
+  // A broad, low head: heavy brow, blunt snout, horns sweeping forward.
+  const head = barrel(
+    [
+      { x: -0.02, ry: 0.13, rz: 0.17, y: 0.02 },
+      { x: 0.1, ry: 0.17, rz: 0.2, y: 0.03 },
+      { x: 0.22, ry: 0.15, rz: 0.18, y: 0.0 },
+      { x: 0.33, ry: 0.12, rz: 0.15, y: -0.04 },
+      { x: 0.4, ry: 0.1, rz: 0.13, y: -0.05 },
+    ],
+    c.dark,
+    { seg: 12, backX: -0.06, frontX: 0.43, outline: 0.026 }
+  );
   neck.add(head);
 
   for (const side of [-1, 1]) {
-    const horn = part(0.34, 0.10, 0.10, P.bone, { outline: 0.016 });
-    horn.position.set(0.40, 0.11, side * 0.16);
-    horn.rotation.z = 0.40;
-    horn.rotation.y = side * 0.22;
+    const horn = tube(
+      [
+        [0.18, 0.12, side * 0.15, 0.05],
+        [0.3, 0.2, side * 0.22, 0.04],
+        [0.44, 0.26, side * 0.22, 0.026],
+        [0.56, 0.25, side * 0.17, 0.006],
+      ],
+      P.bone,
+      { seg: 7, outline: 0.014 }
+    );
     neck.add(horn);
+    const tusk = tube(
+      [
+        [0.36, -0.1, side * 0.09, 0.024],
+        [0.43, -0.06, side * 0.11, 0.016],
+        [0.46, 0.0, side * 0.1, 0.003],
+      ],
+      P.bone,
+      { seg: 5, outline: 0.008 }
+    );
+    neck.add(tusk);
 
-    const eye = decal(0.09, 0.07, c.eye);
-    eye.position.set(0.40, 0.02, side * 0.13);
-    eye.rotation.y = Math.PI / 2;
+    const eye = decal(0.08, 0.05, c.eye);
+    eye.position.set(0.3, 0.06, side * 0.155);
+    eye.rotation.set(0, Math.PI / 2 - side * 0.7, side * -0.25);
     neck.add(eye);
     n[side < 0 ? 'eyeL' : 'eyeR'] = eye;
   }
 
-  // Four thick legs, front pair and back pair, offset laterally in Z.
+  // Four thick legs, front pair and back pair, offset laterally in Z, on
+  // split hooves of bone.
   let i = 0;
   for (const fx of [0.32, -0.32]) {
     for (const side of [-1, 1]) {
       const hip = new THREE.Group();
       hip.position.set(fx, -0.25, side * 0.22);
       body.add(hip);
-      const upper = part(0.18, 0.28, 0.18, c.dark, { pivot: 'top', outline: 0.018 });
+      const upper = limb(0.2, 0.28, 0.2, c.dark, { taper: 0.66, bulge: 0.12, bulgeAt: 0.25 });
       hip.add(upper);
-      const hoof = part(0.22, 0.12, 0.20, P.bone, { pivot: 'top', outline: 0.016 });
+      const hoof = ringed(
+        [
+          { y: -0.12, rx: 0.1, rz: 0.09, p: 2.4 },
+          { y: -0.06, rx: 0.085, rz: 0.08, p: 2.4 },
+          { y: 0.0, rx: 0.07, rz: 0.066, p: 2.4 },
+        ],
+        P.bone,
+        { seg: 10, outline: 0.014 }
+      );
       hoof.position.set(0.02, -0.28, 0);
       hip.add(hoof);
       n['leg' + i] = hip;
@@ -546,12 +1062,22 @@ export function buildCharger(skin = null) {
   }
 
   const tail = new THREE.Group();
-  tail.position.set(-0.50, 0.10, 0);
+  tail.position.set(-0.5, 0.1, 0);
   body.add(tail);
   n.tail = tail;
-  const tailSeg = part(0.26, 0.10, 0.10, c.dark, { outline: 0.014 });
-  tailSeg.position.x = -0.13;
+  const tailSeg = tube(
+    [
+      [0.04, 0, 0, 0.04],
+      [-0.1, -0.02, 0, 0.028],
+      [-0.22, -0.08, 0, 0.016],
+    ],
+    c.dark,
+    { seg: 6, outline: 0.012 }
+  );
   tail.add(tailSeg);
+  const tuft = blob(0.08, 0.1, 0.07, c.dark, { outline: 0.01 });
+  tuft.position.set(-0.25, -0.1, 0);
+  tail.add(tuft);
 
   root.userData.nodes = n;
   return root;
@@ -578,28 +1104,79 @@ export function buildKawach(skin = null) {
   root.add(body);
   n.body = body;
 
-  const torso = part(0.48, 0.56, 0.48, c.body, { pivot: 'bottom', outline: 0.03 });
+  // The cuirass is the torso: squared like plate rather than rounded like
+  // flesh, deep through the chest, with a keel down the front, a gorget at
+  // the neck and a belt at the waist.
+  const torso = trunk(0.5, 0.56, 0.5, c.body, { waist: 0.8, chest: 0.12, p: 3.4, neck: 0.5, outline: 0.03 });
   body.add(torso);
+  const keel = block(0.04, 0.3, 0.06, c.dark, { round: 0.45, outline: 0.01 });
+  onFront(torso, keel, 0.3, 0, -0.01);
+  const gorget = ringed(
+    [
+      { y: 0.5, rx: 0.15, rz: 0.17, p: 3 },
+      { y: 0.56, rx: 0.14, rz: 0.16, p: 3 },
+      { y: 0.62, rx: 0.12, rz: 0.13, p: 3 },
+    ],
+    c.dark,
+    { seg: 14, outline: 0.016 }
+  );
+  torso.add(gorget);
+  const belt = ringed(
+    [
+      { y: 0.0, rx: 0.205, rz: 0.205, p: 3.2 },
+      { y: 0.08, rx: 0.205, rz: 0.205, p: 3.2 },
+    ],
+    c.dark,
+    { seg: 14, outline: 0.014 }
+  );
+  torso.add(belt);
 
-  // The plate: a slab bolted over the chest, wider than the body beneath it.
-  const plate = part(0.56, 0.34, 0.54, c.dark, { outline: 0.028 });
-  plate.position.set(0.02, 0.30, 0);
-  torso.add(plate);
+  // Tassets: a skirt of plates over the hips, which also hides where the
+  // thighs meet the body.
+  const tassets = skirt(0.48, 0.5, 0.56, 0.58, 0.2, c.dark, { p: 3.2, folds: 6, fold: 0.045, outline: 0.022 });
+  tassets.position.y = 0.04;
+  body.add(tassets);
 
   const head = new THREE.Group();
   head.position.y = 0.62;
   torso.add(head);
   n.head = head;
 
-  const helm = part(0.30, 0.26, 0.30, c.dark, { pivot: 'bottom', outline: 0.024 });
+  // The helm: a bucket with a flared rim, a flat face plate and a brow
+  // ridge over a dark visor band the eyes burn through, crested on top.
+  const helm = ringed(
+    [
+      { y: 0.0, rx: 0.12, rz: 0.12, p: 3.2 },
+      { y: 0.035, rx: 0.158, rz: 0.152, p: 3.2 },
+      { y: 0.1, rx: 0.15, rz: 0.146, p: 3.2 },
+      { y: 0.17, rx: 0.152, rz: 0.148, p: 3.2 },
+      { y: 0.215, rx: 0.162, rz: 0.156, x: 0.006, p: 3.2 },
+      { y: 0.26, rx: 0.142, rz: 0.142, x: -0.006, p: 3 },
+      { y: 0.3, rx: 0.1, rz: 0.104, x: -0.018, p: 2.6 },
+      { y: 0.322, rx: 0.05, rz: 0.055, x: -0.024, p: 2.4 },
+    ],
+    c.body,
+    { seg: 16, outline: 0.024, bottomY: 0.0, topY: 0.328 }
+  );
   head.add(helm);
+  const crest = ringed(
+    [
+      { y: 0.26, rx: 0.13, rz: 0.02, x: -0.02 },
+      { y: 0.34, rx: 0.15, rz: 0.026, x: -0.03 },
+      { y: 0.39, rx: 0.1, rz: 0.02, x: -0.05 },
+    ],
+    c.dark,
+    { seg: 10, outline: 0.012 }
+  );
+  head.add(crest);
+  const visor = decal(0.055, 0.25, 0x0b0910);
+  onFront(helm, visor, 0.14, 0, 0.003);
+  visor.rotation.z = Math.PI / 2;
 
   // Eyes, in the game's shared vocabulary: they flare when a commit is near.
   for (const side of [-1, 1]) {
-    const eye = decal(0.07, 0.045, c.eye);
-    eye.position.set(0.155, 0.13, side * 0.075);
-    eye.rotation.y = Math.PI / 2;
-    head.add(eye);
+    const eye = decal(0.07, 0.036, c.eye);
+    onFront(helm, eye, 0.14, side * 0.064, 0.006);
     n[side < 0 ? 'eyeL' : 'eyeR'] = eye;
   }
 
@@ -610,10 +1187,18 @@ export function buildKawach(skin = null) {
     torso.add(shoulder);
     n['shoulder' + key] = shoulder;
 
-    const pauldron = part(0.22, 0.20, 0.22, c.dark, { outline: 0.022 });
+    // Pauldron: a wide shell sloping down off the shoulder, over a smaller
+    // lame beneath it.
+    const pauldron = blob(0.32, 0.17, 0.26, c.body, { p: 3.2, pv: 2.2, outline: 0.022 });
+    pauldron.position.set(0, 0.04, side * 0.03);
+    pauldron.rotation.x = side * 0.32;
     shoulder.add(pauldron);
+    const lame = blob(0.26, 0.12, 0.2, c.dark, { p: 3, pv: 2.2, outline: 0.018 });
+    lame.position.set(0, -0.05, side * 0.06);
+    lame.rotation.x = side * 0.45;
+    shoulder.add(lame);
 
-    const upper = part(0.15, 0.28, 0.15, c.body, { pivot: 'top', outline: 0.02 });
+    const upper = limb(0.15, 0.28, 0.15, c.dark, { taper: 0.9, bulge: 0.05 });
     upper.position.y = -0.05;
     shoulder.add(upper);
 
@@ -622,15 +1207,24 @@ export function buildKawach(skin = null) {
     shoulder.add(elbow);
     n['elbow' + key] = elbow;
 
-    const fore = part(0.13, 0.26, 0.13, c.dark, { pivot: 'top', outline: 0.02 });
+    const fore = limb(0.15, 0.24, 0.15, c.body, { taper: 0.88, bulge: 0.08, bulgeAt: 0.45, p: 2.8 });
     elbow.add(fore);
+    const fist = mitt(0.12, 0.11, 0.13, c.dark, { side });
+    fist.position.y = -0.25;
+    elbow.add(fist);
   }
 
-  // The shield, bolted to the near arm: a slab that reads "this doesn't
-  // flinch head-on" before the bash ever telegraphs.
-  const shield = part(0.05, 0.48, 0.34, c.dark, { outline: 0.02 });
-  shield.position.set(0.10, -0.05, 0);
+  // The shield, bolted to the near arm: a tower of plate with a raised boss
+  // that reads "this doesn't flinch head-on" before the bash ever telegraphs.
+  const shield = block(0.06, 0.52, 0.36, c.body, { round: 0.3, p: 4.5, outline: 0.022 });
+  shield.position.set(0.1, -0.05, 0);
   n.elbowL.add(shield);
+  const shieldRim = block(0.05, 0.44, 0.28, c.dark, { round: 0.3, p: 4.5, outline: 0.0 });
+  shieldRim.position.set(0.012, 0, 0);
+  shield.add(shieldRim);
+  const shieldBoss = blob(0.07, 0.13, 0.13, c.body, { outline: 0.012 });
+  shieldBoss.position.set(0.045, 0.02, 0);
+  shield.add(shieldBoss);
 
   // Legs — wide, low. Standing armour, not something built to chase.
   for (const side of [-1, 1]) {
@@ -640,7 +1234,7 @@ export function buildKawach(skin = null) {
     body.add(hip);
     n['hip' + key] = hip;
 
-    const thigh = part(0.19, 0.28, 0.19, c.dark, { pivot: 'top', outline: 0.022 });
+    const thigh = limb(0.2, 0.28, 0.2, c.dark, { taper: 0.84, bulge: 0.06 });
     hip.add(thigh);
 
     const knee = new THREE.Group();
@@ -648,10 +1242,13 @@ export function buildKawach(skin = null) {
     hip.add(knee);
     n['knee' + key] = knee;
 
-    const shin = part(0.17, 0.26, 0.17, c.body, { pivot: 'top', outline: 0.02 });
-    knee.add(shin);
+    const greave = limb(0.17, 0.26, 0.17, c.body, { taper: 0.92, bulge: 0.08, bulgeAt: 0.25, p: 2.8 });
+    knee.add(greave);
+    const cop = blob(0.12, 0.13, 0.15, c.body, { p: 2.6, outline: 0.014 });
+    cop.position.set(0.07, 0.01, 0);
+    knee.add(cop);
 
-    const foot = part(0.25, 0.09, 0.19, c.dark, { pivot: 'top', outline: 0.018 });
+    const foot = boot(0.27, 0.1, 0.19, c.dark, { toe: 0.4 });
     foot.position.set(0.04, -0.26, 0);
     knee.add(foot);
   }
@@ -712,16 +1309,16 @@ export function buildBhootBatti(skin = null) {
   const root = new THREE.Group();
   const n = {};
 
-  const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.20, 0), glowMaterial({ color: c.core }));
+  const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.2, 1), glowMaterial({ color: c.core }));
   root.add(core);
   n.core = core;
 
   const halo = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(0.34, 0),
+    new THREE.IcosahedronGeometry(0.34, 1),
     new THREE.MeshBasicMaterial({
       color: c.halo,
       transparent: true,
-      opacity: 0.30,
+      opacity: 0.3,
       fog: false,
       depthWrite: false,
       toneMapped: false,
@@ -730,13 +1327,30 @@ export function buildBhootBatti(skin = null) {
   root.add(halo);
   n.halo = halo;
 
-  // Orbiting shards, animated as a group.
+  // The lamp's cage: two thin bands crossed around the flame, so it reads
+  // as a ghost-lantern (a *batti*) rather than as a loose ball of light.
+  for (const tilt of [0.5, -0.5]) {
+    const band = new THREE.Mesh(tor(0.27, 0.014, 5, 18), mat(c.shard, { rim: 0.3 }));
+    band.rotation.set(Math.PI / 2, 0, tilt);
+    halo.add(band);
+  }
+
+  // Orbiting shards, animated as a group: long crystals rather than chips.
   const ring = new THREE.Group();
   root.add(ring);
   n.ring = ring;
   for (let i = 0; i < 5; i++) {
     const a = (i / 5) * Math.PI * 2;
-    const shard = part(0.09, 0.20, 0.05, c.shard, { outline: 0.014 });
+    const shard = ringed(
+      [
+        { y: -0.13, rx: 0.004, rz: 0.004, p: 2 },
+        { y: -0.02, rx: 0.045, rz: 0.028, p: 2 },
+        { y: 0.05, rx: 0.04, rz: 0.024, p: 2 },
+        { y: 0.15, rx: 0.004, rz: 0.004, p: 2 },
+      ],
+      c.shard,
+      { seg: 6, outline: 0.012, bottomY: -0.14, topY: 0.16 }
+    );
     shard.position.set(Math.cos(a) * 0.42, Math.sin(a) * 0.12, Math.sin(a) * 0.42);
     shard.rotation.set(a, a * 1.7, a * 0.5);
     ring.add(shard);
@@ -767,27 +1381,52 @@ export function buildTantrik(skin = null) {
   root.add(body);
   n.body = body;
 
-  const robe = part(0.42, 0.6, 0.42, c.robe, { pivot: 'bottom', outline: 0.03 });
+  // A hunched, narrow-shouldered robe, stooped forward over the sigil.
+  const robe = trunk(0.4, 0.6, 0.42, c.robe, { waist: 0.92, chest: 0.02, taper: 0.8, neck: 0.5, outline: 0.028 });
+  robe.rotation.z = -0.12;
   body.add(robe);
 
-  // The hem: a wide skirt rather than jointed legs — a Tantrik never runs, it
-  // keeps a ring and casts from inside it.
-  const hem = part(0.5, 0.3, 0.5, c.dark, { pivot: 'top', outline: 0.026 });
+  // The hem: a wide, pleated skirt rather than jointed legs — a Tantrik never
+  // runs, it keeps a ring and casts from inside it.
+  const hem = skirt(0.4, 0.42, 0.62, 0.62, 0.62, c.dark, { folds: 7, fold: 0.07, outline: 0.026 });
+  hem.position.y = 0.04;
   robe.add(hem);
+  const sash = ringed(
+    [
+      { y: 0.02, rx: 0.19, rz: 0.2 },
+      { y: 0.09, rx: 0.188, rz: 0.198 },
+    ],
+    c.sigil,
+    { seg: 14, outline: 0.012, opts: { rim: 0.3 } }
+  );
+  robe.add(sash);
 
   const head = new THREE.Group();
   head.position.y = 0.56;
   robe.add(head);
   n.head = head;
 
-  const hood = part(0.26, 0.28, 0.26, c.dark, { pivot: 'bottom', outline: 0.024 });
+  // The hood: a deep cowl peaked at the back, its dark mouth hiding the face
+  // so only the eyes are ever seen.
+  const hood = ringed(
+    [
+      { y: -0.04, rx: 0.15, rz: 0.16, x: -0.01 },
+      { y: 0.06, rx: 0.155, rz: 0.15, x: 0.0 },
+      { y: 0.16, rx: 0.14, rz: 0.135, x: -0.005 },
+      { y: 0.24, rx: 0.11, rz: 0.1, x: -0.03 },
+      { y: 0.3, rx: 0.06, rz: 0.05, x: -0.07 },
+      { y: 0.33, rx: 0.02, rz: 0.018, x: -0.11 },
+    ],
+    c.dark,
+    { seg: 14, outline: 0.022, bottomY: -0.05, topY: 0.34 }
+  );
   head.add(hood);
+  const shadow = decal(0.2, 0.2, 0x07050c);
+  onFront(hood, shadow, 0.1, 0, 0.004);
 
   for (const side of [-1, 1]) {
-    const eye = decal(0.055, 0.045, c.eye);
-    eye.position.set(0.135, 0.12, side * 0.07);
-    eye.rotation.y = Math.PI / 2;
-    head.add(eye);
+    const eye = decal(0.05, 0.034, c.eye);
+    onFront(hood, eye, 0.12, side * 0.05, 0.009);
     n[side < 0 ? 'eyeL' : 'eyeR'] = eye;
   }
 
@@ -805,11 +1444,11 @@ export function buildTantrik(skin = null) {
   for (const side of [-1, 1]) {
     const key = side < 0 ? 'L' : 'R';
     const shoulder = new THREE.Group();
-    shoulder.position.set(0, 0.5, side * 0.22);
+    shoulder.position.set(0, 0.5, side * 0.2);
     robe.add(shoulder);
     n['shoulder' + key] = shoulder;
 
-    const upper = part(0.1, 0.28, 0.1, c.dark, { pivot: 'top', outline: 0.018 });
+    const upper = limb(0.12, 0.28, 0.12, c.dark, { taper: 0.9, bulge: 0 });
     shoulder.add(upper);
 
     const elbow = new THREE.Group();
@@ -817,8 +1456,12 @@ export function buildTantrik(skin = null) {
     shoulder.add(elbow);
     n['elbow' + key] = elbow;
 
-    const fore = part(0.09, 0.24, 0.09, c.robe, { pivot: 'top', outline: 0.016 });
-    elbow.add(fore);
+    // A sleeve that flares to the wrist, and a thin grey hand out of it.
+    const sleeve = skirt(0.1, 0.1, 0.17, 0.17, 0.24, c.robe, { outline: 0.016, seg: 10 });
+    elbow.add(sleeve);
+    const hand = mitt(0.07, 0.09, 0.07, P.bone, { side, fist: false, outline: 0.01 });
+    hand.position.y = -0.24;
+    elbow.add(hand);
   }
 
   root.userData.nodes = n;
@@ -1058,27 +1701,23 @@ export function buildShakuni() {
   // coat now hangs nearly straight from the waist to below the knee and opens
   // only in the last fifth of its height, which is how the reference draws it
   // and is what makes the flare read as a hem rather than as a skirt.
-  const skirt = shaped(
-    lathe(
-      [
-        [0.0, 0.0],
-        [0.268, 0.010],
-        [0.268, 0.042],
-        [0.232, 0.058], // the hem, and the only real flare on him
-        [0.214, 0.170],
-        [0.196, 0.186], // second layer's hem
-        [0.192, 0.470],
-        [0.172, 0.492], // third layer's hem
-        [0.166, 0.700],
-        [0.152, 0.860],
-      ],
-      12
-    ),
+  const robeSkirt = ringed(
+    [
+      { y: 0.01, rx: 0.268, rz: 0.268, wave: 0.035, waves: 9 },
+      { y: 0.042, rx: 0.268, rz: 0.268, wave: 0.035, waves: 9 },
+      { y: 0.058, rx: 0.232, rz: 0.232, wave: 0.02, waves: 9 }, // the hem, and the only real flare on him
+      { y: 0.17, rx: 0.214, rz: 0.214, wave: 0.012, waves: 9 },
+      { y: 0.186, rx: 0.196, rz: 0.196 }, // second layer's hem
+      { y: 0.47, rx: 0.192, rz: 0.192 },
+      { y: 0.492, rx: 0.172, rz: 0.172 }, // third layer's hem
+      { y: 0.7, rx: 0.166, rz: 0.166 },
+      { y: 0.86, rx: 0.152, rz: 0.152 },
+    ],
     P.shakuniRobe,
-    { outline: 0.026, opts: { map: 'shakuni.robe', steps: 3 } }
+    { seg: 20, bottomY: 0.0, topY: 0.87, outline: 0.026, opts: { map: 'shakuni.robe', steps: 3 } }
   );
-  rig.add(skirt);
-  n.skirt = skirt;
+  rig.add(robeSkirt);
+  n.skirt = robeSkirt;
 
   // The gold hem running round the floor edge — the reference draws it as the
   // robe's brightest element, and at combat distance it is what separates the
@@ -1107,8 +1746,11 @@ export function buildShakuni() {
   // Tapered and narrow: 0.135 at the shoulder against the skirt's 0.35 at the
   // floor. That ratio is the whole "slender aristocrat" read, and it is a
   // proportion a stack of boxes states far less clearly than a cone frustum.
-  const robe = shaped(cyl(0.118, 0.152, 0.50, 9), P.shakuniRobe, {
-    pivot: 'bottom',
+  const robe = trunk(0.27, 0.5, 0.29, P.shakuniRobe, {
+    waist: 1.04,
+    chest: 0.06,
+    taper: 0.88,
+    neck: 0.44,
     outline: 0.024,
     opts: { map: 'shakuni.robe', steps: 3 },
   });
@@ -1118,13 +1760,21 @@ export function buildShakuni() {
   // The asymmetric wine sash, over the right shoulder and down to the left
   // hip. Two panels, front and back, so it reads from either facing — he turns
   // by yawing 180°, and a one-sided sash would vanish half the time.
-  for (const sign of [1, -1]) {
-    const sash = part(0.045, 0.68, 0.10, P.shakuniWine, { outline: 0.014 });
-    sash.position.set(sign * 0.098, 0.25, 0);
-    sash.rotation.x = sign * 0.42;
-    stoop.add(sash);
-    n.wineMeshes.push(sash.userData.mesh);
+  // The asymmetric wine sash, over the right shoulder and down to the left
+  // hip, and round the back again — one band wrapping the body, so it reads
+  // from either facing (he turns by yawing 180°).
+  const sashPts = [];
+  for (let i = 0; i <= 16; i++) {
+    const a = (i / 16) * Math.PI * 2;
+    // A tilted ellipse round the torso: high at the right shoulder (+Z, a=π/2),
+    // low at the left hip (-Z, a=3π/2).
+    const y = 0.28 + 0.2 * Math.sin(a);
+    const r = 0.125 + 0.03 * (1 - Math.sin(a)) * 0.5;
+    sashPts.push([Math.cos(a) * (r + 0.02), y, Math.sin(a) * (r + 0.03), 0.028]);
   }
+  const sash = tube(sashPts, P.shakuniWine, { seg: 6, squash: 2.2, outline: 0.012 });
+  stoop.add(sash);
+  n.wineMeshes.push(sash.userData.mesh);
 
   // A gold cord where the sash crosses the waist.
   const cord = shaped(tor(0.150, 0.016, 5, 16), P.shakuniGold, { outline: 0.011 });
@@ -1162,29 +1812,42 @@ export function buildShakuni() {
 
   // A neck, thin and visibly holding a heavy head up. Two boxes of skull would
   // have hidden this joint; a narrow cylinder makes it a feature.
-  const neck = shaped(cyl(0.055, 0.065, 0.12, 7), P.shakuniSkin, { pivot: 'top', outline: 0.010 });
-  neck.position.y = 0.02;
+  const neck = limb(0.11, 0.12, 0.11, P.shakuniSkin, { taper: 1.15, bulge: 0, outline: 0.01 });
+  neck.position.y = 0.04;
   head.add(neck);
 
-  // The skull, scaled long and narrow — sunken, not round.
-  const skull = shaped(sph(0.135, 10, 7), P.shakuniSkin, { outline: 0.018 });
-  // Long and narrow. At 0.155 the head was as wide as the shoulders and read
-  // as a mask on a stick; the taper is where "aged" lives on a face this size.
-  skull.scale.set(0.92, 1.18, 0.86);
-  skull.position.y = 0.14;
-  head.add(skull);
-  n.skull = skull;
+  // The skull, long and narrow — sunken, not round. At 0.155 wide the head
+  // was as wide as the shoulders and read as a mask on a stick; the taper is
+  // where "aged" lives on a face this size.
+  const face = skull(0.25, 0.32, 0.23, P.shakuniSkin, { jaw: 0.6, outline: 0.018 });
+  face.position.y = -0.02;
+  head.add(face);
+  n.skull = face;
 
   // A heavy brow, the one hard edge on the face. Everything else about him is
   // soft and curved; this is what stops "elderly" reading as "kindly".
-  const brow = part(0.055, 0.035, 0.20, P.shakuniSkin, { outline: 0.010 });
-  brow.position.set(0.098, 0.185, 0);
+  const brow = ringed(
+    [
+      { y: -0.016, rx: 0.02, rz: 0.1, p: 3 },
+      { y: 0.0, rx: 0.03, rz: 0.105, p: 3 },
+      { y: 0.016, rx: 0.018, rz: 0.098, p: 3 },
+    ],
+    P.shakuniSkin,
+    { seg: 10, outline: 0.01 }
+  );
+  brow.position.set(0.1, 0.185, 0);
   brow.rotation.z = 0.16;
   head.add(brow);
 
-  const nose = shaped(cone(0.032, 0.09, 5), P.shakuniSkin, { outline: 0.008 });
-  nose.rotation.z = -Math.PI / 2;
-  nose.position.set(0.122, 0.125, 0);
+  const nose = tube(
+    [
+      [0.1, 0.17, 0, 0.02],
+      [0.13, 0.13, 0, 0.022],
+      [0.14, 0.105, 0, 0.012],
+    ],
+    P.shakuniSkin,
+    { seg: 6, outline: 0.008 }
+  );
   head.add(nose);
 
   // The eyes. Sunk *under* the brow rather than sitting on the face, which is
@@ -1226,16 +1889,32 @@ export function buildShakuni() {
     [0.44, 0.038, 0.052, 0.002],
     [0.44, 0.038, -0.052, 0.002],
   ]) {
-    const strand = shaped(cone(r, len, 6), P.shakuniBeard, { outline: 0.012 });
-    strand.rotation.z = Math.PI; // apex down
-    strand.position.set(x, -len / 2 + 0.02, z);
+    const strand = tube(
+      [
+        [x, 0.03, z, r * 0.9],
+        [x + 0.01, -len * 0.3, z * 1.1, r],
+        [x - 0.005, -len * 0.62, z * 1.25, r * 0.62],
+        [x + 0.012, -len, z * 1.35, r * 0.08],
+      ],
+      P.shakuniBeard,
+      { seg: 7, outline: 0.012 }
+    );
     beardGroup.add(strand);
   }
 
   // The moustache, joining the beard to the nose so the face is one mass.
-  const tache = part(0.05, 0.03, 0.11, P.shakuniBeard, { outline: 0.008 });
-  tache.position.set(0.118, 0.075, 0);
-  head.add(tache);
+  for (const side of [-1, 1]) {
+    const tache = tube(
+      [
+        [0.13, 0.085, side * 0.005, 0.016],
+        [0.13, 0.07, side * 0.045, 0.018],
+        [0.11, 0.035, side * 0.07, 0.008],
+      ],
+      P.shakuniBeard,
+      { seg: 6, outline: 0.008 }
+    );
+    head.add(tache);
+  }
 
   // -- headwear --------------------------------------------------------------
   //
@@ -1256,9 +1935,8 @@ export function buildShakuni() {
   head.add(bandTrim);
   n.goldMeshes.push(bandTrim.userData.mesh);
 
-  const crown = shaped(sph(0.148, 9, 5), P.shakuniRobeDark, { outline: 0.016 });
-  crown.scale.set(0.96, 1.05, 0.92);
-  crown.position.y = 0.26;
+  const crown = blob(0.284, 0.26, 0.272, P.shakuniRobeDark, { outline: 0.016, seg: 14 });
+  crown.position.y = 0.3;
   head.add(crown);
 
   const crownTrim = shaped(tor(0.10, 0.014, 5, 16), P.shakuniGold, { outline: 0.008 });
@@ -1278,7 +1956,16 @@ export function buildShakuni() {
 
   // A short cloth tail off the back of the band, so the head has weight from
   // behind as well as in front.
-  const tail = part(0.09, 0.24, 0.16, P.shakuniWineDark, { pivot: 'top', outline: 0.014 });
+  const tail = ringed(
+    [
+      { y: -0.24, rx: 0.02, rz: 0.06, x: -0.02, p: 2.6 },
+      { y: -0.2, rx: 0.03, rz: 0.08, x: -0.012, p: 2.6 },
+      { y: -0.06, rx: 0.036, rz: 0.075, p: 2.6 },
+      { y: 0.0, rx: 0.04, rz: 0.07, p: 2.6 },
+    ],
+    P.shakuniWineDark,
+    { seg: 10, outline: 0.014, topY: 0.03 }
+  );
   tail.position.set(-0.14, 0.24, 0);
   tail.rotation.z = -0.25;
   head.add(tail);
@@ -1299,12 +1986,10 @@ export function buildShakuni() {
     n['shoulder' + key] = shoulder;
 
     // A sleeve cap, wider than the arm inside it — court dress again.
-    const cap = shaped(sph(0.072, 8, 6), P.shakuniRobeDark, { outline: 0.013 });
-    cap.scale.set(1, 0.85, 1);
+    const cap = blob(0.15, 0.12, 0.15, P.shakuniRobeDark, { outline: 0.013 });
     shoulder.add(cap);
 
-    const upper = shaped(cyl(0.046, 0.058, 0.22, 7), P.shakuniRobeDark, { pivot: 'top', outline: 0.012 });
-    upper.position.y = -0.02;
+    const upper = limb(0.11, 0.235, 0.11, P.shakuniRobeDark, { taper: 0.84, bulge: 0.03, outline: 0.012 });
     shoulder.add(upper);
 
     const elbow = new THREE.Group();
@@ -1316,7 +2001,7 @@ export function buildShakuni() {
     // naked arm at combat distance — the one place the reference art's own
     // layering had been dropped, and the only pale mass on the body competing
     // with the beard, which is the read the whole silhouette is built on.
-    const fore = shaped(cyl(0.039, 0.046, 0.20, 7), P.shakuniRobeDark, { pivot: 'top', outline: 0.011 });
+    const fore = skirt(0.09, 0.09, 0.13, 0.13, 0.19, P.shakuniRobeDark, { outline: 0.011, seg: 10 });
     elbow.add(fore);
 
     // A bangle at the wrist. Small, but it is the detail that makes a bare
@@ -1327,9 +2012,8 @@ export function buildShakuni() {
     elbow.add(bangle);
     n.goldMeshes.push(bangle.userData.mesh);
 
-    const hand = shaped(sph(0.05, 8, 6), P.shakuniSkin, { outline: 0.010 });
-    hand.scale.set(0.9, 1.0, 0.8);
-    hand.position.y = -0.215;
+    const hand = mitt(0.08, 0.09, 0.075, P.shakuniSkin, { side, outline: 0.01 });
+    hand.position.y = -0.195;
     elbow.add(hand);
     n['hand' + key] = hand;
   }
@@ -1447,21 +2131,33 @@ export function buildBakasura(skin = null) {
   root.add(body);
   n.body = body;
 
-  // The belly: wide and deep before it is tall, sagging low ahead of a
-  // narrower chest — the one proportion this rig exists to get right.
-  const belly = part(1.0, 0.62, 0.86, c.body, { pivot: 'bottom', outline: 0.036 });
+  // The belly: wide and deep before it is tall, sagging low and forward
+  // ahead of a narrower chest — the one proportion this rig exists to get
+  // right, and a proportion a box could only ever state as "large".
+  const belly = ringed(
+    [
+      { y: 0.0, rx: 0.36, rz: 0.36, x: 0.04 },
+      { y: 0.1, rx: 0.5, rz: 0.44, x: 0.1 },
+      { y: 0.26, rx: 0.56, rz: 0.47, x: 0.12 },
+      { y: 0.42, rx: 0.52, rz: 0.45, x: 0.08 },
+      { y: 0.56, rx: 0.42, rz: 0.4, x: 0.03 },
+      { y: 0.66, rx: 0.3, rz: 0.33, x: 0.0 },
+    ],
+    c.body,
+    { seg: 18, bottomY: -0.06, topY: 0.7, outline: 0.036 }
+  );
   body.add(belly);
   n.belly = belly;
 
   // Bruise-purple worked into the sag itself, a decal rather than new
   // geometry so it rides the belly's own squash-stretch for free.
-  const sag = decal(0.5, 0.3, c.bruise, { opacity: 0.55 });
-  sag.position.set(0.44, 0.16, 0);
-  sag.rotation.y = Math.PI / 2;
-  belly.add(sag);
+  const sag = decal(0.46, 0.26, c.bruise, { opacity: 0.55 });
+  onFront(belly, sag, 0.16, 0, 0.006);
+  const navel = decal(0.05, 0.07, c.dark);
+  onFront(belly, navel, 0.3, 0, 0.004);
 
-  const chest = part(0.7, 0.5, 0.66, c.body, { pivot: 'bottom', outline: 0.034 });
-  chest.position.y = 0.62;
+  const chest = trunk(0.62, 0.52, 0.8, c.body, { waist: 0.78, chest: 0.06, neck: 0.5, outline: 0.034 });
+  chest.position.y = 0.58;
   belly.add(chest);
   n.chest = chest;
 
@@ -1470,66 +2166,123 @@ export function buildBakasura(skin = null) {
   chest.add(head);
   n.head = head;
 
-  const skull = part(0.42, 0.4, 0.42, c.body, { pivot: 'bottom', outline: 0.03 });
-  head.add(skull);
+  // A squat head over a jaw wider than the skull: the predatory glutton's.
+  const face = skull(0.42, 0.42, 0.42, c.body, { jaw: 1.02, snout: 0.06, outline: 0.03 });
+  head.add(face);
+  nose(face, 0.23, 0.08, c.body, { jut: 0.04, r: 0.038, outline: 0.01 });
 
   // Heavy jowls hanging past the jaw — the "predatory glutton" face read.
   for (const side of [-1, 1]) {
-    const jowl = part(0.14, 0.18, 0.16, c.body, { pivot: 'top', outline: 0.02 });
-    jowl.position.set(0.13, 0.08, side * 0.16);
-    skull.add(jowl);
+    const jowl = blob(0.18, 0.2, 0.16, c.body, { outline: 0.02 });
+    jowl.position.set(0.1, 0.07, side * 0.17);
+    face.add(jowl);
   }
 
   // The fanged grin: a dark slot and a row of pale points along it.
-  const mouth = decal(0.24, 0.08, P.outline);
-  mouth.position.set(0.21, 0.06, 0);
-  mouth.rotation.y = Math.PI / 2;
-  skull.add(mouth);
+  const mouth = decal(0.26, 0.07, P.outline);
+  onFront(face, mouth, 0.07, 0, 0.004);
   for (let i = -2; i <= 2; i++) {
-    const fang = part(0.02, 0.05, 0.02, P.bone, { pivot: 'top', outline: 0.006 });
-    fang.position.set(0.215, 0.08, i * 0.045);
-    skull.add(fang);
+    const z = i * 0.048;
+    const fx = frontOf(face.userData.mesh.geometry, 0.095, z).x;
+    const fang = tube(
+      [
+        [fx - 0.005, 0.1, z, 0.016],
+        [fx + 0.004, 0.07, z, 0.012],
+        [fx + 0.006, 0.04, z, 0.002],
+      ],
+      P.bone,
+      { seg: 5, outline: 0.006 }
+    );
+    face.add(fang);
   }
 
   // Plain, dark eyes — like Shakuni, the menace never reads off the face;
   // it reads off the hands.
   for (const side of [-1, 1]) {
-    const eye = decal(0.05, 0.035, P.outline);
-    eye.position.set(0.2, 0.2, side * 0.09);
-    eye.rotation.y = Math.PI / 2;
-    head.add(eye);
+    const eye = decal(0.06, 0.035, P.outline);
+    onFront(face, eye, 0.24, side * 0.085, 0.004);
     n[side < 0 ? 'eyeL' : 'eyeR'] = eye;
+    const brow = decal(0.08, 0.02, c.dark);
+    onFront(face, brow, 0.28, side * 0.09, 0.004);
+    brow.rotation.z = side * -0.35;
   }
 
-  // Long, loose hair spilling from under the helm.
-  const hair = part(0.3, 0.3, 0.3, c.hair, { pivot: 'top', outline: 0.024 });
-  hair.position.set(-0.1, 0.28, 0);
-  skull.add(hair);
+  // Long, loose hair spilling from under the helm, down the back.
+  const hair = ringed(
+    [
+      { y: -0.26, rx: 0.1, rz: 0.2, x: -0.14 },
+      { y: -0.1, rx: 0.15, rz: 0.23, x: -0.12 },
+      { y: 0.06, rx: 0.17, rz: 0.24, x: -0.1 },
+      { y: 0.14, rx: 0.15, rz: 0.22, x: -0.08 },
+    ],
+    c.hair,
+    { seg: 12, bottomY: -0.32, topY: 0.18, outline: 0.022 }
+  );
+  hair.position.y = 0.3;
+  face.add(hair);
+  for (const side of [-1, 1]) {
+    const lock = tube(
+      [
+        [-0.04, 0.32, side * 0.2, 0.05],
+        [-0.02, 0.14, side * 0.24, 0.045],
+        [-0.04, -0.04, side * 0.23, 0.03],
+        [-0.02, -0.14, side * 0.21, 0.006],
+      ],
+      c.hair,
+      { seg: 7, outline: 0.014 }
+    );
+    face.add(lock);
+  }
 
   // The horned skull-crest helm — a static silhouette read, not a
   // telegraph: it sits still through every state the animator drives.
-  const helm = part(0.32, 0.16, 0.32, c.dark, { pivot: 'bottom', outline: 0.026 });
-  helm.position.y = 0.28;
-  skull.add(helm);
+  const helm = ringed(
+    [
+      { y: 0.0, rx: 0.19, rz: 0.2 },
+      { y: 0.05, rx: 0.2, rz: 0.21 },
+      { y: 0.12, rx: 0.18, rz: 0.19, x: -0.01 },
+      { y: 0.18, rx: 0.12, rz: 0.13, x: -0.02 },
+    ],
+    c.dark,
+    { seg: 14, bottomY: 0.0, topY: 0.21, outline: 0.024 }
+  );
+  helm.position.y = 0.3;
+  face.add(helm);
   for (const side of [-1, 1]) {
-    const horn = part(0.06, 0.32, 0.06, P.bone, { pivot: 'bottom', outline: 0.014 });
-    horn.position.set(-0.02, 0.14, side * 0.1);
-    horn.rotation.z = 0.3;
-    horn.rotation.x = side * 0.22;
+    const horn = tube(
+      [
+        [0.0, 0.08, side * 0.15, 0.055],
+        [-0.02, 0.2, side * 0.24, 0.045],
+        [-0.08, 0.34, side * 0.27, 0.03],
+        [-0.18, 0.42, side * 0.24, 0.006],
+      ],
+      P.bone,
+      { seg: 7, outline: 0.014 }
+    );
     helm.add(horn);
+  }
+  // The crest's skull: a small bone face riding the brow of the helm.
+  const crestSkull = blob(0.09, 0.1, 0.11, P.bone, { outline: 0.012 });
+  crestSkull.position.set(0.17, 0.08, 0);
+  helm.add(crestSkull);
+  for (const side of [-1, 1]) {
+    const socket = decal(0.03, 0.025, P.outline);
+    socket.position.set(0.218, 0.09, side * 0.025);
+    socket.rotation.y = Math.PI / 2;
+    helm.add(socket);
   }
 
   // The vertebra-bead necklace, skull pendant at the sternum.
   const necklace = new THREE.Group();
-  necklace.position.set(0.32, 0.4, 0);
+  necklace.position.set(0.3, 0.42, 0);
   chest.add(necklace);
   for (let i = -3; i <= 3; i++) {
-    const bead = part(0.05, 0.05, 0.05, P.bone, { outline: 0.008 });
-    bead.position.set(Math.cos(i * 0.25) * 0.02, -Math.abs(i) * 0.03, i * 0.06);
+    const bead = blob(0.055, 0.05, 0.055, P.bone, { outline: 0.008 });
+    bead.position.set(Math.cos(i * 0.25) * 0.02 - Math.abs(i) * 0.015, -Math.abs(i) * 0.03, i * 0.065);
     necklace.add(bead);
   }
-  const pendant = part(0.08, 0.09, 0.05, P.bone, { pivot: 'top', outline: 0.012 });
-  pendant.position.set(0.02, -0.16, 0);
+  const pendant = blob(0.07, 0.1, 0.08, P.bone, { pivot: 'top', outline: 0.012 });
+  pendant.position.set(0.02, -0.14, 0);
   necklace.add(pendant);
 
   // Arms — oversized forearms and hands, banded in stacked bone rings: the
@@ -1543,7 +2296,7 @@ export function buildBakasura(skin = null) {
     chest.add(shoulder);
     n['shoulder' + key] = shoulder;
 
-    const upper = part(0.22, 0.34, 0.22, c.body, { pivot: 'top', outline: 0.026 });
+    const upper = limb(0.24, 0.34, 0.24, c.body, { taper: 0.9, bulge: 0.08 });
     shoulder.add(upper);
 
     const elbow = new THREE.Group();
@@ -1552,15 +2305,23 @@ export function buildBakasura(skin = null) {
     n['elbow' + key] = elbow;
 
     // Wider than the upper arm — the taper runs backward from a grunt's.
-    const fore = part(0.27, 0.36, 0.27, c.body, { pivot: 'top', outline: 0.028 });
+    const fore = limb(0.24, 0.36, 0.24, c.body, { taper: 1.2, bulge: 0.06, bulgeAt: 0.6 });
     elbow.add(fore);
     for (let i = 0; i < 3; i++) {
-      const ring = part(0.3, 0.05, 0.3, P.bone, { outline: 0.012 });
+      const r = 0.135 + i * 0.012;
+      const ring = ringed(
+        [
+          { y: -0.022, rx: r, rz: r },
+          { y: 0.022, rx: r, rz: r },
+        ],
+        P.bone,
+        { seg: 12, outline: 0.01 }
+      );
       ring.position.y = -0.1 - i * 0.09;
       elbow.add(ring);
     }
 
-    const hand = part(0.24, 0.24, 0.22, c.body, { pivot: 'top', outline: 0.024 });
+    const hand = mitt(0.24, 0.24, 0.22, c.body, { side, fist: false, outline: 0.02 });
     hand.position.y = -0.36;
     elbow.add(hand);
     n['hand' + key] = hand;
@@ -1569,11 +2330,16 @@ export function buildBakasura(skin = null) {
     // it — flares during a grab's windup, the same vocabulary Kawach's eyes
     // and Shakuni's own eyes already use for "about to commit".
     const glow = decal(0.26, 0.26, c.hand, { opacity: 0.55 });
-    glow.position.set(0.12, -0.36, 0);
+    glow.position.set(0.14, -0.46, 0);
     glow.rotation.y = Math.PI / 2;
     elbow.add(glow);
     n['handGlow' + key] = glow;
   }
+
+  // A loincloth under the belly's overhang.
+  const loin = skirt(0.62, 0.66, 0.66, 0.7, 0.3, c.dark, { folds: 6, fold: 0.05, outline: 0.022 });
+  loin.position.y = 0.06;
+  body.add(loin);
 
   // Legs — short and heavy under all that weight.
   for (const side of [-1, 1]) {
@@ -1583,7 +2349,7 @@ export function buildBakasura(skin = null) {
     body.add(hip);
     n['hip' + key] = hip;
 
-    const thigh = part(0.34, 0.4, 0.34, c.body, { pivot: 'top', outline: 0.03 });
+    const thigh = limb(0.34, 0.4, 0.34, c.body, { taper: 0.86, bulge: 0.08 });
     hip.add(thigh);
 
     const knee = new THREE.Group();
@@ -1591,10 +2357,10 @@ export function buildBakasura(skin = null) {
     hip.add(knee);
     n['knee' + key] = knee;
 
-    const shin = part(0.28, 0.36, 0.28, c.dark, { pivot: 'top', outline: 0.026 });
+    const shin = limb(0.28, 0.36, 0.28, c.dark, { taper: 0.82, bulge: 0.12, bulgeAt: 0.25 });
     knee.add(shin);
 
-    const foot = part(0.34, 0.12, 0.28, c.dark, { pivot: 'top', outline: 0.02 });
+    const foot = boot(0.36, 0.12, 0.28, c.dark, { toe: 0.42 });
     foot.position.set(0.07, -0.36, 0);
     knee.add(foot);
   }
@@ -1686,7 +2452,7 @@ export function buildDuryodhana() {
     root.add(hip);
     n['hip' + key] = hip;
 
-    const thigh = roundedPart(0.26, 0.5, 0.26, P.kuruPlateDark, { pivot: 'top' });
+    const thigh = limb(0.26, 0.5, 0.26, P.kuruPlateDark, { taper: 0.8, bulge: 0.1 });
     hip.add(thigh);
 
     const knee = new THREE.Group();
@@ -1694,14 +2460,23 @@ export function buildDuryodhana() {
     hip.add(knee);
     n['knee' + key] = knee;
 
-    const shin = roundedPart(0.22, 0.46, 0.22, P.kuruPlateDark, { pivot: 'top' });
+    const shin = limb(0.22, 0.46, 0.22, P.kuruPlateDark, { taper: 0.74, bulge: 0.12, bulgeAt: 0.25 });
     knee.add(shin);
 
-    const greave = roundedPart(0.25, 0.2, 0.25, P.kuruPlate, { pivot: 'top', outline: 0.028 });
-    greave.position.y = -0.06;
+    // A greave from the knee to mid-shin, fluted at its upper edge.
+    const greave = ringed(
+      [
+        { y: -0.3, rx: 0.1, rz: 0.1 },
+        { y: -0.12, rx: 0.12, rz: 0.12 },
+        { y: 0.02, rx: 0.14, rz: 0.135, wave: 0.08, waves: 6 },
+        { y: 0.05, rx: 0.13, rz: 0.125, wave: 0.08, waves: 6 },
+      ],
+      P.kuruPlate,
+      { seg: 12, outline: 0.024 }
+    );
     knee.add(greave);
 
-    const foot = roundedPart(0.3, 0.12, 0.24, P.kuruPlateDark, { pivot: 'top' });
+    const foot = boot(0.32, 0.12, 0.23, P.kuruPlateDark);
     foot.position.set(0.06, -0.46, 0);
     knee.add(foot);
   }
@@ -1711,34 +2486,58 @@ export function buildDuryodhana() {
   root.add(hips);
   n.hips = hips;
 
-  const torso = roundedPart(0.5, 0.62, 0.34, P.kuruPlate, { pivot: 'bottom', outline: 0.034 });
+  // A king's war-dress over the hips: pleated tassets in the armour's gold.
+  const tassets = skirt(0.5, 0.56, 0.58, 0.64, 0.3, P.kuruPlate, { folds: 8, fold: 0.05, outline: 0.026 });
+  tassets.position.y = 0.06;
+  hips.add(tassets);
+
+  const torso = trunk(0.5, 0.62, 0.5, P.kuruPlate, { waist: 0.8, chest: 0.12, p: 2.5, outline: 0.034 });
   hips.add(torso);
   n.torso = torso;
 
-  // The chest-plate: a shallower, brighter box sitting proud of the torso's
-  // own front face (+X), plus a spine-ridge decal down its centre — the
-  // piece of "armour" a flat torso block never has.
-  const chestPlate = roundedPart(0.14, 0.5, 0.3, P.kuruPlateLight, { pivot: 'bottom', outline: 0.03 });
-  chestPlate.position.set(0.2, 0.06, 0);
+  // The breastplate: a brighter shell proud of the torso's own front, with a
+  // ridge down its centre — the piece of armour a flat torso never has.
+  const chestPlate = blob(0.16, 0.36, 0.42, P.kuruPlateLight, { p: 2.6, outline: 0.028 });
+  chestPlate.position.set(0.19, 0.4, 0);
   torso.add(chestPlate);
-  const ridge = decal(0.08, 0.4, P.kuruPlateDark);
-  ridge.position.set(0.28, 0.28, 0);
-  ridge.rotation.y = Math.PI / 2;
-  chestPlate.add(ridge);
+  const ridge = decal(0.04, 0.3, P.kuruPlateDark);
+  onFront(chestPlate, ridge, 0.0, 0, 0.004);
 
   // The belt: the reference-corroborated green waist-wrap, worked in low
-  // rather than at the face, with the crimson danger accent as its own gem.
-  const belt = roundedPart(0.56, 0.12, 0.38, P.kuruWrap, { pivot: 'bottom', outline: 0.03 });
-  belt.position.y = 0.02;
+  // rather than at the face, with the crimson danger accent as its own gem,
+  // and its knot's two tails hanging down the front of the war-dress.
+  const belt = ringed(
+    [
+      { y: 0.0, rx: 0.215, rz: 0.215, p: 2.4 },
+      { y: 0.07, rx: 0.225, rz: 0.222, p: 2.4 },
+      { y: 0.13, rx: 0.212, rz: 0.21, p: 2.4 },
+    ],
+    P.kuruWrap,
+    { seg: 16, outline: 0.022 }
+  );
   torso.add(belt);
-  const beltGem = decal(0.1, 0.1, P.kuruCore);
-  beltGem.position.set(0.3, 0.06, 0);
-  beltGem.rotation.y = Math.PI / 2;
-  belt.add(beltGem);
+  const beltGem = decal(0.08, 0.08, P.kuruCore);
+  onFront(belt, beltGem, 0.065, 0, 0.004);
+  beltGem.rotation.z = Math.PI / 4;
+  for (const side of [-1, 1]) {
+    const tail = ringed(
+      [
+        { y: -0.34, rx: 0.012, rz: 0.04, x: 0.02, p: 2.6 },
+        { y: -0.3, rx: 0.018, rz: 0.05, x: 0.012, p: 2.6 },
+        { y: -0.1, rx: 0.02, rz: 0.045, p: 2.6 },
+        { y: 0.0, rx: 0.02, rz: 0.04, p: 2.6 },
+      ],
+      P.kuruWrap,
+      { seg: 8, outline: 0.012, topY: 0.02 }
+    );
+    tail.position.set(0.23, 0.04, side * 0.06);
+    tail.rotation.x = side * 0.12;
+    torso.add(tail);
+  }
 
   // The neck — its own part, so the head has somewhere to sit above the
   // shoulder line instead of sinking into it.
-  const neck = roundedPart(0.16, 0.14, 0.16, P.kuruSkin, { pivot: 'bottom', outline: 0.02 });
+  const neck = limb(0.15, 0.14, 0.15, P.kuruSkin, { taper: 1.1, bulge: 0, outline: 0.02, up: true });
   neck.position.y = 0.62;
   torso.add(neck);
   n.neck = neck;
@@ -1750,12 +2549,12 @@ export function buildDuryodhana() {
     torso.add(shoulder);
     n['shoulder' + key] = shoulder;
 
-    const pauldron = roundedPart(0.22, 0.16, 0.22, P.kuruPlateLight, { pivot: 'center', outline: 0.03 });
-    pauldron.position.set(0, 0.02, side * 0.02);
+    const pauldron = blob(0.26, 0.17, 0.24, P.kuruPlateLight, { p: 2.8, pv: 2.2, outline: 0.03 });
+    pauldron.position.set(0, 0.03, side * 0.03);
+    pauldron.rotation.x = side * 0.3;
     shoulder.add(pauldron);
 
-    const upper = roundedPart(0.16, 0.32, 0.16, P.kuruPlate, { pivot: 'top' });
-    upper.position.y = -0.04;
+    const upper = limb(0.17, 0.34, 0.17, P.kuruPlate, { taper: 0.84, bulge: 0.08 });
     shoulder.add(upper);
 
     const elbow = new THREE.Group();
@@ -1763,14 +2562,14 @@ export function buildDuryodhana() {
     shoulder.add(elbow);
     n['elbow' + key] = elbow;
 
-    const fore = roundedPart(0.14, 0.3, 0.14, P.kuruSkin, { pivot: 'top' });
+    const fore = limb(0.15, 0.3, 0.15, P.kuruSkin, { taper: 0.76, bulge: 0.1 });
     elbow.add(fore);
 
-    const vambrace = roundedPart(0.17, 0.16, 0.17, P.kuruPlateLight, { pivot: 'top', outline: 0.026 });
-    vambrace.position.y = -0.02;
+    const vambrace = limb(0.16, 0.14, 0.16, P.kuruPlateLight, { taper: 0.86, bulge: 0, p: 2.6, outline: 0.02 });
+    vambrace.position.y = -0.12;
     elbow.add(vambrace);
 
-    const hand = roundedPart(0.13, 0.13, 0.12, P.kuruSkin, { pivot: 'top', radius: 0.045 });
+    const hand = mitt(0.13, 0.13, 0.12, P.kuruSkin, { side });
     hand.position.y = -0.3;
     elbow.add(hand);
     n['hand' + key] = hand;
@@ -1781,99 +2580,150 @@ export function buildDuryodhana() {
   neck.add(head);
   n.head = head;
 
-  const skull = roundedPart(0.28, 0.26, 0.26, P.kuruSkin, { pivot: 'bottom', outline: 0.026, radius: 0.05 });
-  head.add(skull);
+  const face = skull(0.28, 0.28, 0.26, P.kuruSkin, { jaw: 0.8, outline: 0.026 });
+  head.add(face);
+  nose(face, 0.17, 0.07, P.kuruSkin, { jut: 0.026, r: 0.018 });
 
   for (const side of [-1, 1]) {
-    const brow = decal(0.1, 0.03, 0x0a0813);
-    brow.position.set(0.148, 0.205 + side * 0.006, side * 0.075);
-    brow.rotation.set(0, Math.PI / 2, side * 0.4);
-    skull.add(brow);
+    const brow = decal(0.1, 0.028, 0x0a0813);
+    onFront(face, brow, 0.2, side * 0.07, 0.005);
+    brow.rotation.z = side * 0.4;
   }
 
   // Eyes lit in a hot glowing red so the face itself reads as a threat, not
   // just the mace.
   for (const side of [-1, 1]) {
     const eyeWhite = decal(0.065, 0.04, 0x0a0813);
-    eyeWhite.position.set(0.147, 0.16, side * 0.075);
-    eyeWhite.rotation.y = Math.PI / 2;
-    skull.add(eyeWhite);
+    onFront(face, eyeWhite, 0.16, side * 0.068, 0.004);
     const eyeGlow = decal(0.04, 0.022, P.kuruEye, { opacity: 0.6 });
-    eyeGlow.position.set(0.149, 0.16, side * 0.075);
-    eyeGlow.rotation.y = Math.PI / 2;
-    skull.add(eyeGlow);
+    onFront(face, eyeGlow, 0.16, side * 0.068, 0.007);
     n['eyeGlow' + (side < 0 ? 'L' : 'R')] = eyeGlow;
   }
 
-  const mouth = decal(0.17, 0.028, 0x0a0813);
-  mouth.position.set(0.148, 0.065, 0);
-  mouth.rotation.y = Math.PI / 2;
-  skull.add(mouth);
+  // A king's moustache, and under it the exaggerated grin: a wide dark mouth
+  // upturned at the corners with two pairs of fangs, so the snarl reads at a
+  // glance even this small.
   for (const side of [-1, 1]) {
-    const corner = decal(0.06, 0.032, 0x0a0813);
-    corner.position.set(0.148, 0.095, side * 0.09);
-    corner.rotation.set(0, Math.PI / 2, side * -0.75);
-    skull.add(corner);
-    const fang = part(0.022, 0.05, 0.022, P.bone, { pivot: 'top', outline: 0.006 });
-    fang.position.set(0.148, 0.058, side * 0.065);
-    skull.add(fang);
-    const innerFang = part(0.016, 0.032, 0.016, P.bone, { pivot: 'top', outline: 0.005 });
-    innerFang.position.set(0.148, 0.052, side * 0.022);
-    skull.add(innerFang);
+    const tache = tube(
+      [
+        [0.142, 0.1, side * 0.01, 0.014],
+        [0.14, 0.09, side * 0.05, 0.016],
+        [0.12, 0.1, side * 0.085, 0.01],
+        [0.105, 0.13, side * 0.095, 0.003],
+      ],
+      0x1a0f0c,
+      { seg: 6, outline: 0.006 }
+    );
+    face.add(tache);
+  }
+  const mouth = decal(0.15, 0.026, 0x0a0813);
+  onFront(face, mouth, 0.065, 0, 0.004);
+  for (const side of [-1, 1]) {
+    const corner = decal(0.055, 0.028, 0x0a0813);
+    onFront(face, corner, 0.08, side * 0.08, 0.004);
+    corner.rotation.z = side * -0.75;
+    const fx = frontOf(face.userData.mesh.geometry, 0.06, side * 0.058).x;
+    const fang = tube(
+      [
+        [fx - 0.004, 0.066, side * 0.058, 0.012],
+        [fx + 0.003, 0.04, side * 0.058, 0.008],
+        [fx + 0.004, 0.02, side * 0.058, 0.001],
+      ],
+      P.bone,
+      { seg: 5, outline: 0.005 }
+    );
+    face.add(fang);
+    const innerFang = tube(
+      [
+        [fx - 0.002, 0.062, side * 0.022, 0.009],
+        [fx + 0.004, 0.044, side * 0.022, 0.005],
+        [fx + 0.005, 0.03, side * 0.022, 0.001],
+      ],
+      P.bone,
+      { seg: 5, outline: 0.004 }
+    );
+    face.add(innerFang);
   }
 
-  // The crown: worn, not balanced — every tier's front-back extent stays
-  // inside the skull's own front bound so it tucks behind the face instead
-  // of burying the eyes, starting low at the brow line and rising well past
-  // the skull's own top to top out the silhouette.
+  // The crown: worn, not balanced — it starts low at the brow line, tucks
+  // behind the face rather than burying the eyes, and rises in tiers well
+  // past the skull's own top to a spire of points.
   const crown = new THREE.Group();
-  crown.position.y = 0.18;
-  skull.add(crown);
+  crown.position.y = 0.2;
+  face.add(crown);
 
-  const browBand = roundedPart(0.24, 0.06, 0.34, P.kuruCrown, { pivot: 'bottom', outline: 0.024, radius: 0.018 });
-  browBand.position.y = -0.01;
-  crown.add(browBand);
-
-  const baseBand = roundedPart(0.26, 0.18, 0.4, P.kuruCrown, { pivot: 'bottom', outline: 0.026, radius: 0.032 });
-  baseBand.position.y = 0.05;
-  crown.add(baseBand);
-
-  const upperTier = roundedPart(0.2, 0.09, 0.28, P.kuruCrownDark, { pivot: 'bottom', outline: 0.022, radius: 0.02 });
-  upperTier.position.y = 0.23;
-  crown.add(upperTier);
+  const crownBody = ringed(
+    [
+      { y: -0.01, rx: 0.13, rz: 0.165, x: -0.012, p: 2.4 },
+      { y: 0.04, rx: 0.135, rz: 0.172, x: -0.012, p: 2.4 },
+      { y: 0.05, rx: 0.13, rz: 0.19, x: -0.014, p: 2.4 },
+      { y: 0.2, rx: 0.13, rz: 0.19, x: -0.016, p: 2.4 },
+      { y: 0.215, rx: 0.1, rz: 0.14, x: -0.018, p: 2.4 },
+      { y: 0.3, rx: 0.095, rz: 0.13, x: -0.02, p: 2.4 },
+      { y: 0.34, rx: 0.07, rz: 0.09, x: -0.02, p: 2.4 },
+    ],
+    P.kuruCrown,
+    { seg: 16, bottomY: -0.01, topY: 0.35, outline: 0.024 }
+  );
+  crown.add(crownBody);
+  const band = ringed(
+    [
+      { y: 0.04, rx: 0.136, rz: 0.193, x: -0.013, p: 2.4 },
+      { y: 0.09, rx: 0.136, rz: 0.193, x: -0.014, p: 2.4 },
+    ],
+    P.kuruCrownDark,
+    { seg: 16, outline: 0.0 }
+  );
+  crown.add(band);
 
   for (let i = -3; i <= 3; i++) {
     const h = 0.24 - Math.abs(i) * 0.04;
-    const spike = roundedPart(0.05, h, 0.05, P.kuruCrown, { pivot: 'bottom', outline: 0.015, radius: 0.016 });
-    spike.position.set(0, 0.32, i * 0.038);
+    const z = i * 0.04;
+    const spike = tube(
+      [
+        [-0.02, 0.3, z, 0.028],
+        [-0.02, 0.3 + h * 0.6, z * 1.08, 0.018],
+        [-0.022, 0.3 + h, z * 1.12, 0.003],
+      ],
+      P.kuruCrown,
+      { seg: 6, outline: 0.012 }
+    );
     crown.add(spike);
   }
 
   const gem = decal(0.08, 0.08, 0x3aa0d6);
-  gem.position.set(0.135, 0.09, 0);
-  gem.rotation.y = Math.PI / 2;
-  baseBand.add(gem);
-  const gemGlow = decal(0.05, 0.05, P.kuruCore);
-  gemGlow.position.set(0.14, 0.09, 0);
-  gemGlow.rotation.y = Math.PI / 2;
-  baseBand.add(gemGlow);
+  onFront(crownBody, gem, 0.13, 0, 0.004);
+  gem.rotation.z = Math.PI / 4;
+  const gemGlow = decal(0.045, 0.045, P.kuruCore);
+  onFront(crownBody, gemGlow, 0.13, 0, 0.007);
+  gemGlow.rotation.z = Math.PI / 4;
 
   // The gada — the source's own signature weapon, held two-handed at idle,
-  // a shaft topped with a knobbed head that flares as the fight's one
+  // a shaft topped with a flanged head that flares as the fight's one
   // telegraph.
   const gadaGrip = new THREE.Group();
   gadaGrip.position.set(0.02, -0.28, 0);
   n.handR.add(gadaGrip);
   n.gadaGrip = gadaGrip;
 
-  const shaft = roundedPart(0.05, 0.5, 0.05, P.bone, { pivot: 'top', outline: 0.012, radius: 0.02 });
+  const shaft = limb(0.05, 0.5, 0.05, P.bone, { taper: 1, bulge: 0, seg: 8, outline: 0.012 });
   gadaGrip.add(shaft);
-  const gadaHead = roundedPart(0.24, 0.24, 0.24, P.kuruPlateDark, { pivot: 'top', outline: 0.03, radius: 0.09 });
-  gadaHead.position.y = -0.5;
+  const gadaHead = ringed(
+    [
+      { y: -0.02, rx: 0.05, rz: 0.05 },
+      { y: -0.06, rx: 0.1, rz: 0.1, wave: 0.14, waves: 8 },
+      { y: -0.13, rx: 0.14, rz: 0.14, wave: 0.14, waves: 8 },
+      { y: -0.2, rx: 0.13, rz: 0.13, wave: 0.14, waves: 8 },
+      { y: -0.25, rx: 0.08, rz: 0.08, wave: 0.1, waves: 8 },
+    ],
+    P.kuruPlateDark,
+    { seg: 24, bottomY: -0.28, topY: -0.01, outline: 0.03 }
+  );
+  gadaHead.position.y = -0.48;
   gadaGrip.add(gadaHead);
   n.gadaHead = gadaHead;
   const gadaGlow = decal(0.26, 0.26, P.kuruCore, { opacity: 0 });
-  gadaGlow.position.set(0.13, -0.62, 0);
+  gadaGlow.position.set(0.15, -0.62, 0);
   gadaGlow.rotation.y = Math.PI / 2;
   gadaGrip.add(gadaGlow);
   n.gadaGlow = gadaGlow;
@@ -1928,7 +2778,7 @@ export function buildHiranyakashipu() {
     rig.add(hip);
     n['hip' + key] = hip;
 
-    const thigh = roundedPart(0.3, 0.5, 0.3, P.hiranyaCloth, { pivot: 'top' });
+    const thigh = limb(0.3, 0.5, 0.3, P.hiranyaCloth, { taper: 0.8, bulge: 0.1 });
     hip.add(thigh);
 
     const knee = new THREE.Group();
@@ -1936,12 +2786,18 @@ export function buildHiranyakashipu() {
     hip.add(knee);
     n['knee' + key] = knee;
 
-    const shin = roundedPart(0.22, 0.44, 0.22, P.hiranyaSkin, { pivot: 'top' });
+    const shin = limb(0.22, 0.44, 0.22, P.hiranyaSkin, { taper: 0.7, bulge: 0.14, bulgeAt: 0.22 });
     knee.add(shin);
-    const anklet = roundedPart(0.25, 0.06, 0.25, P.hiranyaGold, { pivot: 'top', outline: 0.018, radius: 0.02 });
-    anklet.position.y = -0.36;
+    const anklet = ringed(
+      [
+        { y: -0.4, rx: 0.075, rz: 0.075 },
+        { y: -0.34, rx: 0.08, rz: 0.08 },
+      ],
+      P.hiranyaGold,
+      { seg: 12, outline: 0.014 }
+    );
     knee.add(anklet);
-    const foot = roundedPart(0.32, 0.12, 0.24, P.hiranyaSkinDark, { pivot: 'top' });
+    const foot = boot(0.32, 0.11, 0.2, P.hiranyaSkinDark, { toe: 0.4 });
     foot.position.set(0.06, -0.44, 0);
     knee.add(foot);
   }
@@ -1951,39 +2807,63 @@ export function buildHiranyakashipu() {
   rig.add(hips);
   n.hips = hips;
 
-  // The dhoti's front fall, hanging from the waist between the thighs.
-  const fall = roundedPart(0.2, 0.46, 0.24, P.hiranyaCloth, { pivot: 'top', outline: 0.02 });
-  fall.position.set(0.16, 0.04, 0);
+  // The dhoti: pleated from the waist to the thigh, and its front fall
+  // hanging between the legs.
+  const dhoti = skirt(0.52, 0.5, 0.6, 0.6, 0.34, P.hiranyaCloth, { folds: 9, fold: 0.05, outline: 0.024 });
+  dhoti.position.y = 0.06;
+  hips.add(dhoti);
+  const fall = ringed(
+    [
+      { y: -0.5, rx: 0.02, rz: 0.08, x: 0.03, p: 2.6 },
+      { y: -0.44, rx: 0.03, rz: 0.1, x: 0.02, p: 2.6, wave: 0.1, waves: 4 },
+      { y: -0.2, rx: 0.035, rz: 0.1, p: 2.6, wave: 0.08, waves: 4 },
+      { y: 0.0, rx: 0.04, rz: 0.09, p: 2.6 },
+    ],
+    P.hiranyaCloth,
+    { seg: 10, outline: 0.016, topY: 0.03 }
+  );
+  fall.position.set(0.25, 0.04, 0);
   hips.add(fall);
 
-  const torso = roundedPart(0.56, 0.68, 0.42, P.hiranyaSkin, { pivot: 'bottom', outline: 0.034 });
+  // Bare-chested: a sculpted torso, broad through the chest and narrow at
+  // the waist, with the muscle carried by the shape and a few drawn lines.
+  const torso = trunk(0.56, 0.68, 0.5, P.hiranyaSkin, { waist: 0.74, chest: 0.16, outline: 0.034 });
   hips.add(torso);
   n.torso = torso;
-
-  // Muscle, drawn rather than modelled: two darker plates on the chest and a
-  // shaded line down the middle — enough that a bare torso reads as mass.
   for (const side of [-1, 1]) {
-    const pec = decal(0.2, 0.14, P.hiranyaSkinDark);
-    pec.position.set(0.282, 0.5, side * 0.1);
-    pec.rotation.y = Math.PI / 2;
-    torso.add(pec);
+    const pec = decal(0.16, 0.022, P.hiranyaSkinDark);
+    onFront(torso, pec, 0.42, side * 0.1, 0.004);
+    pec.rotation.z = side * -0.25;
   }
-  const midline = decal(0.03, 0.34, P.hiranyaSkinDark);
-  midline.position.set(0.283, 0.24, 0);
-  midline.rotation.y = Math.PI / 2;
-  torso.add(midline);
+  const midline = decal(0.022, 0.26, P.hiranyaSkinDark);
+  onFront(torso, midline, 0.22, 0, 0.004);
 
-  const waist = roundedPart(0.6, 0.12, 0.46, P.hiranyaGold, { pivot: 'bottom', outline: 0.026, radius: 0.03 });
-  waist.position.y = 0;
+  const waist = ringed(
+    [
+      { y: -0.01, rx: 0.215, rz: 0.195 },
+      { y: 0.06, rx: 0.225, rz: 0.2 },
+      { y: 0.12, rx: 0.215, rz: 0.19 },
+    ],
+    P.hiranyaGold,
+    { seg: 16, outline: 0.022 }
+  );
   torso.add(waist);
 
-  // The collar: a broad gold ring at the base of the neck.
-  const collar = shaped(tor(0.2, 0.045, 6, 18), P.hiranyaGold, { outline: 0.016 });
-  collar.rotation.x = Math.PI / 2;
-  collar.position.y = 0.66;
+  // The collar: a broad gold necklace-plate at the base of the neck,
+  // scalloped at its lower edge.
+  const collar = ringed(
+    [
+      { y: 0.56, rx: 0.22, rz: 0.24, x: 0.03, wave: 0.08, waves: 10 },
+      { y: 0.6, rx: 0.22, rz: 0.24, x: 0.03, wave: 0.06, waves: 10 },
+      { y: 0.66, rx: 0.17, rz: 0.19, x: 0.01 },
+      { y: 0.7, rx: 0.12, rz: 0.13, x: 0.0 },
+    ],
+    P.hiranyaGold,
+    { seg: 20, outline: 0.02 }
+  );
   torso.add(collar);
 
-  const neck = roundedPart(0.18, 0.14, 0.18, P.hiranyaSkin, { pivot: 'bottom', outline: 0.02 });
+  const neck = limb(0.18, 0.14, 0.18, P.hiranyaSkin, { taper: 1.1, bulge: 0, outline: 0.02, up: true });
   neck.position.y = 0.66;
   torso.add(neck);
   n.neck = neck;
@@ -1995,15 +2875,20 @@ export function buildHiranyakashipu() {
     torso.add(shoulder);
     n['shoulder' + key] = shoulder;
 
-    const delt = roundedPart(0.24, 0.2, 0.24, P.hiranyaSkin, { pivot: 'center', outline: 0.028 });
+    const delt = blob(0.24, 0.22, 0.24, P.hiranyaSkin, { outline: 0.026 });
     delt.position.y = 0.02;
     shoulder.add(delt);
 
-    const upper = roundedPart(0.2, 0.34, 0.2, P.hiranyaSkin, { pivot: 'top' });
-    upper.position.y = -0.04;
+    const upper = limb(0.2, 0.36, 0.2, P.hiranyaSkin, { taper: 0.84, bulge: 0.14 });
     shoulder.add(upper);
-    const band = roundedPart(0.23, 0.07, 0.23, P.hiranyaGold, { pivot: 'top', outline: 0.02, radius: 0.02 });
-    band.position.y = -0.1;
+    const band = ringed(
+      [
+        { y: -0.16, rx: 0.1, rz: 0.1 },
+        { y: -0.09, rx: 0.105, rz: 0.105 },
+      ],
+      P.hiranyaGold,
+      { seg: 12, outline: 0.016 }
+    );
     shoulder.add(band);
 
     const elbow = new THREE.Group();
@@ -2011,22 +2896,28 @@ export function buildHiranyakashipu() {
     shoulder.add(elbow);
     n['elbow' + key] = elbow;
 
-    const fore = roundedPart(0.17, 0.3, 0.17, P.hiranyaSkin, { pivot: 'top' });
+    const fore = limb(0.17, 0.3, 0.17, P.hiranyaSkin, { taper: 0.78, bulge: 0.12 });
     elbow.add(fore);
-    const bracer = roundedPart(0.2, 0.08, 0.2, P.hiranyaGold, { pivot: 'top', outline: 0.02, radius: 0.02 });
-    bracer.position.y = -0.2;
+    const bracer = limb(0.18, 0.12, 0.18, P.hiranyaGold, { taper: 0.9, bulge: 0, outline: 0.016 });
+    bracer.position.y = -0.14;
     elbow.add(bracer);
 
-    const hand = roundedPart(0.16, 0.15, 0.14, P.hiranyaSkin, { pivot: 'top', radius: 0.05 });
+    const hand = mitt(0.16, 0.15, 0.14, P.hiranyaSkin, { side, fist: false });
     hand.position.y = -0.3;
     elbow.add(hand);
     n['hand' + key] = hand;
 
     // The claws he fights with — bone, three to a hand.
     for (let i = -1; i <= 1; i++) {
-      const claw = shaped(cone(0.022, 0.11, 5), P.bone, { pivot: 'top', outline: 0.006 });
-      claw.rotation.z = Math.PI;
-      claw.position.set(0.05, -0.14, i * 0.04);
+      const claw = tube(
+        [
+          [0.05, -0.13, i * 0.04, 0.02],
+          [0.08, -0.2, i * 0.042, 0.014],
+          [0.09, -0.26, i * 0.042, 0.002],
+        ],
+        P.bone,
+        { seg: 5, outline: 0.006 }
+      );
       hand.add(claw);
     }
     // Two lights on each hand, never on at once: amber is an attack coming
@@ -2049,59 +2940,67 @@ export function buildHiranyakashipu() {
   neck.add(head);
   n.head = head;
 
-  const skull = roundedPart(0.3, 0.28, 0.28, P.hiranyaSkin, { pivot: 'bottom', outline: 0.026, radius: 0.055 });
-  head.add(skull);
+  const face = skull(0.3, 0.3, 0.28, P.hiranyaSkin, { jaw: 0.84, outline: 0.026 });
+  head.add(face);
+  nose(face, 0.17, 0.07, P.hiranyaSkin, { jut: 0.028, r: 0.019 });
 
   for (const side of [-1, 1]) {
-    const brow = decal(0.11, 0.035, 0x0a0813);
-    brow.position.set(0.158, 0.215, side * 0.078);
-    brow.rotation.set(0, Math.PI / 2, side * 0.45);
-    skull.add(brow);
+    const brow = decal(0.11, 0.032, 0x0a0813);
+    onFront(face, brow, 0.22, side * 0.075, 0.005);
+    brow.rotation.z = side * 0.45;
 
-    const socket = decal(0.07, 0.042, 0x0a0813);
-    socket.position.set(0.157, 0.168, side * 0.076);
-    socket.rotation.y = Math.PI / 2;
-    skull.add(socket);
-    const eye = decal(0.045, 0.024, P.hiranyaEye, { opacity: 0.7 });
-    eye.position.set(0.159, 0.168, side * 0.076);
-    eye.rotation.y = Math.PI / 2;
-    skull.add(eye);
+    const socket = decal(0.07, 0.04, 0x0a0813);
+    onFront(face, socket, 0.175, side * 0.074, 0.004);
+    const eye = decal(0.045, 0.022, P.hiranyaEye, { opacity: 0.7 });
+    onFront(face, eye, 0.175, side * 0.074, 0.007);
     n['eyeGlow' + (side < 0 ? 'L' : 'R')] = eye;
 
     // The moustache, swept up at the ends — a king's, not a brute's.
-    const tash = decal(0.09, 0.03, P.hiranyaSkinDark);
-    tash.position.set(0.158, 0.1, side * 0.05);
-    tash.rotation.set(0, Math.PI / 2, side * -0.35);
-    skull.add(tash);
-    const fang = part(0.022, 0.05, 0.022, P.bone, { pivot: 'top', outline: 0.006 });
-    fang.position.set(0.158, 0.075, side * 0.04);
-    skull.add(fang);
+    const tash = tube(
+      [
+        [0.148, 0.115, side * 0.01, 0.014],
+        [0.146, 0.105, side * 0.05, 0.016],
+        [0.125, 0.12, side * 0.09, 0.011],
+        [0.11, 0.15, side * 0.1, 0.003],
+      ],
+      P.hiranyaSkinDark,
+      { seg: 6, outline: 0.006 }
+    );
+    face.add(tash);
+    const fx = frontOf(face.userData.mesh.geometry, 0.07, side * 0.04).x;
+    const fang = tube(
+      [
+        [fx - 0.004, 0.085, side * 0.04, 0.012],
+        [fx + 0.003, 0.06, side * 0.04, 0.008],
+        [fx + 0.004, 0.04, side * 0.04, 0.001],
+      ],
+      P.bone,
+      { seg: 5, outline: 0.005 }
+    );
+    face.add(fang);
   }
-  const mouth = decal(0.13, 0.024, 0x0a0813);
-  mouth.position.set(0.158, 0.078, 0);
-  mouth.rotation.y = Math.PI / 2;
-  skull.add(mouth);
+  const mouth = decal(0.12, 0.022, 0x0a0813);
+  onFront(face, mouth, 0.085, 0, 0.004);
 
   // The crown: a tall, tapering kirita, worn low at the brow so it tucks
   // behind the face rather than burying the eyes.
-  const crown = new THREE.Group();
-  crown.position.y = 0.2;
-  skull.add(crown);
-  const brow = roundedPart(0.28, 0.07, 0.34, P.hiranyaGold, { pivot: 'bottom', outline: 0.022, radius: 0.02 });
-  crown.add(brow);
-  const tierA = roundedPart(0.24, 0.14, 0.28, P.hiranyaGold, { pivot: 'bottom', outline: 0.022, radius: 0.03 });
-  tierA.position.y = 0.06;
-  crown.add(tierA);
-  const tierB = roundedPart(0.18, 0.12, 0.2, P.hiranyaGold, { pivot: 'bottom', outline: 0.02, radius: 0.025 });
-  tierB.position.y = 0.19;
-  crown.add(tierB);
-  const spire = shaped(cone(0.07, 0.2, 6), P.hiranyaGold, { pivot: 'bottom', outline: 0.014 });
-  spire.position.y = 0.3;
-  crown.add(spire);
+  const crown = ringed(
+    [
+      { y: 0.2, rx: 0.15, rz: 0.17, x: -0.01, p: 2.4 },
+      { y: 0.26, rx: 0.155, rz: 0.175, x: -0.012, p: 2.4 },
+      { y: 0.28, rx: 0.13, rz: 0.15, x: -0.014, p: 2.4 },
+      { y: 0.4, rx: 0.12, rz: 0.135, x: -0.018, p: 2.4 },
+      { y: 0.42, rx: 0.095, rz: 0.1, x: -0.02, p: 2.4 },
+      { y: 0.5, rx: 0.075, rz: 0.08, x: -0.022 },
+      { y: 0.58, rx: 0.04, rz: 0.042, x: -0.024 },
+      { y: 0.64, rx: 0.012, rz: 0.012, x: -0.026 },
+    ],
+    P.hiranyaGold,
+    { seg: 16, bottomY: 0.2, topY: 0.67, outline: 0.022 }
+  );
+  face.add(crown);
   const jewel = decal(0.06, 0.08, P.hiranyaEye);
-  jewel.position.set(0.123, 0.12, 0);
-  jewel.rotation.y = Math.PI / 2;
-  tierA.add(jewel);
+  onFront(crown, jewel, 0.33, 0, 0.005);
 
   // -- the threshold -------------------------------------------------------
   const doorway = new THREE.Group();
@@ -2111,27 +3010,27 @@ export function buildHiranyakashipu() {
   n.doorway = doorway;
   n.doorGlow = [];
   for (const side of [-1, 1]) {
-    const post = roundedPart(0.24, 2.7, 0.24, P.daityaStone, { pivot: 'bottom', outline: 0.03, radius: 0.04 });
+    const post = block(0.24, 2.7, 0.24, P.daityaStone, { pivot: 'bottom', round: 0.3, outline: 0.03 });
     post.position.x = side * 1.02;
     doorway.add(post);
-    const base = roundedPart(0.34, 0.16, 0.34, P.daityaStoneDark, { pivot: 'bottom', outline: 0.024 });
+    const base = block(0.34, 0.16, 0.34, P.daityaStoneDark, { pivot: 'bottom', round: 0.3, outline: 0.024 });
     base.position.x = side * 1.02;
     doorway.add(base);
     // On both faces: the rig yaws half a turn to face left, and a strip on
     // one face alone ends up behind its own post.
-    for (const face of [-1, 1]) {
+    for (const face_ of [-1, 1]) {
       const strip = decal(0.14, 2.4, P.hiranyaBoon, { opacity: 0 });
-      strip.position.set(side * 1.02, 1.35, face * 0.13);
+      strip.position.set(side * 1.02, 1.35, face_ * 0.13);
       doorway.add(strip);
       n.doorGlow.push(strip);
     }
   }
-  const lintel = roundedPart(2.5, 0.26, 0.32, P.daityaStone, { pivot: 'bottom', outline: 0.03, radius: 0.04 });
+  const lintel = block(2.5, 0.26, 0.32, P.daityaStone, { pivot: 'bottom', round: 0.3, outline: 0.03 });
   lintel.position.y = 2.7;
   doorway.add(lintel);
-  for (const face of [-1, 1]) {
+  for (const face_ of [-1, 1]) {
     const lintelGlow = decal(2.1, 0.1, P.hiranyaBoon, { opacity: 0 });
-    lintelGlow.position.set(0, 2.83, face * 0.17);
+    lintelGlow.position.set(0, 2.83, face_ * 0.17);
     doorway.add(lintelGlow);
     n.doorGlow.push(lintelGlow);
   }
@@ -2141,7 +3040,7 @@ export function buildHiranyakashipu() {
   // Stands in the threshold, just behind the king, and is scaled from zero
   // by the death animation rather than faded — a scale needs no transparent
   // material, and "steps out of the threshold" is what a growing figure
-  // looks like from the side.
+  // looks like from the side. A figure of light: every part unlit.
   const narasimha = new THREE.Group();
   narasimha.position.set(-0.3, 0, -0.5);
   narasimha.scale.setScalar(0.001);
@@ -2149,43 +3048,54 @@ export function buildHiranyakashipu() {
   rig.add(narasimha);
   n.narasimha = narasimha;
   const light = { material: unlit(P.narasimhaLight), outline: 0.02 };
-  const mane = { material: unlit(P.narasimhaMane), outline: 0.016 };
+  const maneLook = { material: unlit(P.narasimhaMane), outline: 0.016 };
   const halo = unlit(P.narasimhaHalo);
 
   for (const side of [-1, 1]) {
-    const leg = part(0.24, 0.96, 0.24, 0, { ...light, pivot: 'bottom' });
-    leg.position.set(0, 0, side * 0.19);
+    const leg = limb(0.26, 0.9, 0.26, 0, { ...light, taper: 0.7, bulge: 0.1, up: true });
+    leg.position.set(0, 0.06, side * 0.19);
     narasimha.add(leg);
   }
-  const nTorso = part(0.52, 0.78, 0.46, 0, { ...light, pivot: 'bottom' });
-  nTorso.position.y = 0.94;
+  const nTorso = trunk(0.54, 0.8, 0.5, 0, { ...light, waist: 0.72, chest: 0.16 });
+  nTorso.position.y = 0.9;
   narasimha.add(nTorso);
   for (const side of [-1, 1]) {
-    const arm = part(0.18, 0.72, 0.18, 0, { ...light, pivot: 'top' });
-    arm.position.set(0.1, 1.66, side * 0.34);
+    const arm = limb(0.19, 0.72, 0.19, 0, { ...light, taper: 0.76, bulge: 0.12 });
+    arm.position.set(0.1, 1.64, side * 0.34);
     arm.rotation.z = 0.55; // reaching forward, toward the king at his feet
     narasimha.add(arm);
   }
   const nHead = new THREE.Group();
-  nHead.position.y = 1.78;
+  nHead.position.y = 1.76;
   narasimha.add(nHead);
-  // The mane first, so the face sits in front of it: petals around the head
-  // in the plane behind the face, the lion read carried by silhouette alone.
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2;
-    const petal = part(0.1, 0.36, 0.2, 0, { ...mane, pivot: 'bottom' });
-    petal.position.set(-0.06, 0.2 + Math.cos(a) * 0.08, Math.sin(a) * 0.08);
-    petal.rotation.x = a;
-    nHead.add(petal);
+  // The mane first, so the face sits in front of it: a ruff of locks around
+  // the head in the plane behind the face, the lion read carried by
+  // silhouette alone.
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2;
+    const lock = tube(
+      [
+        [-0.04, 0.2 + Math.cos(a) * 0.1, Math.sin(a) * 0.1, 0.07],
+        [-0.12, 0.2 + Math.cos(a) * 0.3, Math.sin(a) * 0.3, 0.05],
+        [-0.16, 0.2 + Math.cos(a) * 0.44, Math.sin(a) * 0.44, 0.006],
+      ],
+      0,
+      { ...maneLook, seg: 6 }
+    );
+    nHead.add(lock);
   }
-  const face = part(0.34, 0.36, 0.34, 0, { ...light, pivot: 'bottom' });
-  face.position.y = 0.02;
-  nHead.add(face);
-  const muzzle = part(0.14, 0.14, 0.2, 0, { ...light, pivot: 'bottom' });
-  muzzle.position.set(0.2, 0.04, 0);
-  nHead.add(muzzle);
-  const crownN = part(0.2, 0.16, 0.22, 0, { ...mane, pivot: 'bottom' });
-  crownN.position.y = 0.4;
+  const nFace = skull(0.36, 0.38, 0.34, 0, { ...light, jaw: 0.9, snout: 0.22 });
+  nFace.position.y = 0.02;
+  nHead.add(nFace);
+  const crownN = ringed(
+    [
+      { y: 0.34, rx: 0.14, rz: 0.15, x: -0.02 },
+      { y: 0.42, rx: 0.13, rz: 0.14, x: -0.02 },
+      { y: 0.52, rx: 0.06, rz: 0.06, x: -0.03 },
+    ],
+    0,
+    { ...maneLook, seg: 12, bottomY: 0.34, topY: 0.58 }
+  );
   nHead.add(crownN);
   const ring = new THREE.Mesh(tor(0.62, 0.035, 6, 28), halo);
   ring.rotation.y = Math.PI / 2;
@@ -2227,49 +3137,126 @@ function buildTarakaForm(monstrous, c) {
   /** `_animate`'s idle-bob baseline — read back rather than re-derived, so the two forms never drift out of sync with what was actually built. */
   n.baseY = body.position.y;
 
-  const torso = part(0.5 * s, 0.62 * s, 0.4 * s, skin, { pivot: 'bottom', outline: 0.03 });
+  // The same body plan twice: a dancer's line in the beautiful form, a
+  // hunched predator's in the monstrous one — chest thrown forward, waist
+  // pulled in, shoulders high.
+  const torso = monstrous
+    ? trunk(0.5, 0.62, 0.44, skin, { waist: 0.7, chest: 0.2, outline: 0.03 })
+    : trunk(0.5 * s, 0.62 * s, 0.4 * s, skin, { waist: 0.66, chest: 0.12, taper: 0.9, outline: 0.024 });
   body.add(torso);
   n.torso = torso;
+  if (monstrous) torso.rotation.z = -0.12;
 
   // The raw-hide pelt, slung low across the hip — identity in both forms,
   // per the handoff's explicit call against skull/bone jewelry (Bakasura's
-  // own motif, dropped here so the two giants don't repeat each other).
-  const pelt = part(0.44 * s, 0.2 * s, 0.46 * s, c.pelt, { pivot: 'top', outline: 0.02 });
-  pelt.position.y = 0.03;
+  // own motif, dropped here so the two giants don't repeat each other). A
+  // ragged hem of hide, and a band of the same hide across the chest.
+  const pelt = skirt(0.46 * s, 0.44 * s, 0.56 * s, 0.54 * s, 0.26 * s, c.pelt, { folds: 5, fold: 0.12, outline: 0.02 });
+  pelt.position.y = 0.05 * s;
   torso.add(pelt);
+  const band = ringed(
+    [
+      { y: 0.3 * s, rx: 0.232 * s, rz: 0.19 * s, x: (monstrous ? 0.08 : 0.04) * s },
+      { y: 0.36 * s, rx: 0.25 * s, rz: 0.196 * s, x: (monstrous ? 0.1 : 0.05) * s },
+      { y: 0.44 * s, rx: 0.25 * s, rz: 0.198 * s, x: (monstrous ? 0.11 : 0.055) * s, wave: monstrous ? 0.08 : 0, waves: 5 },
+    ],
+    c.pelt,
+    { seg: 14, outline: 0.016 }
+  );
+  torso.add(band);
 
   const head = new THREE.Group();
   head.position.y = 0.6 * s;
   torso.add(head);
   n.head = head;
 
-  const skull = part(0.32 * s, 0.3 * s, 0.3 * s, skin, { pivot: 'bottom', outline: 0.026 });
-  head.add(skull);
+  const neck = limb(0.13 * s, 0.1 * s, 0.13 * s, skin, { taper: 1.1, bulge: 0, outline: 0.014, up: true });
+  neck.position.y = -0.05 * s;
+  head.add(neck);
+
+  const face = monstrous
+    ? skull(0.34, 0.32, 0.3, skin, { jaw: 0.98, snout: 0.2, outline: 0.026 })
+    : skull(0.3 * s, 0.32 * s, 0.27 * s, skin, { jaw: 0.6, outline: 0.02 });
+  head.add(face);
+  if (!monstrous) nose(face, 0.13, 0.045, skin, { jut: 0.016, r: 0.011 });
 
   if (monstrous) {
     // A distorted, jutting jaw and a row of teeth — "prominent teeth and an
     // enraged expression" per the reference description, built rather than
     // referenced since no image survived for this form.
-    const jaw = part(0.2, 0.14, 0.22, dark, { pivot: 'top', outline: 0.02 });
-    jaw.position.set(0.14, -0.02, 0);
-    skull.add(jaw);
+    const jaw = barrel(
+      [
+        { x: -0.1, ry: 0.05, rz: 0.12, y: -0.03 },
+        { x: 0.02, ry: 0.07, rz: 0.13, y: -0.04 },
+        { x: 0.12, ry: 0.06, rz: 0.11, y: -0.04 },
+        { x: 0.2, ry: 0.045, rz: 0.08, y: -0.03 },
+      ],
+      dark,
+      { seg: 12, backX: -0.13, frontX: 0.23, outline: 0.02 }
+    );
+    jaw.position.set(0.06, 0.02, 0);
+    face.add(jaw);
     for (let i = -1; i <= 1; i++) {
-      const fang = part(0.02, 0.05, 0.02, P.bone, { pivot: 'top', outline: 0.006 });
-      fang.position.set(0.22, -0.02, i * 0.05);
-      skull.add(fang);
+      const fang = tube(
+        [
+          [0.24, 0.0, i * 0.05, 0.016],
+          [0.25, 0.05, i * 0.052, 0.011],
+          [0.25, 0.09, i * 0.05, 0.002],
+        ],
+        P.bone,
+        { seg: 5, outline: 0.006 }
+      );
+      face.add(fang);
+    }
+    // Bark-ridged brows and a crest of it down the skull — the forest's
+    // own curse grown into her.
+    for (let i = 0; i < 4; i++) {
+      const spike = tube(
+        [
+          [0.06 - i * 0.09, 0.3 - i * 0.02, 0, 0.03],
+          [0.0 - i * 0.09, 0.38 - i * 0.03, 0, 0.02],
+          [-0.08 - i * 0.09, 0.42 - i * 0.04, 0, 0.003],
+        ],
+        dark,
+        { seg: 6, outline: 0.01 }
+      );
+      face.add(spike);
     }
   } else {
-    // Loose, human hair — the one detail the monstrous form sheds entirely.
-    const hair = part(0.26, 0.22, 0.26, dark, { pivot: 'top', outline: 0.022 });
-    hair.position.set(-0.06, 0.2, 0);
-    skull.add(hair);
+    // Long, loose human hair down the back — the one detail the monstrous
+    // form sheds entirely.
+    const hair = ringed(
+      [
+        { y: -0.34, rx: 0.05, rz: 0.1, x: -0.12 },
+        { y: -0.22, rx: 0.08, rz: 0.13, x: -0.11 },
+        { y: -0.02, rx: 0.1, rz: 0.13, x: -0.09 },
+        { y: 0.12, rx: 0.12, rz: 0.12, x: -0.05 },
+        { y: 0.2, rx: 0.12, rz: 0.115, x: -0.02 },
+        { y: 0.24, rx: 0.1, rz: 0.1, x: -0.015 },
+      ],
+      dark,
+      { seg: 12, bottomY: -0.4, topY: 0.255, outline: 0.016 }
+    );
+    head.add(hair);
+    for (const side of [-1, 1]) {
+      const lock = tube(
+        [
+          [0.02, 0.2, side * 0.1, 0.03],
+          [0.0, 0.08, side * 0.12, 0.028],
+          [-0.02, -0.06, side * 0.11, 0.02],
+          [0.0, -0.18, side * 0.09, 0.004],
+        ],
+        dark,
+        { seg: 6, outline: 0.01 }
+      );
+      head.add(lock);
+    }
   }
 
   for (const side of [-1, 1]) {
-    const eye = decal(monstrous ? 0.09 : 0.05, monstrous ? 0.06 : 0.04, c.eye, { opacity: monstrous ? 1 : 0.75 });
-    eye.position.set(0.16 * s, 0.14 * s, side * 0.1 * s);
-    eye.rotation.y = Math.PI / 2;
-    skull.add(eye);
+    const eye = decal(monstrous ? 0.09 : 0.05, monstrous ? 0.05 : 0.03, c.eye, { opacity: monstrous ? 1 : 0.75 });
+    onFront(face, eye, (monstrous ? 0.2 : 0.14) * (monstrous ? 1 : 1), side * (monstrous ? 0.085 : 0.05), 0.005);
+    if (monstrous) eye.rotation.z = side * -0.3;
     n[side < 0 ? 'eyeL' : 'eyeR'] = eye;
   }
 
@@ -2282,7 +3269,7 @@ function buildTarakaForm(monstrous, c) {
     torso.add(shoulder);
     n['shoulder' + key] = shoulder;
 
-    const upper = part(0.16 * s, 0.32 * s, 0.16 * s, skin, { pivot: 'top', outline: 0.024 });
+    const upper = limb(0.16 * s, 0.32 * s, 0.16 * s, skin, { taper: 0.8, bulge: monstrous ? 0.14 : 0.04 });
     shoulder.add(upper);
 
     const elbow = new THREE.Group();
@@ -2290,18 +3277,25 @@ function buildTarakaForm(monstrous, c) {
     shoulder.add(elbow);
     n['elbow' + key] = elbow;
 
-    const fore = part(0.15 * s, 0.3 * s, 0.15 * s, skin, { pivot: 'top', outline: 0.022 });
+    const fore = limb(0.15 * s, 0.3 * s, 0.15 * s, skin, { taper: 0.72, bulge: monstrous ? 0.12 : 0.04 });
     elbow.add(fore);
 
-    const hand = part(0.14 * s, 0.16 * s, 0.14 * s, skin, { pivot: 'top', outline: 0.02 });
+    const hand = mitt(0.13 * s, 0.14 * s, 0.13 * s, skin, { side, fist: false });
     hand.position.y = -0.3 * s;
     elbow.add(hand);
     n['hand' + key] = hand;
 
     if (monstrous) {
       for (let i = -1; i <= 1; i++) {
-        const claw = part(0.03, 0.16, 0.03, P.bone, { pivot: 'top', outline: 0.008 });
-        claw.position.set(0.09, -0.38 * s, i * 0.06);
+        const claw = tube(
+          [
+            [0.05, -0.4, i * 0.05, 0.022],
+            [0.1, -0.47, i * 0.055, 0.016],
+            [0.12, -0.54, i * 0.055, 0.002],
+          ],
+          P.bone,
+          { seg: 5, outline: 0.007 }
+        );
         elbow.add(claw);
       }
     }
@@ -2323,7 +3317,7 @@ function buildTarakaForm(monstrous, c) {
     body.add(hip);
     n['hip' + key] = hip;
 
-    const thigh = part(0.2 * s, 0.36 * s, 0.2 * s, dark, { pivot: 'top', outline: 0.026 });
+    const thigh = limb(0.2 * s, 0.36 * s, 0.2 * s, dark, { taper: 0.78, bulge: 0.1 });
     hip.add(thigh);
 
     const knee = new THREE.Group();
@@ -2331,10 +3325,10 @@ function buildTarakaForm(monstrous, c) {
     hip.add(knee);
     n['knee' + key] = knee;
 
-    const shin = part(0.17 * s, 0.32 * s, 0.17 * s, dark, { pivot: 'top', outline: 0.022 });
+    const shin = limb(0.17 * s, 0.32 * s, 0.17 * s, dark, { taper: 0.68, bulge: 0.12, bulgeAt: 0.22 });
     knee.add(shin);
 
-    const foot = part(0.2 * s, 0.1 * s, 0.24 * s, dark, { pivot: 'top', outline: 0.018 });
+    const foot = boot(0.22 * s, 0.1 * s, 0.15 * s, dark, { toe: 0.4 });
     foot.position.set(0.05, -0.32 * s, 0);
     knee.add(foot);
   }
@@ -2410,31 +3404,67 @@ function buildShurpanakhaForm(true_, c) {
   /** `_animate`'s idle-bob baseline, read back rather than re-derived — the same guard `buildTaraka`'s own forms use against the pair drifting apart. */
   n.baseY = body.position.y;
 
-  const torso = part(0.34 * s, 0.66 * s, 0.3 * s, skin, { pivot: 'bottom', outline: 0.03 });
+  const torso = trunk(0.34 * s, 0.66 * s, 0.32 * s, skin, { waist: true_ ? 0.78 : 0.68, chest: 0.1, taper: true_ ? 1 : 0.9, outline: 0.026 });
   body.add(torso);
   n.torso = torso;
 
-  // The red drape, worn across the torso — the disguise's own reference
-  // detail, and shed at the reveal, where the true form wears nothing over
-  // ash-grey skin.
   if (!true_) {
-    const drape = part(0.37, 0.36, 0.33, c.drape, { pivot: 'top', outline: 0.024 });
-    drape.position.y = 0.56;
+    // The red drape, worn over one shoulder and across the torso — the
+    // disguise's own reference detail, shed at the reveal — and a pleated
+    // skirt of the same cloth to the knee.
+    const drape = ringed(
+      [
+        { y: 0.18, rx: 0.15, rz: 0.15, x: 0.012 },
+        { y: 0.32, rx: 0.165, rz: 0.158, x: 0.02 },
+        { y: 0.46, rx: 0.172, rz: 0.162, x: 0.024 },
+        { y: 0.56, rx: 0.15, rz: 0.158, x: 0.012 },
+      ],
+      c.drape,
+      { seg: 14, outline: 0.02 }
+    );
     torso.add(drape);
+    const pallu = tube(
+      [
+        [0.02, 0.58, 0.14, 0.035],
+        [-0.12, 0.5, 0.15, 0.04],
+        [-0.17, 0.3, 0.14, 0.04],
+        [-0.16, 0.1, 0.12, 0.03],
+      ],
+      c.drape,
+      { seg: 6, squash: 0.45, outline: 0.012 }
+    );
+    torso.add(pallu);
+    const dress = skirt(0.3, 0.3, 0.44, 0.42, 0.42, c.drape, { folds: 8, fold: 0.05, outline: 0.02 });
+    dress.position.y = 0.04;
+    torso.add(dress);
 
     // Gold at the waist and throat — jewelry, not armour, and simpler than
     // Kaikeyi's three-strand coin cascade one gate back, which is the
     // concrete difference her entry asks these two women's palettes to carry.
-    const sash = part(0.39, 0.06, 0.35, c.gold, { outline: 0.016 });
-    sash.position.y = 0.14;
+    const sash = ringed(
+      [
+        { y: 0.11, rx: 0.137, rz: 0.137 },
+        { y: 0.16, rx: 0.14, rz: 0.14 },
+      ],
+      c.gold,
+      { seg: 14, outline: 0.012 }
+    );
     torso.add(sash);
+    const necklace = shaped(tor(0.085, 0.012, 5, 14), c.gold, { outline: 0.008 });
+    necklace.rotation.x = Math.PI / 2 - 0.35;
+    necklace.position.set(0.02, 0.6, 0);
+    torso.add(necklace);
   } else {
-    // Dried-blood vein-cracks across the chest, dull rather than danger-red
-    // so they never compete with a live telegraph.
+    // A ragged remnant of the drape at the hip, and dried-blood vein-cracks
+    // across the chest, dull rather than danger-red so they never compete
+    // with a live telegraph.
+    const wrap = skirt(0.32, 0.32, 0.38, 0.36, 0.22, dark, { folds: 5, fold: 0.14, outline: 0.018 });
+    wrap.position.y = 0.06;
+    torso.add(wrap);
     for (let i = 0; i < 3; i++) {
-      const vein = part(0.02, 0.3 - i * 0.06, 0.02, c.vein, { pivot: 'top', outline: 0 });
-      vein.position.set(0.16, 0.6 - i * 0.08, (i - 1) * 0.08);
-      torso.add(vein);
+      const vein = decal(0.018, 0.26 - i * 0.05, c.vein);
+      onFront(torso, vein, 0.48 - i * 0.06, (i - 1) * 0.07, 0.004);
+      vein.rotation.z = (i - 1) * 0.3;
     }
   }
 
@@ -2443,58 +3473,88 @@ function buildShurpanakhaForm(true_, c) {
   torso.add(head);
   n.head = head;
 
-  const skull = part(0.2 * s, 0.21 * s, 0.21 * s, skin, { pivot: 'bottom', outline: 0.022 });
-  head.add(skull);
+  const neck = limb(0.09 * s, 0.1 * s, 0.09 * s, skin, { taper: 1.1, bulge: 0, outline: 0.012, up: true });
+  neck.position.y = -0.06 * s;
+  head.add(neck);
+  const face = skull(0.2 * s, 0.24 * s, 0.19 * s, skin, { jaw: 0.6, outline: 0.02 });
+  head.add(face);
+  if (!true_) nose(face, 0.125, 0.045, skin, { jut: 0.016, r: 0.011 });
 
   if (true_) {
     // The vein-cracks again, on the face this time — the one place the
     // hunter is actually looking when the reveal lands.
     for (const side of [-1, 1]) {
-      const crack = part(0.02, 0.14, 0.02, c.vein, { pivot: 'top', outline: 0 });
-      crack.position.set(0.1, 0.2, side * 0.07);
-      skull.add(crack);
+      const crack = decal(0.016, 0.12, c.vein);
+      onFront(face, crack, 0.15, side * 0.05, 0.004);
+      crack.rotation.z = side * 0.25;
     }
     // The wound itself, at the centre of the face: the nose Lakshmana took.
-    // Recessed rather than added — a notch of dried blood where the rig's
-    // other faces carry nothing — because her phase-transition line points
-    // straight at it ("look at it properly, this time"), and a reveal that
-    // narrates a mutilation the model does not actually show is the reveal
-    // failing at the one job it has. It is never staged as something the
-    // hunter delivers or witnesses: it is already old when she arrives, and
-    // she is the only one who ever describes it.
-    const wound = part(0.05, 0.07, 0.06, c.vein, { pivot: 'top', outline: 0.01 });
-    wound.position.set(0.1, 0.14, 0);
-    skull.add(wound);
+    // Recessed rather than added — a mark of dried blood laid flat where the
+    // rig's other faces carry nothing — because her phase-transition line
+    // points straight at it ("look at it properly, this time"), and a reveal
+    // that narrates a mutilation the model does not actually show is the
+    // reveal failing at the one job it has. It is never staged as something
+    // the hunter delivers or witnesses: it is already old when she arrives,
+    // and she is the only one who ever describes it.
+    const wound = decal(0.04, 0.05, c.vein);
+    onFront(face, wound, 0.1, 0, 0.004);
 
     // Loose, wild hair — the disguise's headdress gone, the same black
     // underneath it always was.
-    const mane = part(0.3, 0.3, 0.3, c.hair, { pivot: 'top', outline: 0.024 });
-    mane.position.set(-0.08, 0.24, 0);
-    skull.add(mane);
+    const mane = capOf(face, 0.1, c.hair, { grow: 1.12, back: 0.012, brow: 0.05, hairline: 0.148, wave: 0.12 });
+    const fall = ringed(
+      [
+        { y: -0.2, rx: 0.06, rz: 0.15, x: -0.13 },
+        { y: -0.06, rx: 0.09, rz: 0.17, x: -0.12, wave: 0.12, waves: 7 },
+        { y: 0.1, rx: 0.1, rz: 0.15, x: -0.1 },
+        { y: 0.2, rx: 0.07, rz: 0.1, x: -0.08 },
+      ],
+      c.hair,
+      { seg: 12, bottomY: -0.27, topY: 0.24, outline: 0.02 }
+    );
+    head.add(fall);
+    for (let i = 0; i < 6; i++) {
+      const a = -1 + (i / 5) * 2;
+      const lock = tube(
+        [
+          [-0.06, 0.16, a * 0.12, 0.035],
+          [-0.16, 0.08 - Math.abs(a) * 0.04, a * 0.2, 0.028],
+          [-0.24, -0.06 - Math.abs(a) * 0.05, a * 0.24, 0.004],
+        ],
+        c.hair,
+        { seg: 6, outline: 0.01 }
+      );
+      head.add(lock);
+    }
   } else {
     // Bound hair under a cowrie-shell-banded headdress: the shell band is the
     // silhouette tell that vanishes at the reveal.
-    const bound = part(0.22, 0.2, 0.22, c.hair, { pivot: 'top', outline: 0.02 });
-    bound.position.set(-0.04, 0.2, 0);
-    skull.add(bound);
+    const bound = capOf(face, 0.1, c.hair, { grow: 1.08, back: 0.01, brow: 0.05, hairline: 0.15 });
+    const bun = blob(0.12, 0.1, 0.11, c.hair, { outline: 0.014 });
+    bun.position.set(-0.12, 0.18, 0);
+    head.add(bun);
 
-    const band = part(0.24, 0.05, 0.24, c.shell, { outline: 0.014 });
-    band.position.y = 0.17;
-    skull.add(band);
+    const shellBand = ringed(
+      [
+        { y: 0.158, rx: 0.1, rz: 0.102, x: -0.004 },
+        { y: 0.19, rx: 0.1, rz: 0.1, x: -0.008 },
+      ],
+      c.shell,
+      { seg: 14, outline: 0.01 }
+    );
+    head.add(shellBand);
 
-    const crest = part(0.16, 0.1, 0.16, c.gold, { pivot: 'bottom', outline: 0.014 });
-    crest.position.y = 0.2;
-    skull.add(crest);
+    const crest = blob(0.08, 0.1, 0.12, c.gold, { pivot: 'bottom', p: 2.4, outline: 0.012 });
+    crest.position.set(0.04, 0.2, 0);
+    head.add(crest);
   }
 
   // Heavy kohl in the disguise, amber flare in the true form — one accent
   // slot, two readings, so the eye the hunter tracks for a windup never
   // moves on the rig.
   for (const side of [-1, 1]) {
-    const eye = decal(true_ ? 0.08 : 0.06, true_ ? 0.05 : 0.03, c.eye, { opacity: true_ ? 1 : 0.7 });
-    eye.position.set(0.11 * s, 0.11 * s, side * 0.07 * s);
-    eye.rotation.y = Math.PI / 2;
-    skull.add(eye);
+    const eye = decal(true_ ? 0.07 : 0.05, true_ ? 0.04 : 0.024, c.eye, { opacity: true_ ? 1 : 0.7 });
+    onFront(face, eye, 0.14 * s, side * 0.045 * s, 0.004);
     n[side < 0 ? 'eyeL' : 'eyeR'] = eye;
   }
 
@@ -2505,7 +3565,7 @@ function buildShurpanakhaForm(true_, c) {
     torso.add(shoulder);
     n['shoulder' + key] = shoulder;
 
-    const upper = part(0.12 * s, 0.3 * s, 0.12 * s, skin, { pivot: 'top', outline: 0.02 });
+    const upper = limb(0.11 * s, 0.3 * s, 0.11 * s, skin, { taper: 0.8, bulge: 0.04 });
     shoulder.add(upper);
 
     const elbow = new THREE.Group();
@@ -2513,10 +3573,10 @@ function buildShurpanakhaForm(true_, c) {
     shoulder.add(elbow);
     n['elbow' + key] = elbow;
 
-    const fore = part(0.11 * s, 0.28 * s, 0.11 * s, skin, { pivot: 'top', outline: 0.018 });
+    const fore = limb(0.1 * s, 0.28 * s, 0.1 * s, skin, { taper: 0.72, bulge: 0.04 });
     elbow.add(fore);
 
-    const hand = part(0.11 * s, 0.13 * s, 0.11 * s, skin, { pivot: 'top', outline: 0.016 });
+    const hand = mitt(0.09 * s, 0.11 * s, 0.09 * s, skin, { side, fist: false });
     hand.position.y = -0.28 * s;
     elbow.add(hand);
     n['hand' + key] = hand;
@@ -2526,15 +3586,23 @@ function buildShurpanakhaForm(true_, c) {
       // the source's own language. The disguise's hands are bare: the swipe
       // that lands after the reveal is the feint that landed before it.
       for (let i = -1; i <= 1; i++) {
-        const claw = part(0.028, 0.2, 0.028, P.bone, { pivot: 'top', outline: 0.007 });
-        claw.position.set(0.09, -0.36, i * 0.05);
+        const claw = tube(
+          [
+            [0.04, -0.36, i * 0.04, 0.018],
+            [0.09, -0.44, i * 0.045, 0.013],
+            [0.11, -0.52, i * 0.045, 0.002],
+          ],
+          P.bone,
+          { seg: 5, outline: 0.006 }
+        );
         elbow.add(claw);
       }
     } else {
       // Gold bangles where the claws will be — the disguise wearing ornament
       // exactly where the true form carries the weapon.
-      const bangle = part(0.13, 0.04, 0.13, c.gold, { outline: 0.01 });
-      bangle.position.y = -0.26 * s;
+      const bangle = shaped(tor(0.05, 0.014, 5, 12), c.gold, { outline: 0.008 });
+      bangle.rotation.x = Math.PI / 2;
+      bangle.position.y = -0.24 * s;
       elbow.add(bangle);
     }
 
@@ -2556,7 +3624,7 @@ function buildShurpanakhaForm(true_, c) {
     body.add(hip);
     n['hip' + key] = hip;
 
-    const thigh = part(0.15 * s, 0.36 * s, 0.15 * s, dark, { pivot: 'top', outline: 0.022 });
+    const thigh = limb(0.15 * s, 0.36 * s, 0.15 * s, dark, { taper: 0.76, bulge: 0.08 });
     hip.add(thigh);
 
     const knee = new THREE.Group();
@@ -2564,10 +3632,10 @@ function buildShurpanakhaForm(true_, c) {
     hip.add(knee);
     n['knee' + key] = knee;
 
-    const shin = part(0.13 * s, 0.32 * s, 0.13 * s, dark, { pivot: 'top', outline: 0.02 });
+    const shin = limb(0.13 * s, 0.32 * s, 0.13 * s, dark, { taper: 0.66, bulge: 0.1, bulgeAt: 0.22 });
     knee.add(shin);
 
-    const foot = part(0.15 * s, 0.08 * s, 0.18 * s, dark, { pivot: 'top', outline: 0.016 });
+    const foot = boot(0.17 * s, 0.07 * s, 0.11 * s, true_ ? dark : c.skin, { toe: 0.4 });
     foot.position.set(0.04, -0.32 * s, 0);
     knee.add(foot);
   }
@@ -2656,42 +3724,82 @@ export function buildLankaSoldier(skin = null) {
 
   // Narrow and upright where Kawach is wide and low-slung — a formation
   // fighter stands in a line, it does not brace alone.
-  const torso = part(0.34, 0.62, 0.38, c.body, { pivot: 'bottom', outline: 0.028 });
+  const torso = trunk(0.34, 0.62, 0.38, c.skin, { waist: 0.76, chest: 0.12, outline: 0.026 });
   body.add(torso);
 
-  // Scale skirting rather than a bolted chest slab: the plate is layered and
-  // war-worn, not one thick piece.
+  // Lamellar rather than a bolted chest slab: three overlapping bands, each
+  // flaring at its lower edge, layered and war-worn rather than one piece.
   for (let i = 0; i < 3; i++) {
-    const lame = part(0.38, 0.1, 0.42, c.dark, { outline: 0.018 });
-    lame.position.set(0.01, 0.1 + i * 0.13, 0);
+    const y0 = 0.08 + i * 0.13;
+    const hx = 0.17 + (i === 1 ? 0.012 : 0) - i * 0.004;
+    const hz = 0.19 - i * 0.004;
+    const lame = ringed(
+      [
+        { y: y0 - 0.075, rx: hx * 1.06, rz: hz * 1.04, x: 0.02, p: 2.6 },
+        { y: y0 - 0.06, rx: hx * 1.09, rz: hz * 1.07, x: 0.02, p: 2.6 },
+        { y: y0 + 0.07, rx: hx * 1.02, rz: hz * 0.99, x: 0.018, p: 2.6 },
+      ],
+      i === 1 ? c.body : c.dark,
+      { seg: 14, outline: 0.014 }
+    );
     torso.add(lame);
   }
+  const loin = skirt(0.3, 0.34, 0.34, 0.38, 0.24, c.dark, { folds: 5, fold: 0.05, outline: 0.018 });
+  loin.position.y = 0.02;
+  body.add(loin);
 
   const head = new THREE.Group();
   head.position.y = 0.66;
   torso.add(head);
   n.head = head;
 
-  const skull = part(0.26, 0.26, 0.26, c.skin, { pivot: 'bottom', outline: 0.022 });
-  head.add(skull);
+  const face = skull(0.25, 0.27, 0.24, c.skin, { jaw: 0.8 });
+  head.add(face);
+  nose(face, 0.15, 0.06, c.skin, { jut: 0.024, r: 0.015 });
 
   // A conical helm with a back-swept crest — height added at the top of the
   // silhouette, which is where a lineup of them reads as a line.
-  const helm = part(0.28, 0.14, 0.28, c.dark, { pivot: 'bottom', outline: 0.02 });
-  helm.position.y = 0.24;
-  skull.add(helm);
-  const crest = part(0.05, 0.22, 0.14, c.body, { pivot: 'bottom', outline: 0.014 });
-  crest.position.set(-0.08, 0.12, 0);
-  crest.rotation.z = 0.5;
-  helm.add(crest);
+  const helm = ringed(
+    [
+      { y: 0.16, rx: 0.14, rz: 0.135 },
+      { y: 0.2, rx: 0.145, rz: 0.14 },
+      { y: 0.28, rx: 0.12, rz: 0.115, x: -0.01 },
+      { y: 0.36, rx: 0.06, rz: 0.058, x: -0.03 },
+      { y: 0.42, rx: 0.015, rz: 0.015, x: -0.05 },
+    ],
+    c.dark,
+    { seg: 14, outline: 0.02, bottomY: 0.16, topY: 0.43 }
+  );
+  face.add(helm);
+  const crest = tube(
+    [
+      [-0.04, 0.38, 0, 0.035],
+      [-0.16, 0.44, 0, 0.03],
+      [-0.28, 0.4, 0, 0.018],
+      [-0.36, 0.3, 0, 0.004],
+    ],
+    c.body,
+    { seg: 6, squash: 0.45, outline: 0.012 }
+  );
+  face.add(crest);
+  for (const side of [-1, 1]) {
+    const tusk = tube(
+      [
+        [0.1, 0.04, side * 0.05, 0.014],
+        [0.125, 0.08, side * 0.058, 0.009],
+        [0.13, 0.11, side * 0.052, 0.002],
+      ],
+      P.bone,
+      { seg: 5, outline: 0.006 }
+    );
+    face.add(tusk);
+  }
 
   // Eyes, in the shared vocabulary: they flare when a commit is near — the
   // same signal on the same schedule as the Kawach this extends.
   for (const side of [-1, 1]) {
-    const eye = decal(0.06, 0.04, c.eye);
-    eye.position.set(0.14, 0.12, side * 0.065);
-    eye.rotation.y = Math.PI / 2;
-    head.add(eye);
+    const eye = decal(0.06, 0.034, c.eye);
+    onFront(face, eye, 0.15, side * 0.058, 0.004);
     n[side < 0 ? 'eyeL' : 'eyeR'] = eye;
   }
 
@@ -2702,10 +3810,12 @@ export function buildLankaSoldier(skin = null) {
     torso.add(shoulder);
     n['shoulder' + key] = shoulder;
 
-    const pauldron = part(0.18, 0.14, 0.18, c.dark, { outline: 0.018 });
+    const pauldron = blob(0.22, 0.13, 0.2, c.dark, { p: 3, pv: 2.2, outline: 0.018 });
+    pauldron.position.set(0, 0.03, side * 0.02);
+    pauldron.rotation.x = side * 0.35;
     shoulder.add(pauldron);
 
-    const upper = part(0.13, 0.28, 0.13, c.skin, { pivot: 'top', outline: 0.018 });
+    const upper = limb(0.13, 0.28, 0.13, c.skin, { taper: 0.82, bulge: 0.1 });
     upper.position.y = -0.04;
     shoulder.add(upper);
 
@@ -2714,12 +3824,15 @@ export function buildLankaSoldier(skin = null) {
     shoulder.add(elbow);
     n['elbow' + key] = elbow;
 
-    const fore = part(0.12, 0.26, 0.12, c.skin, { pivot: 'top', outline: 0.018 });
+    const fore = limb(0.12, 0.26, 0.12, c.skin, { taper: 0.76, bulge: 0.1 });
     elbow.add(fore);
 
-    const bracer = part(0.15, 0.09, 0.15, c.dark, { outline: 0.012 });
-    bracer.position.y = -0.2;
+    const bracer = limb(0.13, 0.12, 0.13, c.dark, { taper: 0.9, bulge: 0, p: 2.6, outline: 0.012 });
+    bracer.position.y = -0.1;
     elbow.add(bracer);
+    const hand = mitt(0.1, 0.1, 0.11, c.skin, { side });
+    hand.position.y = -0.26;
+    elbow.add(hand);
   }
 
   // The spear, carried in the far arm and pivoting from the grip so the
@@ -2731,21 +3844,29 @@ export function buildLankaSoldier(skin = null) {
   n.spear = spear;
 
   const haft = new THREE.Group();
-  haft.rotation.z = -Math.PI / 2; // lay the box down along +X (a +90° z-turn would point it backwards)
+  haft.rotation.z = -Math.PI / 2; // lay it down along +X (a +90° z-turn would point it backwards)
   spear.add(haft);
-  const shaft = part(0.05, 2.0, 0.05, c.haft, { pivot: 'bottom', outline: 0.012 });
-  shaft.position.y = -0.55; // grip sits a third of the way up, not at the butt
+  const shaft = limb(0.05, 1.98, 0.05, c.haft, { taper: 0.9, bulge: 0, seg: 8, outline: 0.012, up: true });
+  shaft.position.y = -0.53; // grip sits a third of the way up, not at the butt
   haft.add(shaft);
-  const tip = part(0.07, 0.32, 0.07, c.head, { pivot: 'bottom', outline: 0.012 });
+  // A leaf blade: widest a third of the way up, thin through its width, so
+  // the head reads as a spear rather than as the haft in a paler colour.
+  const tip = ringed(
+    [
+      { y: 0.0, rx: 0.03, rz: 0.03 },
+      { y: 0.06, rx: 0.024, rz: 0.05 },
+      { y: 0.14, rx: 0.02, rz: 0.075 },
+      { y: 0.26, rx: 0.014, rz: 0.05 },
+      { y: 0.36, rx: 0.006, rz: 0.012 },
+    ],
+    c.head,
+    { seg: 10, outline: 0.01, bottomY: -0.01, topY: 0.4 }
+  );
   tip.position.y = 1.45;
   haft.add(tip);
-  // The leaf blade: two flared cheeks either side of the point, so the head
-  // reads as a spear rather than as the haft continuing in a paler colour.
-  for (const side of [-1, 1]) {
-    const cheek = part(0.03, 0.16, 0.05, c.head, { pivot: 'bottom', outline: 0.008 });
-    cheek.position.set(0, 1.45, side * 0.05);
-    haft.add(cheek);
-  }
+  const collar = blob(0.07, 0.06, 0.07, c.body, { outline: 0.008 });
+  collar.position.y = 1.45;
+  haft.add(collar);
 
   // Legs — long, planted. It walks in and stops at spear length, which is a
   // very different distance from the one the shield taught.
@@ -2756,7 +3877,7 @@ export function buildLankaSoldier(skin = null) {
     body.add(hip);
     n['hip' + key] = hip;
 
-    const thigh = part(0.16, 0.36, 0.16, c.dark, { pivot: 'top', outline: 0.02 });
+    const thigh = limb(0.16, 0.36, 0.16, c.dark, { taper: 0.8, bulge: 0.08 });
     hip.add(thigh);
 
     const knee = new THREE.Group();
@@ -2764,10 +3885,13 @@ export function buildLankaSoldier(skin = null) {
     hip.add(knee);
     n['knee' + key] = knee;
 
-    const shin = part(0.14, 0.34, 0.14, c.skin, { pivot: 'top', outline: 0.018 });
+    const shin = limb(0.14, 0.34, 0.14, c.skin, { taper: 0.7, bulge: 0.12, bulgeAt: 0.22 });
     knee.add(shin);
+    const greave = limb(0.15, 0.2, 0.15, c.dark, { taper: 0.8, bulge: 0.04, p: 2.6, outline: 0.012 });
+    greave.position.y = -0.08;
+    knee.add(greave);
 
-    const foot = part(0.22, 0.08, 0.16, c.dark, { pivot: 'top', outline: 0.016 });
+    const foot = boot(0.22, 0.08, 0.15, c.dark);
     foot.position.set(0.04, -0.34, 0);
     knee.add(foot);
   }
@@ -2830,69 +3954,103 @@ export function buildKumbhakarna(skin = null) {
   // The trunk: mountain-like, per the source's own word for him. Wide and
   // deep, and unlike Bakasura it is a chest rather than a belly — he is a
   // giant, not a glutton, and the two must not read as the same build scaled.
-  const torso = flesh(part(1.5, 1.5, 1.3, c.skin, { pivot: 'bottom', outline: 0.05 }));
+  const torso = flesh(trunk(1.5, 1.5, 1.4, c.skin, { waist: 0.84, chest: 0.16, belly: 0.06, neck: 0.5, outline: 0.05, seg: 18 }));
   body.add(torso);
   n.torso = torso;
 
   // The wrap — minimal warrior garb, the only garment on him, and no jewelry
   // anywhere: the inverse of Bakasura's bone-heavy read, on purpose.
-  const wrap = part(1.56, 0.46, 1.36, c.wrap, { pivot: 'top', outline: 0.034 });
-  wrap.position.y = 0.24;
+  const wrap = skirt(1.3, 1.24, 1.44, 1.38, 0.62, c.wrap, { folds: 9, fold: 0.05, outline: 0.034, seg: 20 });
+  wrap.position.y = 0.2;
   torso.add(wrap);
+  const knot = ringed(
+    [
+      { y: 0.1, rx: 0.64, rz: 0.6, x: 0.02 },
+      { y: 0.26, rx: 0.66, rz: 0.62, x: 0.03 },
+    ],
+    c.wrap,
+    { seg: 18, outline: 0.03 }
+  );
+  torso.add(knot);
 
   const head = new THREE.Group();
   head.position.y = 1.46;
   torso.add(head);
   n.head = head;
 
-  const skull = flesh(part(0.86, 0.8, 0.82, c.skin, { pivot: 'bottom', outline: 0.04 }));
-  head.add(skull);
+  const face = flesh(skull(0.86, 0.84, 0.82, c.skin, { jaw: 0.9, snout: 0.05, outline: 0.04, seg: 18 }));
+  head.add(face);
+  n.skinMeshes.push(nose(face, 0.5, 0.16, c.skin, { jut: 0.07, r: 0.055, outline: 0.012 }).userData.mesh);
 
   // A heavy jaw, hung open a crack — a face caught mid-yawn is the whole
-  // default character read his entry asks for. It has to sit far enough
-  // forward to break the skull's own outline: the skull is 0.86 across, so
-  // anything inside x ±0.43 is a box drawn inside a box and reads as nothing
-  // at all.
-  const jaw = flesh(part(0.42, 0.3, 0.6, c.skin, { pivot: 'top', outline: 0.028 }));
-  jaw.position.set(0.46, 0.16, 0);
-  skull.add(jaw);
+  // default character read his entry asks for. It sits forward of the face
+  // so it breaks the skull's own outline.
+  const jaw = flesh(
+    barrel(
+      [
+        { x: -0.3, ry: 0.1, rz: 0.28, y: -0.12 },
+        { x: -0.1, ry: 0.14, rz: 0.3, y: -0.14 },
+        { x: 0.1, ry: 0.13, rz: 0.26, y: -0.14 },
+        { x: 0.2, ry: 0.1, rz: 0.2, y: -0.12 },
+      ],
+      c.skin,
+      { seg: 14, backX: -0.34, frontX: 0.24, outline: 0.028 }
+    )
+  );
+  jaw.position.set(0.26, 0.26, 0);
+  face.add(jaw);
   n.jaw = jaw;
+  const mouth = decal(0.34, 0.1, 0x1a0c0a);
+  onFront(face, mouth, 0.24, 0, 0.006);
 
   // Disheveled hair and beard — this is a man who has been asleep for a very
   // long time, and it is the only untidy thing on a rig that wears no
-  // ornament at all. Three masses, each placed to clear the skull's own
-  // silhouette rather than to sit inside it: on top, down the back, and
-  // hanging off the chin below the jaw.
-  const crown = part(0.8, 0.44, 0.86, c.hair, { pivot: 'bottom', outline: 0.034 });
-  crown.position.set(-0.16, 0.72, 0);
-  skull.add(crown);
-  const mane = part(0.3, 0.62, 0.8, c.hair, { pivot: 'top', outline: 0.03 });
-  mane.position.set(-0.5, 0.74, 0);
-  skull.add(mane);
-  // The beard frames the jaw rather than hanging below it. Below is not
-  // available: the skull's underside sits level with the top of a chest 1.5
-  // units across, so anything that hangs is inside him. So it flares wider
-  // than the skull is deep instead, which is what makes it read from the
-  // three-quarter angle the camera actually holds.
-  const beard = part(0.36, 0.40, 0.90, c.hair, { pivot: 'top', outline: 0.03 });
-  beard.position.set(0.30, 0.16, 0);
-  skull.add(beard);
+  // ornament at all: a matted crown, a mane down the back, and a beard that
+  // frames the jaw rather than hanging into the chest below it.
+  const crown = capOf(face, 0.5, c.hair, { grow: 1.1, back: 0.06, brow: 0.12, hairline: 0.66, wave: 0.12, waves: 9, outline: 0.03 });
+  const mane = ringed(
+    [
+      { y: -0.3, rx: 0.12, rz: 0.36, x: -0.5, wave: 0.14, waves: 9 },
+      { y: 0.0, rx: 0.2, rz: 0.42, x: -0.46, wave: 0.14, waves: 9 },
+      { y: 0.36, rx: 0.26, rz: 0.44, x: -0.36 },
+      { y: 0.66, rx: 0.24, rz: 0.4, x: -0.24 },
+    ],
+    c.hair,
+    { seg: 16, bottomY: -0.42, topY: 0.74, outline: 0.03 }
+  );
+  mane.position.y = 0.3;
+  face.add(mane);
+  const beard = ringed(
+    [
+      { y: -0.24, rx: 0.14, rz: 0.36, x: 0.34, wave: 0.16, waves: 8 },
+      { y: -0.08, rx: 0.2, rz: 0.46, x: 0.28, wave: 0.12, waves: 8 },
+      { y: 0.12, rx: 0.2, rz: 0.44, x: 0.2 },
+      { y: 0.3, rx: 0.12, rz: 0.4, x: 0.12 },
+    ],
+    c.hair,
+    { seg: 16, bottomY: -0.32, topY: 0.36, outline: 0.03 }
+  );
+  beard.position.y = 0.16;
+  face.add(beard);
 
   // Eyes and lids. The eye is the telegraph — the shared damage-signal amber,
   // per his entry — and the lid sitting over most of it is the groggy read.
   // `_wake` raises the lids; nothing else about the face moves.
   for (const side of [-1, 1]) {
     const key = side < 0 ? 'L' : 'R';
-    const eye = decal(0.2, 0.13, c.eye, { opacity: 0.5 });
-    eye.position.set(0.44, 0.5, side * 0.2);
-    eye.rotation.y = Math.PI / 2;
-    skull.add(eye);
+    const eye = decal(0.2, 0.12, c.eye, { opacity: 0.5 });
+    onFront(face, eye, 0.52, side * 0.2, 0.01);
     n['eye' + key] = eye;
 
-    const lid = flesh(part(0.04, 0.1, 0.24, c.skin, { pivot: 'top', outline: 0.01 }));
-    lid.position.set(0.45, 0.57, side * 0.2);
-    skull.add(lid);
+    const lid = flesh(blob(0.08, 0.1, 0.26, c.skin, { pivot: 'top', outline: 0.01 }));
+    const f = frontOf(face.userData.mesh.geometry, 0.58, side * 0.2);
+    lid.position.set(f.x + 0.01, 0.6, side * 0.2);
+    lid.rotation.y = f.yaw - Math.PI / 2;
+    face.add(lid);
     n['lid' + key] = lid;
+    const brow = decal(0.26, 0.05, c.hair);
+    onFront(face, brow, 0.64, side * 0.2, 0.012);
+    brow.rotation.z = side * 0.18;
   }
 
   // Arms. The club is carried in the far arm; the near arm hangs — a
@@ -2905,7 +4063,7 @@ export function buildKumbhakarna(skin = null) {
     torso.add(shoulder);
     n['shoulder' + key] = shoulder;
 
-    const upper = flesh(part(0.52, 0.86, 0.52, c.skin, { pivot: 'top', outline: 0.036 }));
+    const upper = flesh(limb(0.54, 0.86, 0.54, c.skin, { taper: 0.84, bulge: 0.12, outline: 0.036 }));
     shoulder.add(upper);
 
     const elbow = new THREE.Group();
@@ -2913,10 +4071,10 @@ export function buildKumbhakarna(skin = null) {
     shoulder.add(elbow);
     n['elbow' + key] = elbow;
 
-    const fore = flesh(part(0.46, 0.8, 0.46, c.skin, { pivot: 'top', outline: 0.034 }));
+    const fore = flesh(limb(0.48, 0.8, 0.48, c.skin, { taper: 0.8, bulge: 0.14, outline: 0.034 }));
     elbow.add(fore);
 
-    const hand = flesh(part(0.44, 0.4, 0.42, c.skin, { pivot: 'top', outline: 0.03 }));
+    const hand = flesh(mitt(0.44, 0.42, 0.42, c.skin, { side, outline: 0.03 }));
     hand.position.y = -0.8;
     elbow.add(hand);
     n['hand' + key] = hand;
@@ -2934,22 +4092,40 @@ export function buildKumbhakarna(skin = null) {
   n.elbowR.add(club);
   n.club = club;
 
-  const trunk = new THREE.Group();
-  trunk.rotation.z = -Math.PI / 2; // along +X, same as the soldier's haft
-  club.add(trunk);
-  const shaft = part(0.34, 3.0, 0.34, c.club, { pivot: 'bottom', outline: 0.03 });
-  shaft.position.y = -0.5;
-  trunk.add(shaft);
-  // The head end: thicker, knotted, still carrying its root ball. An
-  // *uprooted* tree, not a turned handle.
-  const knot = part(0.62, 0.7, 0.62, c.clubDark, { outline: 0.032 });
-  knot.position.y = 2.15;
-  trunk.add(knot);
-  for (const side of [-1, 1]) {
-    const root_ = part(0.24, 0.4, 0.22, c.clubDark, { pivot: 'bottom', outline: 0.016 });
-    root_.position.set(side * 0.24, 2.4, side * 0.22);
-    root_.rotation.z = side * 0.5;
-    trunk.add(root_);
+  const trunkGroup = new THREE.Group();
+  trunkGroup.rotation.z = -Math.PI / 2; // along +X, same as the soldier's haft
+  club.add(trunkGroup);
+  // A knotted bole that thickens toward the root end, not a turned handle.
+  const bole = tube(
+    [
+      [0, -0.5, 0, 0.13],
+      [0.02, 0.2, 0.01, 0.16],
+      [-0.02, 0.8, -0.01, 0.15],
+      [0.03, 1.3, 0.02, 0.19],
+      [-0.02, 1.8, 0, 0.22],
+      [0.0, 2.2, 0, 0.3],
+    ],
+    c.club,
+    { seg: 10, outline: 0.03 }
+  );
+  trunkGroup.add(bole);
+  // The head end: still carrying its root ball and its roots.
+  const knot2 = blob(0.66, 0.6, 0.62, c.clubDark, { outline: 0.032, p: 2.2 });
+  knot2.position.y = 2.3;
+  trunkGroup.add(knot2);
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2 + 0.3;
+    const root_ = tube(
+      [
+        [Math.cos(a) * 0.2, 2.45, Math.sin(a) * 0.2, 0.09],
+        [Math.cos(a) * 0.42, 2.62, Math.sin(a) * 0.42, 0.06],
+        [Math.cos(a) * 0.52, 2.86, Math.sin(a) * 0.5, 0.03],
+        [Math.cos(a) * 0.5, 3.02, Math.sin(a) * 0.48, 0.005],
+      ],
+      c.clubDark,
+      { seg: 6, outline: 0.014 }
+    );
+    trunkGroup.add(root_);
   }
 
   // Legs — heavy columns. Nothing here is built for speed, and the fight is
@@ -2961,7 +4137,7 @@ export function buildKumbhakarna(skin = null) {
     body.add(hip);
     n['hip' + key] = hip;
 
-    const thigh = flesh(part(0.62, 1.0, 0.62, c.skin, { pivot: 'top', outline: 0.04 }));
+    const thigh = flesh(limb(0.64, 1.0, 0.64, c.skin, { taper: 0.84, bulge: 0.08, outline: 0.04 }));
     hip.add(thigh);
 
     const knee = new THREE.Group();
@@ -2969,10 +4145,10 @@ export function buildKumbhakarna(skin = null) {
     hip.add(knee);
     n['knee' + key] = knee;
 
-    const shin = flesh(part(0.54, 0.86, 0.54, c.skin, { pivot: 'top', outline: 0.036 }));
+    const shin = flesh(limb(0.56, 0.86, 0.56, c.skin, { taper: 0.8, bulge: 0.12, bulgeAt: 0.25, outline: 0.036 }));
     knee.add(shin);
 
-    const foot = part(0.66, 0.2, 0.5, c.dark, { pivot: 'top', outline: 0.026 });
+    const foot = boot(0.7, 0.22, 0.52, c.dark, { toe: 0.4, outline: 0.026 });
     foot.position.set(0.1, -0.86, 0);
     knee.add(foot);
   }
@@ -3005,33 +4181,57 @@ export function buildKaikeyi() {
   root.add(body);
   n.body = body;
 
-  const robe = part(0.3, 0.62, 0.28, P.kaikeyiRobe, { pivot: 'bottom', outline: 0.03 });
+  const robe = trunk(0.3, 0.62, 0.3, P.kaikeyiRobe, { waist: 0.72, chest: 0.08, taper: 0.9, outline: 0.026 });
   body.add(robe);
   n.robe = robe;
 
   // A bridal/coronation hem, heavier and more layered than Shakuni's plain
   // skirt — dressed for the day the boons were granted, not for court
-  // business.
-  const hem = part(0.4, 0.26, 0.36, P.kaikeyiRobeDark, { pivot: 'top', outline: 0.026 });
-  hem.position.y = 0.02;
+  // business: two tiers, the lower one pleated and pooling at the floor.
+  const hem = skirt(0.3, 0.3, 0.48, 0.46, 0.64, P.kaikeyiRobeDark, { folds: 10, fold: 0.05, outline: 0.024 });
+  hem.position.y = 0.04;
   robe.add(hem);
-
-  for (const side of [-1, 1]) {
-    const foot = part(0.12, 0.06, 0.13, P.kaikeyiRobeDark, { pivot: 'top', outline: 0.014 });
-    foot.position.set(0.05, -0.26, side * 0.08);
-    hem.add(foot);
-  }
+  const overskirt = skirt(0.3, 0.3, 0.42, 0.4, 0.36, P.kaikeyiRobe, { folds: 7, fold: 0.06, outline: 0.02 });
+  overskirt.position.y = 0.06;
+  robe.add(overskirt);
+  // The overskirt's gold border, pleated with it so it reads as one hem.
+  const border = ringed(
+    [
+      { y: -0.37, rx: 0.214, rz: 0.204, wave: 0.06, waves: 7 },
+      { y: -0.33, rx: 0.21, rz: 0.2, wave: 0.055, waves: 7 },
+    ],
+    P.kaikeyiGold,
+    { seg: 18, outline: 0.01 }
+  );
+  border.position.y = 0.06;
+  robe.add(border);
 
   // The cascading multi-strand gold coin-necklace reaching the waist — the
   // handoff's own differentiator from Shurpanakha's simpler gold jewelry.
   for (let i = 0; i < 3; i++) {
-    const strand = part(0.03, 0.5 - i * 0.06, 0.03, P.kaikeyiGold, { pivot: 'top', outline: 0.008 });
-    strand.position.set(0.15, 0.34, (i - 1) * 0.05);
+    const len = 0.5 - i * 0.06;
+    const z = (i - 1) * 0.05;
+    const strand = tube(
+      [
+        [0.08, 0.56, z * 2.2, 0.012],
+        [0.16, 0.46, z * 1.2, 0.012],
+        [0.17, 0.56 - len * 0.7, z, 0.012],
+        [0.165, 0.56 - len, z * 0.8, 0.01],
+      ],
+      P.kaikeyiGold,
+      { seg: 5, outline: 0.006 }
+    );
     robe.add(strand);
   }
 
-  const sash = part(0.32, 0.06, 0.29, P.kaikeyiGold, { outline: 0.02 });
-  sash.position.y = 0.2;
+  const sash = ringed(
+    [
+      { y: 0.17, rx: 0.12, rz: 0.12 },
+      { y: 0.23, rx: 0.125, rz: 0.124 },
+    ],
+    P.kaikeyiGold,
+    { seg: 14, outline: 0.014 }
+  );
   robe.add(sash);
 
   const head = new THREE.Group();
@@ -3039,45 +4239,73 @@ export function buildKaikeyi() {
   robe.add(head);
   n.head = head;
 
-  const skull = part(0.19, 0.22, 0.2, P.kaikeyiSkin, { pivot: 'bottom', outline: 0.02 });
-  head.add(skull);
+  const neck = limb(0.08, 0.1, 0.08, P.kaikeyiSkin, { taper: 1.1, bulge: 0, outline: 0.01, up: true });
+  neck.position.y = -0.06;
+  head.add(neck);
+  const face = skull(0.19, 0.23, 0.18, P.kaikeyiSkin, { jaw: 0.6, outline: 0.018 });
+  head.add(face);
+  nose(face, 0.13, 0.045, P.kaikeyiSkin, { jut: 0.016, r: 0.011 });
 
   // Loose, wavy hair under the veil — Shurpanakha's own hair is bound and
   // ornate under her headdress, a concrete, checkable difference rather
   // than a mood contrast.
-  const hair = part(0.24, 0.24, 0.24, P.kaikeyiHair, { pivot: 'top', outline: 0.022 });
-  hair.position.set(-0.03, 0.24, 0);
-  skull.add(hair);
+  capOf(face, 0.1, P.kaikeyiHair, { grow: 1.08, back: 0.01, brow: 0.045, hairline: 0.145, wave: 0.06 });
+  const hair = ringed(
+    [
+      { y: -0.26, rx: 0.05, rz: 0.1, x: -0.09, wave: 0.1, waves: 6 },
+      { y: -0.1, rx: 0.07, rz: 0.11, x: -0.08, wave: 0.08, waves: 6 },
+      { y: 0.08, rx: 0.08, rz: 0.11, x: -0.06 },
+      { y: 0.18, rx: 0.06, rz: 0.09, x: -0.05 },
+    ],
+    P.kaikeyiHair,
+    { seg: 12, bottomY: -0.32, topY: 0.22, outline: 0.014 }
+  );
+  head.add(hair);
 
   // The veil, over the hair rather than the face — ceremonial, not
-  // concealing.
-  const veil = part(0.22, 0.28, 0.22, P.kaikeyiRobeDark, { pivot: 'top', outline: 0.02 });
-  veil.position.set(-0.05, 0.3, 0);
-  skull.add(veil);
+  // concealing: a drape from the crown down the back to the shoulders.
+  const veil = ringed(
+    [
+      { y: -0.2, rx: 0.07, rz: 0.15, x: -0.1 },
+      { y: -0.06, rx: 0.09, rz: 0.15, x: -0.09 },
+      { y: 0.1, rx: 0.1, rz: 0.13, x: -0.06 },
+      { y: 0.22, rx: 0.09, rz: 0.105, x: -0.03 },
+      { y: 0.26, rx: 0.06, rz: 0.07, x: -0.03 },
+    ],
+    P.kaikeyiRobeDark,
+    { seg: 14, bottomY: -0.24, topY: 0.275, outline: 0.016 }
+  );
+  head.add(veil);
 
   // The paisley crown and its single teardrop ruby, distinct from
   // Duryodhana's tiered jeweled crown and Ravana's ten-head arc.
-  const crown = part(0.15, 0.1, 0.16, P.kaikeyiGold, { pivot: 'bottom', outline: 0.016 });
-  crown.position.y = 0.11;
-  skull.add(crown);
-  const ruby = decal(0.045, 0.06, P.crimson);
-  ruby.position.set(0.1, 0.13, 0);
-  ruby.rotation.y = Math.PI / 2;
-  skull.add(ruby);
+  const crown = ringed(
+    [
+      { y: 0.17, rx: 0.1, rz: 0.1, x: -0.004 },
+      { y: 0.2, rx: 0.104, rz: 0.104, x: -0.004 },
+      { y: 0.24, rx: 0.07, rz: 0.08, x: 0.0, wave: 0.2, waves: 5 },
+      { y: 0.28, rx: 0.03, rz: 0.03, x: 0.02 },
+    ],
+    P.kaikeyiGold,
+    { seg: 15, bottomY: 0.17, topY: 0.3, outline: 0.012 }
+  );
+  head.add(crown);
+  const ruby = decal(0.035, 0.05, P.crimson);
+  onFront(face, ruby, 0.19, 0, 0.012);
 
   // A large gold nose ring (nath) — unclaimed elsewhere on the roster.
-  const nath = decal(0.05, 0.05, P.kaikeyiGold);
-  nath.position.set(0.095, 0.0, 0.05);
-  nath.rotation.x = Math.PI / 2;
-  skull.add(nath);
+  const f = frontOf(face.userData.mesh.geometry, 0.1, 0.03);
+  const nath = shaped(tor(0.015, 0.004, 4, 12), P.kaikeyiGold, { outline: 0.003 });
+  nath.position.set(f.x + 0.012, 0.085, 0.03);
+  nath.rotation.y = Math.PI / 2 - 0.3;
+  face.add(nath);
 
   // Heavy kohl — "an expression that reads as weighted rather than
   // triumphant or cruel," the reference's own read.
   for (const side of [-1, 1]) {
-    const eye = decal(0.045, 0.024, P.outline);
-    eye.position.set(0.095, 0.03, side * 0.05);
-    eye.rotation.y = Math.PI / 2;
-    skull.add(eye);
+    const eye = decal(0.042, 0.02, P.outline);
+    onFront(face, eye, 0.135, side * 0.042, 0.004);
+    eye.rotation.z = side * 0.1;
   }
 
   // Arms, clasped and empty.
@@ -3086,17 +4314,21 @@ export function buildKaikeyi() {
     shoulder.position.set(0, 0.42, side * 0.14);
     robe.add(shoulder);
 
-    const upper = part(0.08, 0.22, 0.08, P.kaikeyiRobe, { pivot: 'top', outline: 0.015 });
+    const upper = limb(0.085, 0.22, 0.085, P.kaikeyiRobe, { taper: 0.84, bulge: 0.02, outline: 0.014 });
     shoulder.add(upper);
 
     const elbow = new THREE.Group();
     elbow.position.y = -0.22;
     shoulder.add(elbow);
 
-    const fore = part(0.07, 0.2, 0.07, P.kaikeyiSkin, { pivot: 'top', outline: 0.013 });
+    const fore = limb(0.07, 0.2, 0.07, P.kaikeyiSkin, { taper: 0.78, bulge: 0.03, outline: 0.012 });
     elbow.add(fore);
+    const bangle = shaped(tor(0.034, 0.009, 4, 12), P.kaikeyiGold, { outline: 0.005 });
+    bangle.rotation.x = Math.PI / 2;
+    bangle.position.y = -0.17;
+    elbow.add(bangle);
 
-    const hand = part(0.07, 0.08, 0.08, P.kaikeyiSkin, { pivot: 'top', outline: 0.012 });
+    const hand = mitt(0.065, 0.08, 0.07, P.kaikeyiSkin, { side, fist: false, outline: 0.01 });
     hand.position.y = -0.2;
     elbow.add(hand);
   }
@@ -3105,8 +4337,6 @@ export function buildKaikeyi() {
   return root;
 }
 
-// ---------------------------------------------------------------------------
-// Dwar-Rakshak — the level's boss
 // ---------------------------------------------------------------------------
 
 export function buildGuardian() {
@@ -3762,25 +4992,48 @@ export function buildRavana() {
   root.add(hips);
   n.hips = hips;
 
-  const torso = part(0.98, 1.3, 1.1, P.lankaPlate, { pivot: 'bottom', outline: 0.05 });
+  const torso = trunk(0.98, 1.3, 1.1, P.lankaPlate, { waist: 0.8, chest: 0.12, p: 2.4, neck: 0.44, outline: 0.05, seg: 18 });
   hips.add(torso);
   n.torso = torso;
 
-  // The vermillion drape, worn over the plate — the one large non-gold mass on
-  // him, and what stops the chest reading as a slab. Kept just inside the
-  // torso's own width so it never becomes a separate floating box.
-  const robe = part(0.94, 0.86, 1.06, P.lankaRobe, { pivot: 'top', outline: 0.03 });
-  robe.position.y = 0.46;
+  // The vermillion drape: a dhoti from the waist, pleated, and a sash of the
+  // same cloth wrapped from shoulder to hip — the one large non-gold mass on
+  // him, and what stops the chest reading as a slab.
+  const robe = skirt(0.86, 0.96, 1.04, 1.16, 0.9, P.lankaRobe, { folds: 10, fold: 0.05, outline: 0.03, seg: 22 });
+  robe.position.y = 0.36;
   torso.add(robe);
+  const sashPts = [];
+  for (let i = 0; i <= 18; i++) {
+    const a = (i / 18) * Math.PI * 2;
+    const y = 0.72 + 0.34 * Math.sin(a);
+    sashPts.push([Math.cos(a) * 0.5, y, Math.sin(a) * 0.56, 0.07]);
+  }
+  const sash = tube(sashPts, P.lankaRobe, { seg: 6, squash: 2.4, outline: 0.02 });
+  torso.add(sash);
 
   // Heavy court gold at the collar and the belt: "richly adorned" is explicit
   // in his entry where it was not in Duryodhana's, and it is the ornament
   // rather than the scale that separates the two kings' silhouettes.
-  const collar = part(1.06, 0.22, 1.2, P.lankaPlateDark, { outline: 0.034 });
-  collar.position.y = 1.18;
+  const collar = ringed(
+    [
+      { y: 1.02, rx: 0.5, rz: 0.58, x: 0.02, wave: 0.07, waves: 12 },
+      { y: 1.08, rx: 0.5, rz: 0.58, x: 0.02, wave: 0.05, waves: 12 },
+      { y: 1.2, rx: 0.42, rz: 0.5, x: 0.0 },
+      { y: 1.28, rx: 0.3, rz: 0.36, x: -0.02 },
+    ],
+    P.lankaPlateDark,
+    { seg: 24, outline: 0.03 }
+  );
   torso.add(collar);
-  const belt = part(1.02, 0.2, 1.14, P.lankaPlateDark, { outline: 0.034 });
-  belt.position.y = 0.1;
+  const belt = ringed(
+    [
+      { y: 0.02, rx: 0.42, rz: 0.47, p: 2.4 },
+      { y: 0.1, rx: 0.44, rz: 0.49, p: 2.4 },
+      { y: 0.2, rx: 0.42, rz: 0.47, p: 2.4 },
+    ],
+    P.lankaPlateDark,
+    { seg: 18, outline: 0.03 }
+  );
   torso.add(belt);
 
   // -- the head arc ---------------------------------------------------------
@@ -3794,11 +5047,11 @@ export function buildRavana() {
   n.head = neck;
 
   /**
-   * One head: skull, crown, a pair of eyes and the flare decal that is this
-   * head's own telegraph. `lateral` is the Z offset (paired limbs offset in Z,
-   * not X — models face +X), `back` pulls the outer heads behind the main one
-   * and `lift` raises them, so the arc reads as a fan from the three-quarter
-   * angle the camera actually holds rather than as a row of boxes.
+   * One head: face, crown, moustache, eyes, and the flare decal that is this
+   * head's own telegraph. `lateral` is the Z offset (paired limbs offset in
+   * Z, not X — models face +X), `back` pulls the outer heads behind the main
+   * one and `lift` raises them, so the arc reads as a fan from the
+   * three-quarter angle the camera actually holds.
    */
   const buildHead = (scale, lateral, back, lift, tilt) => {
     const g = new THREE.Group();
@@ -3807,31 +5060,60 @@ export function buildRavana() {
     g.scale.setScalar(scale);
     neck.add(g);
 
-    const skull = part(0.5, 0.5, 0.52, P.lankaSkin, { pivot: 'bottom', outline: 0.04 });
-    g.add(skull);
+    const face = skull(0.5, 0.52, 0.5, P.lankaSkin, { jaw: 0.8, outline: 0.04, seg: 16 });
+    g.add(face);
+    nose(face, 0.29, 0.1, P.lankaSkin, { jut: 0.045, r: 0.032, outline: 0.01 });
 
-    // A worn crown per head — ten crowned heads is what both anchor references
-    // independently agree on, and an uncrowned head in the arc would read as a
-    // severed one.
-    const crown = part(0.4, 0.34, 0.42, P.lankaPlate, { pivot: 'bottom', outline: 0.03 });
-    crown.position.y = 0.5;
+    // A worn crown per head — ten crowned heads is what both anchor
+    // references independently agree on, and an uncrowned head in the arc
+    // would read as a severed one. A tiered mukuta rising to a finial.
+    const crown = ringed(
+      [
+        { y: 0.36, rx: 0.24, rz: 0.26, x: -0.02, p: 2.4 },
+        { y: 0.44, rx: 0.26, rz: 0.28, x: -0.02, p: 2.4 },
+        { y: 0.46, rx: 0.22, rz: 0.24, x: -0.02, p: 2.4 },
+        { y: 0.62, rx: 0.19, rz: 0.2, x: -0.03, p: 2.4 },
+        { y: 0.64, rx: 0.15, rz: 0.16, x: -0.03, p: 2.4 },
+        { y: 0.78, rx: 0.1, rz: 0.1, x: -0.04 },
+        { y: 0.9, rx: 0.04, rz: 0.04, x: -0.05 },
+      ],
+      P.lankaPlate,
+      { seg: 16, bottomY: 0.36, topY: 1.02, outline: 0.03 }
+    );
     g.add(crown);
-    const finial = part(0.14, 0.2, 0.14, P.lankaPlateDark, { pivot: 'bottom', outline: 0.02 });
-    finial.position.y = 0.84;
-    g.add(finial);
+    const band = decal(0.12, 0.12, P.lankaCore);
+    onFront(crown, band, 0.5, 0, 0.006);
+    band.rotation.z = Math.PI / 4;
 
     // The jaw, hung a crack open — the head that bares its teeth before its
-    // arm commits is the whole per-head telegraph, and a closed box cannot.
-    // Far enough forward to clear the skull's own 0.5-unit outline.
-    const jaw = part(0.24, 0.16, 0.36, P.lankaSkinDark, { pivot: 'top', outline: 0.02 });
-    jaw.position.set(0.26, 0.16, 0);
+    // arm commits is the whole per-head telegraph.
+    const jaw = barrel(
+      [
+        { x: -0.14, ry: 0.05, rz: 0.16, y: -0.04 },
+        { x: 0.0, ry: 0.07, rz: 0.17, y: -0.05 },
+        { x: 0.1, ry: 0.06, rz: 0.13, y: -0.05 },
+      ],
+      P.lankaSkinDark,
+      { seg: 12, backX: -0.17, frontX: 0.14, outline: 0.02 }
+    );
+    jaw.position.set(0.15, 0.14, 0);
     g.add(jaw);
 
     for (const side of [-1, 1]) {
-      const eye = decal(0.12, 0.09, P.lankaCore);
-      eye.position.set(0.27, 0.34, side * 0.12);
-      eye.rotation.y = Math.PI / 2;
-      g.add(eye);
+      const eye = decal(0.11, 0.06, P.lankaCore);
+      onFront(face, eye, 0.3, side * 0.11, 0.006);
+      eye.rotation.z = side * -0.2;
+      const tache = tube(
+        [
+          [0.25, 0.2, side * 0.02, 0.022],
+          [0.25, 0.18, side * 0.1, 0.026],
+          [0.2, 0.2, side * 0.17, 0.016],
+          [0.16, 0.25, side * 0.19, 0.004],
+        ],
+        0x2a1a10,
+        { seg: 6, outline: 0.008 }
+      );
+      g.add(tache);
     }
 
     // The flare: a halo standing just off the face, driven per-head by the
@@ -3886,12 +5168,12 @@ export function buildRavana() {
     torso.add(shoulder);
     n['shoulder' + key] = shoulder;
 
-    const pauldron = part(0.5, 0.34, 0.44, P.lankaPlate, { outline: 0.04 });
-    pauldron.position.y = 0.06;
+    const pauldron = blob(0.56, 0.34, 0.46, P.lankaPlate, { p: 2.8, pv: 2.2, outline: 0.04 });
+    pauldron.position.set(0, 0.08, side * 0.04);
+    pauldron.rotation.x = side * 0.3;
     shoulder.add(pauldron);
 
-    const upper = part(0.3, 0.6, 0.3, P.lankaSkin, { pivot: 'top', outline: 0.03 });
-    upper.position.y = -0.12;
+    const upper = limb(0.3, 0.7, 0.3, P.lankaSkin, { taper: 0.84, bulge: 0.12 });
     shoulder.add(upper);
 
     const elbow = new THREE.Group();
@@ -3899,14 +5181,20 @@ export function buildRavana() {
     shoulder.add(elbow);
     n['elbow' + key] = elbow;
 
-    const fore = part(0.28, 0.58, 0.28, P.lankaSkin, { pivot: 'top', outline: 0.03 });
+    const fore = limb(0.28, 0.58, 0.28, P.lankaSkin, { taper: 0.8, bulge: 0.1 });
     elbow.add(fore);
 
-    const band = part(0.32, 0.1, 0.32, P.lankaPlateDark, { outline: 0.022 });
-    band.position.y = -0.5;
+    const band = ringed(
+      [
+        { y: -0.54, rx: 0.13, rz: 0.13 },
+        { y: -0.44, rx: 0.145, rz: 0.145 },
+      ],
+      P.lankaPlateDark,
+      { seg: 12, outline: 0.02 }
+    );
     elbow.add(band);
 
-    const fist = part(0.32, 0.3, 0.32, P.lankaSkinDark, { pivot: 'top', outline: 0.03 });
+    const fist = mitt(0.3, 0.3, 0.3, P.lankaSkinDark, { side, outline: 0.028 });
     fist.position.y = -0.58;
     elbow.add(fist);
   }
@@ -3932,16 +5220,26 @@ export function buildRavana() {
     /** The fanned pose the animator returns this arm to. Read, not re-derived. */
     shoulder.userData.rest = rest;
 
-    const upper = part(0.24, 0.52, 0.24, P.lankaSkin, { pivot: 'top', outline: 0.026 });
+    const upper = limb(0.24, 0.52, 0.24, P.lankaSkin, { taper: 0.86, bulge: 0.1, outline: 0.026 });
     shoulder.add(upper);
 
-    const cuff = part(0.28, 0.1, 0.28, P.lankaPlateDark, { outline: 0.02 });
-    cuff.position.y = -0.48;
+    const cuff = ringed(
+      [
+        { y: -0.53, rx: 0.12, rz: 0.12 },
+        { y: -0.43, rx: 0.13, rz: 0.13 },
+      ],
+      P.lankaPlateDark,
+      { seg: 12, outline: 0.02 }
+    );
     shoulder.add(cuff);
 
-    const fore = part(0.22, 0.5, 0.22, P.lankaSkin, { pivot: 'top', outline: 0.026 });
+    const fore = limb(0.22, 0.5, 0.22, P.lankaSkin, { taper: 0.8, bulge: 0.08, outline: 0.026 });
     fore.position.y = -0.54;
     shoulder.add(fore);
+
+    const hand = mitt(0.2, 0.2, 0.2, P.lankaSkinDark, { outline: 0.02 });
+    hand.position.y = -1.0;
+    shoulder.add(hand);
 
     const grip = new THREE.Group();
     grip.position.y = -1.04;
@@ -3951,21 +5249,28 @@ export function buildRavana() {
 
   // Chandrahas — the curved sword, and the one signature both anchor
   // references carry. Cold moon-steel, on the near-camera side, because it is
-  // the weapon the player has to recognise fastest.
+  // the weapon the player has to recognise fastest. A true crescent now: a
+  // thin blade widening toward the tip and sweeping back in Z as it falls.
   const swordGrip = buildArm('armSweep', -0.96, -0.35);
   {
-    const hilt = part(0.12, 0.26, 0.12, P.lankaPlateDark, { pivot: 'top', outline: 0.02 });
+    const hilt = limb(0.1, 0.24, 0.1, P.lankaPlateDark, { taper: 1, bulge: 0, outline: 0.02 });
     swordGrip.add(hilt);
-    const guard = part(0.3, 0.09, 0.16, P.lankaPlate, { outline: 0.022 });
+    const guard = blob(0.16, 0.08, 0.34, P.lankaPlate, { outline: 0.022 });
+    guard.position.y = -0.2;
     swordGrip.add(guard);
-    // Three tapering segments, each stepped in Z, so the "curved" read comes
-    // from the silhouette rather than from geometry this engine cannot bend.
-    for (let i = 0; i < 3; i++) {
-      const seg = part(0.2 - i * 0.03, 0.48, 0.07, P.lankaSword, { pivot: 'top', outline: 0.018 });
-      seg.position.set(0, -0.24 - i * 0.42, i * 0.03);
-      seg.rotation.x = i * 0.08;
-      swordGrip.add(seg);
-    }
+    const blade = ringed(
+      [
+        { y: -1.52, rx: 0.008, rz: 0.01, z: 0.36 },
+        { y: -1.4, rx: 0.02, rz: 0.1, z: 0.26 },
+        { y: -1.1, rx: 0.024, rz: 0.13, z: 0.14 },
+        { y: -0.74, rx: 0.024, rz: 0.11, z: 0.05 },
+        { y: -0.4, rx: 0.022, rz: 0.08, z: 0.0 },
+        { y: -0.24, rx: 0.02, rz: 0.07, z: 0.0 },
+      ],
+      P.lankaSword,
+      { seg: 10, bottomY: -1.56, topY: -0.22, outline: 0.018 }
+    );
+    swordGrip.add(blade);
   }
 
   // The trishul — the reach thrust. The longest prop on him, because this is
@@ -3973,11 +5278,32 @@ export function buildRavana() {
   // prongs off the floor between attacks.
   const trishulGrip = buildArm('armCharge', 0.46, 0.8);
   {
-    const haft = part(0.1, 1.7, 0.1, P.lankaPlateDark, { pivot: 'top', outline: 0.02 });
+    const haft = limb(0.09, 1.72, 0.09, P.lankaPlateDark, { taper: 0.9, bulge: 0, outline: 0.02 });
     trishulGrip.add(haft);
-    for (const off of [-0.15, 0, 0.15]) {
-      const prong = part(0.07, off === 0 ? 0.5 : 0.36, 0.07, P.lankaPlate, { pivot: 'top', outline: 0.016 });
-      prong.position.set(0, -1.7 - (off === 0 ? 0 : 0.07), off);
+    const socket = blob(0.16, 0.12, 0.16, P.lankaPlate, { outline: 0.016 });
+    socket.position.y = -1.72;
+    trishulGrip.add(socket);
+    const mid = tube(
+      [
+        [0, -1.72, 0, 0.05],
+        [0, -2.0, 0, 0.04],
+        [0, -2.26, 0, 0.004],
+      ],
+      P.lankaPlate,
+      { seg: 6, outline: 0.016 }
+    );
+    trishulGrip.add(mid);
+    for (const side of [-1, 1]) {
+      const prong = tube(
+        [
+          [0, -1.74, side * 0.04, 0.04],
+          [0, -1.82, side * 0.2, 0.036],
+          [0, -1.98, side * 0.22, 0.03],
+          [0, -2.12, side * 0.16, 0.004],
+        ],
+        P.lankaPlate,
+        { seg: 6, outline: 0.016 }
+      );
       trishulGrip.add(prong);
     }
   }
@@ -3987,16 +5313,32 @@ export function buildRavana() {
   // camera so the throw is legible before it leaves his hand.
   const chakraGrip = buildArm('armVolley', -0.46, -0.5);
   {
-    const hub = part(0.18, 0.18, 0.08, P.lankaPlateDark, { outline: 0.022 });
+    const hub = blob(0.2, 0.2, 0.08, P.lankaPlateDark, { outline: 0.022 });
     hub.position.y = -0.24;
     chakraGrip.add(hub);
     n.chakra = hub;
+    const ring = shaped(tor(0.34, 0.045, 6, 28), P.lankaPlate, { outline: 0.016 });
+    hub.add(ring);
     for (let i = 0; i < 8; i++) {
       const a = (i / 8) * Math.PI * 2;
-      const spoke = part(0.3, 0.09, 0.06, P.lankaPlate, { outline: 0.016 });
-      spoke.position.set(Math.cos(a) * 0.27, Math.sin(a) * 0.27, 0);
-      spoke.rotation.z = a;
+      const spoke = tube(
+        [
+          [Math.cos(a) * 0.08, Math.sin(a) * 0.08, 0, 0.03],
+          [Math.cos(a) * 0.32, Math.sin(a) * 0.32, 0, 0.022],
+        ],
+        P.lankaPlate,
+        { seg: 5, outline: 0.012 }
+      );
       hub.add(spoke);
+      const tooth = tube(
+        [
+          [Math.cos(a) * 0.36, Math.sin(a) * 0.36, 0, 0.035],
+          [Math.cos(a) * 0.46, Math.sin(a) * 0.46, 0, 0.004],
+        ],
+        P.lankaPlate,
+        { seg: 5, outline: 0.012 }
+      );
+      hub.add(tooth);
     }
     const rim = decal(0.72, 0.72, P.lankaCore, { opacity: 0.22 });
     rim.position.z = 0.06;
@@ -4010,13 +5352,31 @@ export function buildRavana() {
   // hunter's own fire coming back at them.
   const torchGrip = buildArm('armSlam', 0.96, 0.55);
   {
-    const haft = part(0.12, 1.0, 0.12, P.lankaPlateDark, { pivot: 'top', outline: 0.022 });
+    const haft = limb(0.11, 1.0, 0.11, P.lankaPlateDark, { taper: 0.9, bulge: 0, outline: 0.022 });
     torchGrip.add(haft);
-    const bowl = part(0.28, 0.24, 0.28, P.lankaPlate, { outline: 0.024 });
-    bowl.position.y = -1.06;
+    const bowl = ringed(
+      [
+        { y: -1.02, rx: 0.08, rz: 0.08 },
+        { y: -1.1, rx: 0.15, rz: 0.15, wave: 0.1, waves: 8 },
+        { y: -1.2, rx: 0.17, rz: 0.17, wave: 0.1, waves: 8 },
+      ],
+      P.lankaPlate,
+      { seg: 16, outline: 0.024 }
+    );
     torchGrip.add(bowl);
-    const fire = part(0.22, 0.36, 0.22, P.lankaFlame, { pivot: 'top', outline: 0 });
-    fire.position.y = -1.16;
+    // The flame hangs below the bowl at rest, and burns *away* from it — a
+    // teardrop whose point trails, which is the shape fire takes when the
+    // arm swings it.
+    const fire = ringed(
+      [
+        { y: -1.62, rx: 0.01, rz: 0.01 },
+        { y: -1.48, rx: 0.07, rz: 0.07, wave: 0.2, waves: 5 },
+        { y: -1.32, rx: 0.13, rz: 0.13, wave: 0.12, waves: 5 },
+        { y: -1.2, rx: 0.12, rz: 0.12 },
+      ],
+      P.lankaFlame,
+      { seg: 12, bottomY: -1.66, topY: -1.16, outline: 0 }
+    );
     torchGrip.add(fire);
     n.torchFire = fire;
     const fireGlow = decal(0.5, 0.6, P.lankaFlame, { opacity: 0.4 });
@@ -4035,9 +5395,9 @@ export function buildRavana() {
       stub.position.set(-0.34, 0.86 - i * 0.22, side * (0.3 + i * 0.34));
       stub.rotation.z = -(0.6 + i * 0.4);
       torso.add(stub);
-      const upper = part(0.17, 0.46, 0.17, P.lankaSkinDark, { pivot: 'top', outline: 0.022 });
+      const upper = limb(0.17, 0.46, 0.17, P.lankaSkinDark, { taper: 0.86, bulge: 0.08, outline: 0.022 });
       stub.add(upper);
-      const fore = part(0.15, 0.4, 0.15, P.lankaSkinDark, { pivot: 'top', outline: 0.022 });
+      const fore = limb(0.15, 0.4, 0.15, P.lankaSkinDark, { taper: 0.8, bulge: 0.06, outline: 0.022 });
       fore.position.y = -0.46;
       fore.rotation.z = side * 0.4;
       stub.add(fore);
@@ -4053,7 +5413,7 @@ export function buildRavana() {
     hips.add(hip);
     n['hip' + key] = hip;
 
-    const thigh = part(0.38, 0.88, 0.42, P.lankaPlateDark, { pivot: 'top', outline: 0.034 });
+    const thigh = limb(0.4, 0.88, 0.42, P.lankaPlateDark, { taper: 0.82, bulge: 0.08 });
     hip.add(thigh);
 
     const knee = new THREE.Group();
@@ -4061,10 +5421,10 @@ export function buildRavana() {
     hip.add(knee);
     n['knee' + key] = knee;
 
-    const shin = part(0.34, 0.8, 0.36, P.lankaPlate, { pivot: 'top', outline: 0.032 });
+    const shin = limb(0.34, 0.8, 0.36, P.lankaPlate, { taper: 0.82, bulge: 0.1, bulgeAt: 0.25, p: 2.4 });
     knee.add(shin);
 
-    const foot = part(0.62, 0.2, 0.46, P.lankaPlateDark, { pivot: 'top', outline: 0.03 });
+    const foot = boot(0.64, 0.2, 0.44, P.lankaPlateDark, { toe: 0.36, outline: 0.03 });
     foot.position.set(0.1, -0.8, 0);
     knee.add(foot);
   }
@@ -4113,43 +5473,67 @@ export function buildKamsa(skin = null) {
   n.body = body;
   n.baseY = body.position.y;
 
-  const torso = part(0.62, 0.72, 0.5, c.plate, { pivot: 'bottom', outline: 0.04 });
+  const torso = trunk(0.6, 0.72, 0.54, c.plate, { waist: 0.86, chest: 0.1, belly: 0.06, p: 2.6, neck: 0.5, outline: 0.04 });
   body.add(torso);
   n.torso = torso;
 
-  const belt = part(0.66, 0.14, 0.54, c.plateDark, { pivot: 'top', outline: 0.026 });
-  belt.position.y = 0.02;
+  const belt = ringed(
+    [
+      { y: -0.02, rx: 0.27, rz: 0.245, p: 2.6 },
+      { y: 0.06, rx: 0.28, rz: 0.25, p: 2.6 },
+      { y: 0.13, rx: 0.27, rz: 0.245, p: 2.6 },
+    ],
+    c.plateDark,
+    { seg: 16, outline: 0.026 }
+  );
   torso.add(belt);
+  const warDress = skirt(0.54, 0.5, 0.62, 0.58, 0.34, c.plateDark, { folds: 8, fold: 0.05, outline: 0.024 });
+  warDress.position.y = 0.04;
+  body.add(warDress);
 
   // The pauldrons, wide enough to anchor the chain drape strung between them.
   for (const side of [-1, 1]) {
-    const pauldron = part(0.2, 0.16, 0.24, c.plateDark, { outline: 0.024 });
-    pauldron.position.set(0.02, 0.6, side * 0.32);
+    const pauldron = blob(0.26, 0.17, 0.26, c.plateDark, { p: 2.8, pv: 2.2, outline: 0.024 });
+    pauldron.position.set(0.02, 0.62, side * 0.32);
+    pauldron.rotation.x = side * 0.3;
     torso.add(pauldron);
   }
 
   // The barred gorget: a collar ring with bar-shapes standing proud of it,
   // read across the neck rather than smoothed into a ruff.
-  const gorget = part(0.34, 0.14, 0.4, c.iron, { outline: 0.022 });
-  gorget.position.y = 0.68;
+  const gorget = ringed(
+    [
+      { y: 0.62, rx: 0.17, rz: 0.2, p: 2.6 },
+      { y: 0.7, rx: 0.18, rz: 0.21, p: 2.6 },
+      { y: 0.76, rx: 0.15, rz: 0.17, p: 2.6 },
+    ],
+    c.iron,
+    { seg: 16, outline: 0.022 }
+  );
   torso.add(gorget);
   for (let i = -2; i <= 2; i++) {
-    const bar = part(0.06, 0.2, 0.06, c.iron, { outline: 0.012 });
-    bar.position.set(0.19, 0.68, i * 0.09);
+    const a = i * 0.42;
+    const bar = limb(0.04, 0.2, 0.04, c.iron, { taper: 1, bulge: 0, outline: 0.012, up: true });
+    bar.position.set(Math.cos(a) * 0.17, 0.62, Math.sin(a) * 0.2);
     torso.add(bar);
   }
 
-  // The chain drape: three links strung from each pauldron down to the
-  // chest's centre line — armour motif and, per his kit, the chain lash's
-  // own weapon, doing double duty rather than sitting on the rig as
-  // decoration.
+  // The chain drape: links strung from each pauldron down to the chest's
+  // centre line — armour motif and, per his kit, the chain lash's own
+  // weapon, doing double duty rather than sitting on the rig as decoration.
+  // Carried on a group standing off the breastplate, because the animator
+  // rattles each link about the x it was hung at.
+  const chain = new THREE.Group();
+  chain.position.x = 0.07;
+  torso.add(chain);
   n.chainLinks = [];
   for (const side of [-1, 1]) {
     for (let i = 0; i < 3; i++) {
-      const link = part(0.07, 0.09, 0.07, c.iron, { outline: 0.012 });
+      const link = shaped(tor(0.038, 0.012, 5, 12), c.iron, { outline: 0.008 });
       const u = i / 2;
-      link.position.set(0.28, 0.58 - u * 0.24, side * (0.32 - u * 0.32));
-      torso.add(link);
+      link.position.set(0.28, 0.58 - u * 0.24 - Math.sin(u * Math.PI) * 0.04, side * (0.32 - u * 0.32));
+      link.rotation.set(i % 2 ? Math.PI / 2 : 0, side * 0.6, 0);
+      chain.add(link);
       n.chainLinks.push(link);
     }
   }
@@ -4159,26 +5543,64 @@ export function buildKamsa(skin = null) {
   torso.add(head);
   n.head = head;
 
-  const skull = part(0.32, 0.32, 0.32, c.skin, { pivot: 'bottom', outline: 0.03 });
-  head.add(skull);
+  const neck = limb(0.16, 0.14, 0.16, c.skin, { taper: 1.05, bulge: 0, outline: 0.016, up: true });
+  neck.position.y = -0.1;
+  head.add(neck);
+  const face = skull(0.32, 0.34, 0.3, c.skin, { jaw: 0.9, outline: 0.03 });
+  head.add(face);
+  nose(face, 0.19, 0.075, c.skin, { jut: 0.03, r: 0.02 });
+
+  // A tyrant's face: a heavy brow, a thick moustache swept down into a
+  // short beard along the jaw.
+  for (const side of [-1, 1]) {
+    const brow = decal(0.11, 0.03, 0x1a100a);
+    onFront(face, brow, 0.22, side * 0.075, 0.005);
+    brow.rotation.z = side * 0.3;
+    const tache = tube(
+      [
+        [0.158, 0.13, side * 0.01, 0.018],
+        [0.155, 0.12, side * 0.06, 0.02],
+        [0.13, 0.08, side * 0.09, 0.014],
+        [0.11, 0.04, side * 0.1, 0.004],
+      ],
+      0x1a100a,
+      { seg: 6, outline: 0.006 }
+    );
+    face.add(tache);
+  }
+  const beard = ringed(
+    [
+      { y: -0.02, rx: 0.06, rz: 0.08, x: 0.11 },
+      { y: 0.03, rx: 0.1, rz: 0.13, x: 0.07 },
+      { y: 0.09, rx: 0.12, rz: 0.15, x: 0.04 },
+    ],
+    0x1a100a,
+    { seg: 12, bottomY: -0.05, topY: 0.1, outline: 0.012 }
+  );
+  face.add(beard);
 
   // The iron circlet-crown, bar-spiked rather than gold and jewelled —
   // deliberately not competing with Duryodhana's or Ravana's opulence.
-  const circlet = part(0.3, 0.08, 0.3, c.iron, { pivot: 'bottom', outline: 0.02 });
-  circlet.position.y = 0.3;
-  skull.add(circlet);
-  for (let i = -2; i <= 2; i++) {
-    const spike = part(0.03, 0.14, 0.03, c.iron, { pivot: 'bottom', outline: 0.008 });
-    spike.position.set(0.06, 0.36, i * 0.055);
-    skull.add(spike);
+  const circlet = ringed(
+    [
+      { y: 0.26, rx: 0.16, rz: 0.155, x: -0.01 },
+      { y: 0.32, rx: 0.165, rz: 0.16, x: -0.01 },
+    ],
+    c.iron,
+    { seg: 16, outline: 0.018 }
+  );
+  face.add(circlet);
+  for (let i = -3; i <= 3; i++) {
+    const a = i * 0.38;
+    const spike = limb(0.028, 0.12, 0.028, c.iron, { taper: 0.5, bulge: 0, outline: 0.008, up: true });
+    spike.position.set(Math.cos(a) * 0.16 - 0.01, 0.31, Math.sin(a) * 0.155);
+    face.add(spike);
   }
 
   for (const side of [-1, 1]) {
     const key = side < 0 ? 'L' : 'R';
-    const eye = decal(0.06, 0.04, c.eye, { opacity: 0.7 });
-    eye.position.set(0.15, 0.06, side * 0.08);
-    eye.rotation.y = Math.PI / 2;
-    skull.add(eye);
+    const eye = decal(0.06, 0.034, c.eye, { opacity: 0.7 });
+    onFront(face, eye, 0.18, side * 0.07, 0.005);
     n['eye' + key] = eye;
   }
 
@@ -4189,7 +5611,7 @@ export function buildKamsa(skin = null) {
     torso.add(shoulder);
     n['shoulder' + key] = shoulder;
 
-    const upper = part(0.2, 0.34, 0.2, c.skin, { pivot: 'top', outline: 0.026 });
+    const upper = limb(0.2, 0.34, 0.2, c.skin, { taper: 0.84, bulge: 0.12 });
     shoulder.add(upper);
 
     const elbow = new THREE.Group();
@@ -4197,19 +5619,29 @@ export function buildKamsa(skin = null) {
     shoulder.add(elbow);
     n['elbow' + key] = elbow;
 
-    const fore = part(0.18, 0.32, 0.18, c.skin, { pivot: 'top', outline: 0.024 });
+    const fore = limb(0.18, 0.32, 0.18, c.skin, { taper: 0.8, bulge: 0.1 });
     elbow.add(fore);
 
-    const hand = part(0.17, 0.16, 0.17, c.skin, { pivot: 'top', outline: 0.022 });
+    const hand = mitt(0.16, 0.16, 0.16, c.skin, { side });
     hand.position.y = -0.32;
     elbow.add(hand);
     n['hand' + key] = hand;
 
     // The shackle-cuff, worn unused — the jailer wearing his own prisoners'
-    // irons as regalia.
-    const cuff = part(0.2, 0.06, 0.2, c.iron, { outline: 0.014 });
-    cuff.position.y = -0.24;
+    // irons as regalia, with a broken link still hanging off it.
+    const cuff = ringed(
+      [
+        { y: -0.28, rx: 0.09, rz: 0.09 },
+        { y: -0.2, rx: 0.095, rz: 0.095 },
+      ],
+      c.iron,
+      { seg: 12, outline: 0.014 }
+    );
     elbow.add(cuff);
+    const dangle = shaped(tor(0.034, 0.011, 5, 12), c.iron, { outline: 0.007 });
+    dangle.position.set(0.05, -0.31, side * 0.06);
+    dangle.rotation.y = Math.PI / 2;
+    elbow.add(dangle);
   }
 
   // The mace, carried in the right hand: a fused mass of shackle-iron —
@@ -4224,17 +5656,26 @@ export function buildKamsa(skin = null) {
   const grip = new THREE.Group();
   grip.rotation.z = -Math.PI / 2;
   mace.add(grip);
-  const shaft = part(0.1, 1.5, 0.1, c.plateDark, { pivot: 'bottom', outline: 0.018 });
+  const shaft = limb(0.09, 1.5, 0.09, c.plateDark, { taper: 0.95, bulge: 0, outline: 0.018, up: true });
   shaft.position.y = -0.1;
   grip.add(shaft);
 
-  const head_ = part(0.36, 0.4, 0.36, c.iron, { outline: 0.026 });
-  head_.position.y = 1.5;
-  grip.add(head_);
+  const macehead = ringed(
+    [
+      { y: 1.3, rx: 0.08, rz: 0.08 },
+      { y: 1.38, rx: 0.17, rz: 0.17, wave: 0.18, waves: 6 },
+      { y: 1.5, rx: 0.2, rz: 0.2, wave: 0.18, waves: 6 },
+      { y: 1.62, rx: 0.17, rz: 0.17, wave: 0.18, waves: 6 },
+      { y: 1.7, rx: 0.08, rz: 0.08 },
+    ],
+    c.iron,
+    { seg: 18, bottomY: 1.26, topY: 1.74, outline: 0.026 }
+  );
+  grip.add(macehead);
   // Cuffs and links, hammered into the head — the same shackle motif as the
   // wrists, spent again here rather than a new ornament.
   for (const side of [-1, 1]) {
-    const stud = part(0.1, 0.1, 0.1, c.plateDark, { outline: 0.012 });
+    const stud = shaped(tor(0.06, 0.02, 5, 12), c.plateDark, { outline: 0.01 });
     stud.position.set(0, 1.5, side * 0.2);
     grip.add(stud);
   }
@@ -4251,7 +5692,7 @@ export function buildKamsa(skin = null) {
     body.add(hip);
     n['hip' + key] = hip;
 
-    const thigh = part(0.24, 0.4, 0.24, c.plateDark, { pivot: 'top', outline: 0.03 });
+    const thigh = limb(0.25, 0.4, 0.25, c.plateDark, { taper: 0.82, bulge: 0.08 });
     hip.add(thigh);
 
     const knee = new THREE.Group();
@@ -4259,10 +5700,10 @@ export function buildKamsa(skin = null) {
     hip.add(knee);
     n['knee' + key] = knee;
 
-    const shin = part(0.2, 0.36, 0.2, c.plateDark, { pivot: 'top', outline: 0.026 });
+    const shin = limb(0.21, 0.36, 0.21, c.plateDark, { taper: 0.8, bulge: 0.1, bulgeAt: 0.25 });
     knee.add(shin);
 
-    const foot = part(0.24, 0.1, 0.28, c.plateDark, { pivot: 'top', outline: 0.02 });
+    const foot = boot(0.28, 0.1, 0.19, c.plateDark);
     foot.position.set(0.05, -0.36, 0);
     knee.add(foot);
   }
@@ -4302,34 +5743,64 @@ export function buildMathuraWrestler(skin = null) {
   n.body = body;
   n.baseY = body.position.y;
 
-  const torso = part(0.38, 0.5, 0.32, c.skin, { pivot: 'bottom', outline: 0.028 });
+  // A pehlwan's build: a barrel chest over a thick waist, all of it bare.
+  const torso = trunk(0.38, 0.5, 0.34, c.skin, { waist: 0.9, chest: 0.16, belly: 0.12, outline: 0.028 });
   body.add(torso);
   n.torso = torso;
 
-  const langot = part(0.42, 0.16, 0.34, c.cloth, { pivot: 'top', outline: 0.022 });
+  const langot = ringed(
+    [
+      { y: -0.2, rx: 0.1, rz: 0.12 },
+      { y: -0.12, rx: 0.16, rz: 0.17, x: 0.01 },
+      { y: -0.02, rx: 0.19, rz: 0.17, x: 0.012 },
+      { y: 0.06, rx: 0.185, rz: 0.165, x: 0.012 },
+    ],
+    c.cloth,
+    { seg: 14, outline: 0.02, bottomY: -0.24 }
+  );
   langot.position.y = 0.02;
   torso.add(langot);
+  const knot = blob(0.07, 0.09, 0.08, c.cloth, { outline: 0.01 });
+  knot.position.set(0.19, 0.03, 0.05);
+  torso.add(knot);
 
   const head = new THREE.Group();
   head.position.y = 0.48;
   torso.add(head);
   n.head = head;
 
-  const skull = part(0.24, 0.24, 0.24, c.skin, { pivot: 'bottom', outline: 0.024 });
-  head.add(skull);
+  const neck = limb(0.15, 0.08, 0.15, c.skin, { taper: 1.05, bulge: 0, outline: 0.016, up: true });
+  neck.position.y = -0.03;
+  head.add(neck);
+  const face = skull(0.24, 0.25, 0.23, c.skin, { jaw: 0.86 });
+  face.position.y = 0.02;
+  head.add(face);
+  nose(face, 0.14, 0.06, c.skin, { jut: 0.024, r: 0.016 });
 
   // Cropped topknot — akhada custom, and a silhouette tell distinct from
-  // every other biped's own hair/headdress.
-  const knot = part(0.1, 0.12, 0.1, c.dark, { pivot: 'bottom', outline: 0.014 });
-  knot.position.y = 0.24;
-  skull.add(knot);
+  // every other biped's own hair/headdress. And the moustache every akhada
+  // champion wears, curled at the ends.
+  const topknot = blob(0.09, 0.1, 0.09, c.dark, { outline: 0.012 });
+  topknot.position.set(-0.03, 0.29, 0);
+  head.add(topknot);
+  for (const side of [-1, 1]) {
+    const tache = tube(
+      [
+        [0.118, 0.1, side * 0.012, 0.014],
+        [0.118, 0.092, side * 0.05, 0.016],
+        [0.1, 0.1, side * 0.085, 0.011],
+        [0.085, 0.125, side * 0.09, 0.004],
+      ],
+      c.dark,
+      { seg: 6, outline: 0.006 }
+    );
+    face.add(tache);
+  }
 
   for (const side of [-1, 1]) {
     const key = side < 0 ? 'L' : 'R';
-    const eye = decal(0.05, 0.03, c.eye, { opacity: 0.6 });
-    eye.position.set(0.12, 0.02, side * 0.07);
-    eye.rotation.y = Math.PI / 2;
-    skull.add(eye);
+    const eye = decal(0.05, 0.028, c.eye, { opacity: 0.6 });
+    onFront(face, eye, 0.14, side * 0.055, 0.004);
     n['eye' + key] = eye;
   }
 
@@ -4340,13 +5811,19 @@ export function buildMathuraWrestler(skin = null) {
     torso.add(shoulder);
     n['shoulder' + key] = shoulder;
 
-    const upper = part(0.13, 0.28, 0.13, c.skin, { pivot: 'top', outline: 0.02 });
+    const upper = limb(0.15, 0.28, 0.15, c.skin, { taper: 0.82, bulge: 0.16, bulgeAt: 0.35 });
     shoulder.add(upper);
 
     // A wrestler's arm-band, akhada-plain — the roster's own note that
     // nothing here should compete with Kamsa's regalia.
-    const band = part(0.15, 0.04, 0.15, c.cloth, { outline: 0.01 });
-    band.position.y = -0.08;
+    const band = ringed(
+      [
+        { y: -0.1, rx: 0.074, rz: 0.074 },
+        { y: -0.06, rx: 0.076, rz: 0.076 },
+      ],
+      c.cloth,
+      { seg: 10, outline: 0.008 }
+    );
     upper.add(band);
 
     const elbow = new THREE.Group();
@@ -4354,10 +5831,10 @@ export function buildMathuraWrestler(skin = null) {
     shoulder.add(elbow);
     n['elbow' + key] = elbow;
 
-    const fore = part(0.12, 0.26, 0.12, c.skin, { pivot: 'top', outline: 0.018 });
+    const fore = limb(0.13, 0.26, 0.13, c.skin, { taper: 0.8, bulge: 0.14 });
     elbow.add(fore);
 
-    const hand = part(0.12, 0.13, 0.12, c.skin, { pivot: 'top', outline: 0.016 });
+    const hand = mitt(0.12, 0.12, 0.12, c.skin, { side, fist: false });
     hand.position.y = -0.26;
     elbow.add(hand);
     n['hand' + key] = hand;
@@ -4378,7 +5855,7 @@ export function buildMathuraWrestler(skin = null) {
     body.add(hip);
     n['hip' + key] = hip;
 
-    const thigh = part(0.16, 0.34, 0.16, c.skin, { pivot: 'top', outline: 0.022 });
+    const thigh = limb(0.18, 0.34, 0.18, c.skin, { taper: 0.78, bulge: 0.12 });
     hip.add(thigh);
 
     const knee = new THREE.Group();
@@ -4386,10 +5863,10 @@ export function buildMathuraWrestler(skin = null) {
     hip.add(knee);
     n['knee' + key] = knee;
 
-    const shin = part(0.14, 0.3, 0.14, c.skin, { pivot: 'top', outline: 0.02 });
+    const shin = limb(0.15, 0.3, 0.15, c.skin, { taper: 0.66, bulge: 0.14, bulgeAt: 0.22 });
     knee.add(shin);
 
-    const foot = part(0.16, 0.08, 0.2, c.dark, { pivot: 'top', outline: 0.016 });
+    const foot = boot(0.2, 0.08, 0.13, c.skin, { toe: 0.4 });
     foot.position.set(0.04, -0.3, 0);
     knee.add(foot);
   }
@@ -4433,32 +5910,76 @@ function buildPutanaForm(true_, c) {
   // on a shorter rise, so the size increase carries "poison filling her
   // body" instead of a fourth tall giant.
   const torso = true_
-    ? part(0.5, 0.62, 0.46, skin, { pivot: 'bottom', outline: 0.036 })
-    : part(0.32, 0.62, 0.28, skin, { pivot: 'bottom', outline: 0.03 });
+    ? trunk(0.5, 0.62, 0.48, skin, { waist: 1.0, chest: 0.04, belly: 0.3, neck: 0.46, outline: 0.034 })
+    : trunk(0.32, 0.62, 0.3, skin, { waist: 0.7, chest: 0.1, taper: 0.9, outline: 0.026 });
   body.add(torso);
   n.torso = torso;
 
   if (!true_) {
-    // The bold crimson-and-mustard striped drape, the folk-painting anchor.
-    const drape = part(0.35, 0.34, 0.31, c.robe, { pivot: 'top', outline: 0.024 });
-    drape.position.y = 0.54;
+    // The bold crimson-and-mustard striped drape, the folk-painting anchor:
+    // a bodice band, a skirt to the shin with a gold border, and the end of
+    // the drape thrown back over one shoulder.
+    const drape = ringed(
+      [
+        { y: 0.2, rx: 0.14, rz: 0.14, x: 0.012 },
+        { y: 0.34, rx: 0.155, rz: 0.15, x: 0.02 },
+        { y: 0.46, rx: 0.16, rz: 0.152, x: 0.022 },
+        { y: 0.54, rx: 0.14, rz: 0.15, x: 0.012 },
+      ],
+      c.robe,
+      { seg: 14, outline: 0.02 }
+    );
     torso.add(drape);
-    const stripe = part(0.36, 0.09, 0.32, c.robeGold, { outline: 0.018 });
-    stripe.position.y = 0.4;
+    const stripe = ringed(
+      [
+        { y: 0.36, rx: 0.158, rz: 0.153, x: 0.021 },
+        { y: 0.42, rx: 0.161, rz: 0.155, x: 0.022 },
+      ],
+      c.robeGold,
+      { seg: 14, outline: 0.0 }
+    );
     torso.add(stripe);
+    const pallu = tube(
+      [
+        [0.03, 0.56, -0.13, 0.034],
+        [-0.12, 0.48, -0.14, 0.04],
+        [-0.16, 0.26, -0.13, 0.04],
+        [-0.15, 0.04, -0.11, 0.03],
+      ],
+      c.robe,
+      { seg: 6, squash: 0.45, outline: 0.012 }
+    );
+    torso.add(pallu);
+    const dress = skirt(0.3, 0.3, 0.46, 0.44, 0.56, c.robe, { folds: 9, fold: 0.05, outline: 0.02 });
+    dress.position.y = 0.04;
+    torso.add(dress);
+    const hem = ringed(
+      [
+        { y: -0.52, rx: 0.228, rz: 0.218 },
+        { y: -0.47, rx: 0.222, rz: 0.212 },
+      ],
+      c.robeGold,
+      { seg: 18, outline: 0.012 }
+    );
+    hem.position.y = 0.04;
+    torso.add(hem);
     // Silver jewelry at the throat — `bladeSteel` reused rather than a
     // redundant new accent.
-    const necklace = part(0.3, 0.05, 0.3, P.bladeSteel, { outline: 0.014 });
-    necklace.position.y = 0.58;
+    const necklace = shaped(tor(0.08, 0.013, 5, 14), P.bladeSteel, { outline: 0.008 });
+    necklace.rotation.x = Math.PI / 2 - 0.35;
+    necklace.position.set(0.02, 0.58, 0);
     torso.add(necklace);
   } else {
     // Dull vein-cracks, the poison showing through rather than a wound —
     // the true form's own damage-signal telegraph accent, `putanaToxin`.
     for (let i = 0; i < 3; i++) {
-      const vein = part(0.025, 0.26 - i * 0.05, 0.025, c.toxin, { pivot: 'top', outline: 0 });
-      vein.position.set(0.22, 0.5 - i * 0.09, (i - 1) * 0.1);
-      torso.add(vein);
+      const vein = decal(0.022, 0.24 - i * 0.05, c.toxin);
+      onFront(torso, vein, 0.4 - i * 0.07, (i - 1) * 0.09, 0.005);
+      vein.rotation.z = (i - 1) * 0.35;
     }
+    const wrap = skirt(0.46, 0.44, 0.52, 0.5, 0.24, c.trueSkinDark, { folds: 6, fold: 0.14, outline: 0.02 });
+    wrap.position.y = 0.05;
+    torso.add(wrap);
   }
 
   const head = new THREE.Group();
@@ -4466,39 +5987,63 @@ function buildPutanaForm(true_, c) {
   torso.add(head);
   n.head = head;
 
-  const skull = true_
-    ? part(0.26, 0.26, 0.26, skin, { pivot: 'bottom', outline: 0.026 })
-    : part(0.2, 0.21, 0.2, skin, { pivot: 'bottom', outline: 0.022 });
-  head.add(skull);
+  const neck = limb(true_ ? 0.14 : 0.09, 0.1, true_ ? 0.14 : 0.09, skin, { taper: 1.1, bulge: 0, outline: 0.012, up: true });
+  neck.position.y = -0.06;
+  head.add(neck);
+  const face = true_
+    ? skull(0.26, 0.28, 0.26, skin, { jaw: 0.96, snout: 0.08, outline: 0.026 })
+    : skull(0.2, 0.24, 0.19, skin, { jaw: 0.6, outline: 0.02 });
+  head.add(face);
+  nose(face, true_ ? 0.16 : 0.13, true_ ? 0.06 : 0.045, skin, { jut: true_ ? 0.03 : 0.016, r: true_ ? 0.022 : 0.011 });
 
   if (!true_) {
     // Loose dark hair under a simple gold circlet — the disguise reads as
     // an ordinary, welcoming woman.
-    const hair = part(0.24, 0.22, 0.24, c.robeGold, { pivot: 'top', outline: 0.02 });
-    hair.position.set(-0.04, 0.2, 0);
-    skull.add(hair);
+    capOf(face, 0.1, c.hair ?? P.putanaHair, { grow: 1.08, back: 0.01, brow: 0.05, hairline: 0.15 });
+    const fall = ringed(
+      [
+        { y: -0.3, rx: 0.04, rz: 0.1, x: -0.1 },
+        { y: -0.16, rx: 0.06, rz: 0.12, x: -0.1 },
+        { y: 0.04, rx: 0.08, rz: 0.12, x: -0.08 },
+        { y: 0.18, rx: 0.07, rz: 0.1, x: -0.06 },
+      ],
+      c.hair ?? P.putanaHair,
+      { seg: 12, bottomY: -0.36, topY: 0.22, outline: 0.016 }
+    );
+    head.add(fall);
+    const circlet = shaped(tor(0.105, 0.012, 5, 16), c.robeGold, { outline: 0.008 });
+    circlet.rotation.x = Math.PI / 2;
+    circlet.rotation.z = 0.12;
+    circlet.position.set(-0.004, 0.19, 0);
+    head.add(circlet);
   } else {
     // A ragged, matted mane where the disguise's hair was — the same "kept
     // the disguise's own material, made feral" move Taraka's pelts and
     // Shurpanakha's hair both already use across their own reveals.
-    const mane = part(0.32, 0.3, 0.32, c.trueSkinDark, { pivot: 'top', outline: 0.024 });
-    mane.position.set(-0.08, 0.24, 0);
-    skull.add(mane);
+    capOf(face, 0.12, c.trueSkinDark, { grow: 1.12, back: 0.02, brow: 0.06, hairline: 0.18, wave: 0.14 });
+    const mane = ringed(
+      [
+        { y: -0.2, rx: 0.08, rz: 0.18, x: -0.14, wave: 0.16, waves: 7 },
+        { y: 0.0, rx: 0.12, rz: 0.2, x: -0.12, wave: 0.14, waves: 7 },
+        { y: 0.18, rx: 0.12, rz: 0.17, x: -0.08 },
+        { y: 0.26, rx: 0.08, rz: 0.12, x: -0.06 },
+      ],
+      c.trueSkinDark,
+      { seg: 14, bottomY: -0.28, topY: 0.3, outline: 0.02 }
+    );
+    head.add(mane);
   }
 
   // The mouth glow — `putanaToxin` on the true form, dim in the disguise:
   // one accent slot doing double duty, present but unlit before the reveal.
-  const mouth = decal(true_ ? 0.12 : 0.06, true_ ? 0.06 : 0.03, c.toxin, { opacity: true_ ? 0.9 : 0.15 });
-  mouth.position.set(0.12, 0.03, 0);
-  mouth.rotation.y = Math.PI / 2;
-  skull.add(mouth);
+  const mouth = decal(true_ ? 0.12 : 0.05, true_ ? 0.05 : 0.018, c.toxin, { opacity: true_ ? 0.9 : 0.15 });
+  onFront(face, mouth, true_ ? 0.07 : 0.06, 0, 0.005);
   n.mouth = mouth;
 
   for (const side of [-1, 1]) {
-    const eye = decal(true_ ? 0.07 : 0.05, true_ ? 0.05 : 0.03, true_ ? c.toxin : c.eye, { opacity: true_ ? 1 : 0.7 });
-    eye.position.set(0.11, true_ ? 0.13 : 0.11, side * 0.07);
-    eye.rotation.y = Math.PI / 2;
-    skull.add(eye);
+    const eye = decal(true_ ? 0.07 : 0.05, true_ ? 0.04 : 0.024, true_ ? c.toxin : c.eye, { opacity: true_ ? 1 : 0.7 });
+    onFront(face, eye, true_ ? 0.17 : 0.14, side * (true_ ? 0.065 : 0.045), 0.005);
+    if (true_) eye.rotation.z = side * -0.25;
     n[side < 0 ? 'eyeL' : 'eyeR'] = eye;
   }
 
@@ -4509,7 +6054,7 @@ function buildPutanaForm(true_, c) {
     torso.add(shoulder);
     n['shoulder' + key] = shoulder;
 
-    const upper = part(true_ ? 0.15 : 0.12, true_ ? 0.32 : 0.3, true_ ? 0.15 : 0.12, skin, { pivot: 'top', outline: 0.02 });
+    const upper = limb(true_ ? 0.16 : 0.11, true_ ? 0.32 : 0.3, true_ ? 0.16 : 0.11, skin, { taper: 0.8, bulge: true_ ? 0.14 : 0.04 });
     shoulder.add(upper);
 
     const elbow = new THREE.Group();
@@ -4517,10 +6062,10 @@ function buildPutanaForm(true_, c) {
     shoulder.add(elbow);
     n['elbow' + key] = elbow;
 
-    const fore = part(true_ ? 0.14 : 0.11, true_ ? 0.3 : 0.28, true_ ? 0.14 : 0.11, skin, { pivot: 'top', outline: 0.018 });
+    const fore = limb(true_ ? 0.15 : 0.1, true_ ? 0.3 : 0.28, true_ ? 0.15 : 0.1, skin, { taper: 0.74, bulge: true_ ? 0.1 : 0.04 });
     elbow.add(fore);
 
-    const hand = part(true_ ? 0.15 : 0.11, true_ ? 0.16 : 0.13, true_ ? 0.15 : 0.11, skin, { pivot: 'top', outline: 0.016 });
+    const hand = mitt(true_ ? 0.14 : 0.09, true_ ? 0.15 : 0.11, true_ ? 0.14 : 0.09, skin, { side, fist: false });
     hand.position.y = true_ ? -0.3 : -0.28;
     elbow.add(hand);
     n['hand' + key] = hand;
@@ -4528,16 +6073,30 @@ function buildPutanaForm(true_, c) {
     if (true_) {
       // Full rakshasi claws — sized up from the disguise's hint.
       for (let i = -1; i <= 1; i++) {
-        const claw = part(0.03, 0.22, 0.03, P.bone, { pivot: 'top', outline: 0.007 });
-        claw.position.set(0.1, -0.38, i * 0.055);
+        const claw = tube(
+          [
+            [0.05, -0.4, i * 0.05, 0.022],
+            [0.11, -0.48, i * 0.055, 0.015],
+            [0.13, -0.58, i * 0.055, 0.002],
+          ],
+          P.bone,
+          { seg: 5, outline: 0.007 }
+        );
         elbow.add(claw);
       }
     } else {
       // A subtly clawed nail on each hand — the tell hidden in plain
       // sight, per her entry's own reference reading.
       for (let i = -1; i <= 1; i++) {
-        const nail = part(0.018, 0.09, 0.018, P.bone, { pivot: 'top', outline: 0.005 });
-        nail.position.set(0.07, -0.28, i * 0.035);
+        const nail = tube(
+          [
+            [0.04, -0.36, i * 0.028, 0.009],
+            [0.06, -0.4, i * 0.03, 0.006],
+            [0.065, -0.43, i * 0.03, 0.001],
+          ],
+          P.bone,
+          { seg: 5, outline: 0.004 }
+        );
         elbow.add(nail);
       }
     }
@@ -4558,7 +6117,7 @@ function buildPutanaForm(true_, c) {
     body.add(hip);
     n['hip' + key] = hip;
 
-    const thigh = part(true_ ? 0.19 : 0.15, true_ ? 0.38 : 0.36, true_ ? 0.19 : 0.15, dark, { pivot: 'top', outline: 0.022 });
+    const thigh = limb(true_ ? 0.2 : 0.15, true_ ? 0.38 : 0.36, true_ ? 0.2 : 0.15, dark, { taper: 0.78, bulge: 0.1 });
     hip.add(thigh);
 
     const knee = new THREE.Group();
@@ -4566,10 +6125,10 @@ function buildPutanaForm(true_, c) {
     hip.add(knee);
     n['knee' + key] = knee;
 
-    const shin = part(true_ ? 0.16 : 0.13, true_ ? 0.34 : 0.32, true_ ? 0.16 : 0.13, dark, { pivot: 'top', outline: 0.02 });
+    const shin = limb(true_ ? 0.17 : 0.13, true_ ? 0.34 : 0.32, true_ ? 0.17 : 0.13, dark, { taper: 0.7, bulge: 0.1, bulgeAt: 0.22 });
     knee.add(shin);
 
-    const foot = part(true_ ? 0.18 : 0.15, 0.08, true_ ? 0.22 : 0.18, dark, { pivot: 'top', outline: 0.016 });
+    const foot = boot(true_ ? 0.22 : 0.17, 0.08, true_ ? 0.15 : 0.11, true_ ? dark : skin, { toe: 0.4 });
     foot.position.set(0.04, true_ ? -0.34 : -0.32, 0);
     knee.add(foot);
   }
@@ -4670,40 +6229,49 @@ export function buildNarakasura(skin = null) {
   // Rounded plate rather than hard boxes: the roster's design language for a
   // crowned villain (see `buildDuryodhana`), and here it also reads as rock
   // weathered round rather than forged square.
-  const torso = roundedPart(0.6, 0.7, 0.5, c.stone, { pivot: 'bottom', outline: 0.04, radius: 0.06 });
+  const torso = trunk(0.6, 0.7, 0.54, c.stone, { waist: 0.84, chest: 0.12, p: 2.8, neck: 0.5, outline: 0.04 });
   body.add(torso);
   n.torso = torso;
 
-  const belt = part(0.64, 0.13, 0.54, c.stoneDark, { pivot: 'top', outline: 0.026 });
-  belt.position.y = 0.02;
+  const belt = ringed(
+    [
+      { y: -0.02, rx: 0.26, rz: 0.235, p: 2.8 },
+      { y: 0.06, rx: 0.27, rz: 0.245, p: 2.8 },
+      { y: 0.13, rx: 0.26, rz: 0.235, p: 2.8 },
+    ],
+    c.stoneDark,
+    { seg: 16, outline: 0.026 }
+  );
   torso.add(belt);
+  const faulds = skirt(0.52, 0.48, 0.62, 0.58, 0.32, c.stoneDark, { p: 2.8, folds: 7, fold: 0.06, outline: 0.024 });
+  faulds.position.y = 0.04;
+  body.add(faulds);
 
   // Strata across the chest — the earth motif carried as geology rather than
   // as ornament. Passive decoration; see the note above about the tell.
   for (let i = 0; i < 3; i++) {
-    const seam = part(0.02, 0.05, 0.46, c.stoneDark, { outline: 0 });
-    seam.position.set(0.3, 0.2 + i * 0.17, 0);
-    torso.add(seam);
+    const seam = decal(0.44, 0.03, c.stoneDark);
+    onFront(torso, seam, 0.22 + i * 0.16, 0, 0.004);
+    seam.rotation.z = (i - 1) * 0.08;
   }
 
   // The ember cracks: rust-magma fissures in the plate, lit but never flaring.
   n.embers = [];
-  for (const [ex, ey, ez, ew] of [
-    [0.31, 0.16, 0.1, 0.16],
-    [0.31, 0.42, -0.14, 0.12],
-    [0.31, 0.56, 0.06, 0.1],
+  for (const [ey, ez, ew, tilt] of [
+    [0.16, 0.1, 0.16, 0.4],
+    [0.42, -0.12, 0.12, -0.3],
+    [0.56, 0.06, 0.1, 0.5],
   ]) {
     const crack = decal(0.03, ew, c.ember, { opacity: 0.55 });
-    crack.position.set(ex, ey, ez);
-    crack.rotation.y = Math.PI / 2;
-    crack.rotation.x = 0.4;
-    torso.add(crack);
+    onFront(torso, crack, ey, ez, 0.006);
+    crack.rotation.z = tilt;
     n.embers.push(crack);
   }
 
   for (const side of [-1, 1]) {
-    const pauldron = roundedPart(0.22, 0.18, 0.26, c.stoneDark, { outline: 0.024, radius: 0.05 });
-    pauldron.position.set(0.02, 0.58, side * 0.32);
+    const pauldron = blob(0.28, 0.19, 0.3, c.stoneDark, { p: 2.6, pv: 2.2, outline: 0.024 });
+    pauldron.position.set(0.02, 0.6, side * 0.32);
+    pauldron.rotation.x = side * 0.3;
     torso.add(pauldron);
   }
 
@@ -4712,56 +6280,103 @@ export function buildNarakasura(skin = null) {
   torso.add(head);
   n.head = head;
 
-  const skull = roundedPart(0.31, 0.31, 0.31, c.skin, { pivot: 'bottom', outline: 0.03, radius: 0.05 });
-  head.add(skull);
+  const neck = limb(0.15, 0.14, 0.15, c.skin, { taper: 1.05, bulge: 0, outline: 0.016, up: true });
+  neck.position.y = -0.1;
+  head.add(neck);
+  const face = skull(0.31, 0.33, 0.3, c.skin, { jaw: 0.86, outline: 0.03 });
+  head.add(face);
+  nose(face, 0.19, 0.075, c.skin, { jut: 0.03, r: 0.02 });
+
+  // A demon's humanoid face: heavy brows, fangs at the corners of a grim
+  // mouth, a short black beard.
+  for (const side of [-1, 1]) {
+    const brow = decal(0.11, 0.032, 0x1a100c);
+    onFront(face, brow, 0.22, side * 0.07, 0.005);
+    brow.rotation.z = side * 0.35;
+    const fx = frontOf(face.userData.mesh.geometry, 0.08, side * 0.05).x;
+    const fang = tube(
+      [
+        [fx - 0.004, 0.09, side * 0.05, 0.013],
+        [fx + 0.004, 0.12, side * 0.052, 0.009],
+        [fx + 0.004, 0.15, side * 0.05, 0.001],
+      ],
+      P.bone,
+      { seg: 5, outline: 0.005 }
+    );
+    face.add(fang);
+  }
+  const mouth = decal(0.12, 0.022, 0x1a100c);
+  onFront(face, mouth, 0.085, 0, 0.004);
+  const beard = ringed(
+    [
+      { y: -0.04, rx: 0.05, rz: 0.07, x: 0.12 },
+      { y: 0.02, rx: 0.1, rz: 0.13, x: 0.07 },
+      { y: 0.08, rx: 0.12, rz: 0.15, x: 0.035 },
+    ],
+    0x1a100c,
+    { seg: 12, bottomY: -0.07, topY: 0.09, outline: 0.012 }
+  );
+  face.add(beard);
 
   // A low stone diadem, not a jewelled crown — he is a king, but the horns are
   // the silhouette and a tall crown would fight them for the same space.
-  const diadem = part(0.29, 0.07, 0.3, c.stoneDark, { pivot: 'bottom', outline: 0.018 });
-  diadem.position.y = 0.29;
-  skull.add(diadem);
+  const diadem = ringed(
+    [
+      { y: 0.26, rx: 0.155, rz: 0.15, x: -0.01, p: 2.6 },
+      { y: 0.31, rx: 0.16, rz: 0.155, x: -0.012, p: 2.6 },
+      { y: 0.33, rx: 0.15, rz: 0.145, x: -0.014, p: 2.6 },
+    ],
+    c.stoneDark,
+    { seg: 16, outline: 0.018 }
+  );
+  face.add(diadem);
 
-  // The horns. Swept up and back in three tapering segments a side, growing
-  // from the temples of a humanoid face. This is the read the whole rig is
-  // built around, so it is the one thing given real size.
+  // The horns. Swept up and back, growing from the temples of a humanoid
+  // face — one tapering, curling tube a side rather than four stacked
+  // blocks. This is the read the whole rig is built around, so it is the one
+  // thing given real size.
   n.horns = [];
   for (const side of [-1, 1]) {
     const key = side < 0 ? 'L' : 'R';
     const hornRoot = new THREE.Group();
-    hornRoot.position.set(-0.02, 0.24, side * 0.15);
+    hornRoot.position.set(-0.02, 0.26, side * 0.15);
     // Splayed out along Z as well as swept back, so the pair reads as a spread
     // from the three-quarter angle `actor.js`'s TILT yaws every rig to. The
     // first build kept them near the centre line and they disappeared into the
     // skull at gameplay distance — which fails the one thing his roster entry
     // asks this rig to do, since the horns *are* his distinguishing silhouette.
-    hornRoot.rotation.x = side * -0.5;
-    skull.add(hornRoot);
+    // (+0.5 about X leans a +Z horn further toward +Z: out, not across. The
+    // box build had the sign the other way and its horns crossed overhead.)
+    hornRoot.rotation.x = side * 0.5;
+    face.add(hornRoot);
     n['horn' + key] = hornRoot;
-
-    let parent = hornRoot;
-    let w = 0.14;
-    for (let i = 0; i < 4; i++) {
-      const seg = part(w, 0.26, w, i >= 2 ? c.stoneDark : c.stone, { pivot: 'bottom', outline: 0.016 });
-      parent.add(seg);
-      const next = new THREE.Group();
-      next.position.y = 0.26;
-      // Curving back over the crown rather than straight up: a straight horn
-      // reads as a spike, and a spike is Kamsa's circlet two gates back. Gentle
-      // per-segment, so four segments arc rather than fold flat.
-      next.rotation.z = -0.2;
-      parent.add(next);
-      parent = next;
-      w *= 0.78;
+    const horn = tube(
+      [
+        [0, -0.02, 0, 0.075],
+        [0.0, 0.2, 0, 0.066],
+        [-0.06, 0.42, 0, 0.052],
+        [-0.18, 0.6, 0, 0.036],
+        [-0.34, 0.68, 0, 0.02],
+        [-0.46, 0.64, 0, 0.004],
+      ],
+      c.stone,
+      { seg: 9, outline: 0.016 }
+    );
+    hornRoot.add(horn);
+    // Ridged: two dark bands of the same stone, the way a horn grows in rings.
+    for (const [y, x, r] of [[0.14, -0.005, 0.072], [0.32, -0.03, 0.062]]) {
+      const ridge = shaped(tor(r, 0.012, 5, 14), c.stoneDark, { outline: 0.006 });
+      ridge.position.set(x, y, 0);
+      ridge.rotation.set(Math.PI / 2, 0, 0.2);
+      hornRoot.add(ridge);
     }
     n.horns.push(hornRoot);
   }
 
   for (const side of [-1, 1]) {
     const key = side < 0 ? 'L' : 'R';
-    const eye = decal(0.06, 0.045, c.eye, { opacity: 0.75 });
-    eye.position.set(0.15, 0.07, side * 0.075);
-    eye.rotation.y = Math.PI / 2;
-    skull.add(eye);
+    const eye = decal(0.06, 0.036, c.eye, { opacity: 0.75 });
+    onFront(face, eye, 0.18, side * 0.068, 0.005);
     n['eye' + key] = eye;
   }
 
@@ -4772,7 +6387,7 @@ export function buildNarakasura(skin = null) {
     torso.add(shoulder);
     n['shoulder' + key] = shoulder;
 
-    const upper = part(0.19, 0.33, 0.19, c.skin, { pivot: 'top', outline: 0.026 });
+    const upper = limb(0.19, 0.33, 0.19, c.skin, { taper: 0.84, bulge: 0.12 });
     shoulder.add(upper);
 
     const elbow = new THREE.Group();
@@ -4780,16 +6395,16 @@ export function buildNarakasura(skin = null) {
     shoulder.add(elbow);
     n['elbow' + key] = elbow;
 
-    const fore = part(0.17, 0.31, 0.17, c.skin, { pivot: 'top', outline: 0.024 });
+    const fore = limb(0.17, 0.31, 0.17, c.skin, { taper: 0.8, bulge: 0.1 });
     elbow.add(fore);
 
     // Stone vambrace — the plate motif reaching down the arm, so the spear is
     // held by something that matches the body it grows out of.
-    const vambrace = part(0.19, 0.12, 0.19, c.stoneDark, { outline: 0.016 });
-    vambrace.position.y = -0.22;
+    const vambrace = limb(0.19, 0.16, 0.19, c.stoneDark, { taper: 0.88, bulge: 0, p: 2.6, outline: 0.016 });
+    vambrace.position.y = -0.12;
     elbow.add(vambrace);
 
-    const hand = part(0.16, 0.15, 0.16, c.skin, { pivot: 'top', outline: 0.022 });
+    const hand = mitt(0.15, 0.15, 0.15, c.skin, { side });
     hand.position.y = -0.31;
     elbow.add(hand);
     n['hand' + key] = hand;
@@ -4807,26 +6422,32 @@ export function buildNarakasura(skin = null) {
   grip.rotation.z = -Math.PI / 2;
   spear.add(grip);
 
-  const haft = part(0.075, 2.1, 0.075, c.stoneDark, { pivot: 'bottom', outline: 0.016 });
-  haft.position.y = -0.5;
+  const haft = limb(0.07, 2.08, 0.07, c.stoneDark, { taper: 0.9, bulge: 0, outline: 0.016, up: true });
+  haft.position.y = -0.48;
   grip.add(haft);
 
   // The head: a leaf blade of the same stone as his plate.
-  const blade = part(0.14, 0.46, 0.05, c.stone, { pivot: 'bottom', outline: 0.02 });
-  blade.position.y = 1.6;
+  const blade = ringed(
+    [
+      { y: 1.58, rx: 0.03, rz: 0.03 },
+      { y: 1.66, rx: 0.026, rz: 0.06 },
+      { y: 1.78, rx: 0.024, rz: 0.08 },
+      { y: 1.96, rx: 0.018, rz: 0.055 },
+      { y: 2.14, rx: 0.006, rz: 0.012 },
+    ],
+    c.stone,
+    { seg: 10, bottomY: 1.56, topY: 2.2, outline: 0.02 }
+  );
   grip.add(blade);
-  const tip = part(0.05, 0.16, 0.04, c.stone, { pivot: 'bottom', outline: 0.014 });
-  tip.position.y = 2.06;
-  grip.add(tip);
 
   // Aditi's earrings, fused to the haft below the blade. Looted gold on a
   // stone weapon: the one thing on him that does not belong to him.
   n.earrings = [];
   for (const side of [-1, 1]) {
-    const hoop = part(0.1, 0.11, 0.035, c.gold, { outline: 0.012 });
+    const hoop = shaped(tor(0.05, 0.014, 5, 14), c.gold, { outline: 0.008 });
     hoop.position.set(0, 1.46, side * 0.07);
     grip.add(hoop);
-    const drop = part(0.05, 0.09, 0.03, c.gold, { outline: 0.01 });
+    const drop = blob(0.04, 0.07, 0.03, c.gold, { outline: 0.008 });
     drop.position.set(0, 1.37, side * 0.07);
     grip.add(drop);
     n.earrings.push(hoop, drop);
@@ -4849,7 +6470,7 @@ export function buildNarakasura(skin = null) {
     body.add(hip);
     n['hip' + key] = hip;
 
-    const thigh = part(0.23, 0.39, 0.23, c.stoneDark, { pivot: 'top', outline: 0.03 });
+    const thigh = limb(0.24, 0.39, 0.24, c.stoneDark, { taper: 0.82, bulge: 0.08 });
     hip.add(thigh);
 
     const knee = new THREE.Group();
@@ -4857,10 +6478,10 @@ export function buildNarakasura(skin = null) {
     hip.add(knee);
     n['knee' + key] = knee;
 
-    const shin = part(0.19, 0.35, 0.19, c.stoneDark, { pivot: 'top', outline: 0.026 });
+    const shin = limb(0.2, 0.35, 0.2, c.stoneDark, { taper: 0.8, bulge: 0.1, bulgeAt: 0.25, p: 2.4 });
     knee.add(shin);
 
-    const foot = part(0.23, 0.1, 0.27, c.stoneDark, { pivot: 'top', outline: 0.02 });
+    const foot = boot(0.27, 0.1, 0.19, c.stoneDark);
     foot.position.set(0.05, -0.35, 0);
     knee.add(foot);
   }

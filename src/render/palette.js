@@ -29,11 +29,16 @@ export const P = {
   bone: 0xe8e2d0,
 
   // Characters
-  hunterCoat: 0x2b2f45,
-  hunterCoatDark: 0x1a1d2e,
-  hunterTrim: 0x6f7bb5,
+  //
+  // The hunter's coat was a near-black navy while the rig was boxes, and a box
+  // has nothing for light to describe. Lifted to a mid indigo with the lofted
+  // rig (2026-09-29): still the darkest figure on the field, but dark enough to
+  // read as a coat, not as a hole — the chalky mid-tone the note above asks for.
+  hunterCoat: 0x3a4368,
+  hunterCoatDark: 0x262b47,
+  hunterTrim: 0x7a86c2,
   hunterSkin: 0xe8c4a0,
-  hunterHair: 0x1c1c26,
+  hunterHair: 0x23232f,
   bladeSteel: 0xd7dcea,
 
   raakchyasBody: 0x2a1f3d,
@@ -427,6 +432,8 @@ export const P = {
   putanaTrueSkin: 0x8f8a5c,
   putanaTrueSkinDark: 0x453f2c,
   putanaToxin: 0xacd94a,
+  /** The disguise's own hair: dark, as her entry describes it, where the box rig had borrowed the drape's mustard. */
+  putanaHair: 0x2b1d16,
 
   // Act 3 — gate 10's Gokul household, the materials its authored landmarks
   // are built from (`src/render/landmarks.js`). Village vernacular rather than

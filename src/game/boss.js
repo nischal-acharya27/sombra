@@ -17,10 +17,11 @@
 
 import * as THREE from 'three';
 import { Actor } from './actor.js';
-import { buildGuardian, buildGoruMukh, buildHakim, buildChiranjivi, buildMaunAnkur, buildRavana, buildDuryodhana, buildHiranyakashipu } from '../render/models.js';
+import { unseeded, buildGuardian, buildGoruMukh, buildHakim, buildChiranjivi, buildMaunAnkur, buildRavana, buildDuryodhana, buildHiranyakashipu } from '../render/models.js';
 import { GUARDIAN, GORU_MUKH, HAKIM, CHIRANJIVI, MAUN_ANKUR, RAVANA, DURYODHANA, HIRANYAKASHIPU, PHYS } from './config.js';
 import { STRINGS } from '../ui/strings.js';
 import { P } from '../render/palette.js';
+import { cloneMaterial } from '../render/toon.js';
 import { clamp, damp, lerp, rand, pick } from '../engine/mathx.js';
 
 const WHITE = new THREE.Color(0xffffff);
@@ -40,15 +41,18 @@ export class Boss extends Actor {
     this.ctx = ctx;
     this.cfg = cfg;
 
-    this.root = buildFn();
+    // Built and unshared off the seeded stream — see `unseeded` in models.js.
+    this.root = unseeded(() => buildFn());
     this.n = this.root.userData.nodes;
     this.mats = [];
-    this.root.traverse((o) => {
-      if (!o.isMesh || !o.material || o.material.isShaderMaterial) return;
-      if (o === this.n.core) return; // the flare node is driven separately
-      o.material = o.material.clone();
-      if (o.material.color) this.mats.push({ mat: o.material, base: o.material.color.clone() });
-    });
+    unseeded(() =>
+      this.root.traverse((o) => {
+        if (!o.isMesh || !o.material || o.material.isShaderMaterial) return;
+        if (o === this.n.core) return; // the flare node is driven separately
+        o.material = cloneMaterial(o.material);
+        if (o.material.color) this.mats.push({ mat: o.material, base: o.material.color.clone() });
+      })
+    );
 
     this.state = 'entering';
     this.phase = 2.4;

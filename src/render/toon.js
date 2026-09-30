@@ -119,6 +119,25 @@ export function toonMaterial({
   return mat;
 }
 
+/**
+ * A material's own copy, rim and all.
+ *
+ * `Material.clone()` copies every parameter but not `onBeforeCompile` or
+ * `customProgramCacheKey`, so a clone of a rimmed toon material renders
+ * without its rim. Every enemy and boss unshares its materials to flash white
+ * when hit, which silently stripped the rim off everything but the hunter —
+ * the silhouette separation this file exists to give.
+ */
+export function cloneMaterial(m) {
+  const c = m.clone();
+  if (m.userData.rimUniforms) {
+    c.onBeforeCompile = m.onBeforeCompile;
+    c.customProgramCacheKey = m.customProgramCacheKey;
+    c.userData.rimUniforms = m.userData.rimUniforms;
+  }
+  return c;
+}
+
 /** Unlit, fog-free emissive material for glows, cores and magic. */
 export function glowMaterial({ color = P.violet, opacity = 1, transparent = false, depthWrite = true } = {}) {
   return new THREE.MeshBasicMaterial({
@@ -162,11 +181,52 @@ const OUTLINE_FRAG = /* glsl */ `
   void main() { gl_FragColor = vec4(uColor, 1.0); }
 `;
 
+// The smooth-surface variant: out along the vertex normal. A lofted limb's
+// normals are continuous, so nothing tears; and on anything long, the radial
+// push above thins the outline to nothing along the sides, because near the
+// ends of a forearm "away from the centre" points down the bone rather than
+// out of the skin.
+const OUTLINE_NORMAL_VERT = /* glsl */ `
+  uniform float uThickness;
+  void main() {
+    vec3 p = position + normalize(normal) * uThickness;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+  }
+`;
+
+const normalOutlineCache = new Map();
+
 /**
  * Inverted-hull outline. Returns a child mesh to add alongside `mesh` — it
  * shares the geometry, so it costs a draw call and no memory.
+ *
+ * Smooth geometry (anything from `shapes.js`, flagged `userData.smooth`) is
+ * pushed out along its normals, and its outline materials are shared by
+ * thickness and colour — they carry no per-geometry centre, so a crowd of
+ * rigs costs one outline material per line weight rather than one per part.
  */
 export function outlineFor(geometry, thickness = 0.035, color = P.outline) {
+  if (geometry.userData.smooth) {
+    const key = `${thickness}|${color}`;
+    let mat = normalOutlineCache.get(key);
+    if (!mat) {
+      mat = new THREE.ShaderMaterial({
+        uniforms: {
+          uThickness: { value: thickness },
+          uColor: { value: new THREE.Color(color) },
+        },
+        vertexShader: OUTLINE_NORMAL_VERT,
+        fragmentShader: OUTLINE_FRAG,
+        side: THREE.BackSide,
+        fog: false,
+        toneMapped: false,
+      });
+      normalOutlineCache.set(key, mat);
+    }
+    const outline = new THREE.Mesh(geometry, mat);
+    outline.renderOrder = -1;
+    return outline;
+  }
   if (!geometry.boundingSphere) geometry.computeBoundingSphere();
   const c = geometry.boundingSphere.center;
   const mat = new THREE.ShaderMaterial({
