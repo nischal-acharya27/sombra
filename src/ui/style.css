@@ -524,38 +524,98 @@ h2 { font-size: clamp(34px, 6vw, 62px); font-weight: 800; letter-spacing: 0.06em
 h2.fail { color: var(--crimson); text-shadow: 0 0 44px rgba(255, 77, 94, 0.6); }
 h2.win { color: #7ff2c9; text-shadow: 0 0 44px rgba(127, 242, 201, 0.55); }
 
+/* The System's buttons: a lit panel with a cyan edge, bracketed at two
+ * corners like the windows' own frames, and a sheen that crosses on hover.
+ * No `filter`, `backdrop-filter` or `will-change` — see `.sys-window`. */
 .cta {
+  position: relative;
   pointer-events: auto;
-  background: rgba(10, 22, 42, 0.8);
-  border: 1px solid var(--panel-edge);
+  background:
+    linear-gradient(105deg, transparent 38%, rgba(170, 235, 255, 0.16) 50%, transparent 62%) -160% 0 / 250% 100% no-repeat,
+    linear-gradient(180deg, rgba(26, 58, 96, 0.94), rgba(8, 18, 38, 0.94));
+  border: 1px solid rgba(95, 216, 255, 0.62);
+  border-radius: 3px;
   color: var(--ink);
   font-family: var(--sans);
   font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.34em;
-  padding: 13px 40px;
+  padding: 14px 44px 14px calc(44px + 0.34em);
   cursor: pointer;
-  transition: background 0.16s, box-shadow 0.16s, transform 0.16s;
-  box-shadow: 0 0 26px rgba(50, 160, 220, 0.2);
+  text-shadow: 0 0 12px rgba(95, 216, 255, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(170, 235, 255, 0.28),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.35),
+    0 6px 20px rgba(0, 0, 0, 0.45),
+    0 0 24px rgba(50, 160, 220, 0.22);
+  transition: background-position 0.5s ease, box-shadow 0.16s, transform 0.12s, border-color 0.16s;
 }
+/* Corner brackets, top-left and bottom-right. */
+.cta::before,
+.cta::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--cyan);
+  pointer-events: none;
+  opacity: 0.9;
+}
+.cta::before { top: -3px; left: -3px; border-right: 0; border-bottom: 0; }
+.cta::after { bottom: -3px; right: -3px; border-left: 0; border-top: 0; }
 .cta:hover {
-  background: rgba(28, 62, 104, 0.9);
-  box-shadow: 0 0 42px rgba(95, 216, 255, 0.45);
+  background-position: 160% 0, 0 0;
+  border-color: var(--cyan);
+  box-shadow:
+    inset 0 1px 0 rgba(190, 240, 255, 0.4),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.35),
+    0 8px 24px rgba(0, 0, 0, 0.5),
+    0 0 36px rgba(95, 216, 255, 0.5);
   transform: translateY(-1px);
 }
-.cta:active { transform: translateY(1px); }
+.cta:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5), 0 0 18px rgba(95, 216, 255, 0.35);
+}
+.cta:focus-visible { outline: 2px solid var(--cyan); outline-offset: 4px; }
 .cta.secondary {
   margin-top: 12px;
-  padding: 9px 28px;
+  padding: 9px 30px 9px calc(30px + 0.34em);
   font-size: 12px;
-  opacity: 0.72;
-  box-shadow: none;
+  color: #bcd6e8;
+  background:
+    linear-gradient(105deg, transparent 38%, rgba(170, 235, 255, 0.12) 50%, transparent 62%) -160% 0 / 250% 100% no-repeat,
+    linear-gradient(180deg, rgba(18, 36, 62, 0.82), rgba(8, 16, 32, 0.82));
+  border-color: rgba(95, 216, 255, 0.34);
+  text-shadow: none;
+  box-shadow: inset 0 1px 0 rgba(170, 235, 255, 0.14), 0 4px 14px rgba(0, 0, 0, 0.35);
 }
-.cta.secondary:hover { opacity: 1; }
+.cta.secondary::before,
+.cta.secondary::after { width: 7px; height: 7px; border-width: 1px; opacity: 0.55; }
+.cta.secondary:hover { color: var(--ink); border-color: rgba(95, 216, 255, 0.7); }
 /* The second wind on the death screen. Two lines: the verb, and what
- * pressing it costs — the word "ad" is on the button, not behind it. */
-.cta.second-wind { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-.cta.second-wind small { font-size: 10px; font-weight: 500; letter-spacing: 0.22em; opacity: 0.7; text-transform: uppercase; }
+ * pressing it costs — the word "ad" is on the button, not behind it. Gold
+ * rather than cyan, so the offer reads as its own thing beside RISE AGAIN. */
+.cta.second-wind {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  border-color: rgba(255, 179, 71, 0.7);
+  background:
+    linear-gradient(105deg, transparent 38%, rgba(255, 220, 160, 0.18) 50%, transparent 62%) -160% 0 / 250% 100% no-repeat,
+    linear-gradient(180deg, rgba(74, 48, 20, 0.94), rgba(26, 16, 8, 0.94));
+  text-shadow: 0 0 12px rgba(255, 179, 71, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 220, 160, 0.3),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.35),
+    0 6px 20px rgba(0, 0, 0, 0.45),
+    0 0 26px rgba(255, 179, 71, 0.25);
+}
+.cta.second-wind::before,
+.cta.second-wind::after { border-color: var(--amber); }
+.cta.second-wind:hover { border-color: var(--amber); box-shadow: inset 0 1px 0 rgba(255, 220, 160, 0.4), 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 36px rgba(255, 179, 71, 0.5); }
+.cta.second-wind small { font-size: 10px; font-weight: 500; letter-spacing: 0.22em; opacity: 0.75; text-transform: uppercase; }
 
 .controls-hint {
   display: flex;
@@ -623,9 +683,9 @@ kbd {
   /* Resting translucency is deliberate and load-bearing: the play plane runs
      behind the bottom of the frame, and a control you cannot see through is a
      control that hides the enemy walking under it. */
-  background: rgba(10, 20, 38, 0.3);
-  border: 1px solid rgba(120, 170, 210, 0.32);
-  box-shadow: 0 0 16px rgba(6, 12, 26, 0.5), inset 0 0 18px rgba(10, 30, 60, 0.4);
+  background: radial-gradient(circle at 50% 32%, rgba(60, 110, 170, 0.3), rgba(10, 20, 38, 0.26) 70%);
+  border: 1.5px solid rgba(120, 170, 210, 0.36);
+  box-shadow: 0 0 16px rgba(6, 12, 26, 0.5), inset 0 0 0 3px rgba(10, 20, 38, 0.25), inset 0 1px 0 rgba(170, 225, 255, 0.18);
   transition: background 0.08s, border-color 0.08s, box-shadow 0.08s, transform 0.08s;
 }
 
